@@ -8,7 +8,7 @@ import "./iVAULT.sol";
 import "./iUTILS.sol";
 
     //======================================VADER=========================================//
-contract VUSD is iERC20 {
+contract USDV is iERC20 {
     using SafeMath for uint256;
 
     // ERC-20 Parameters
@@ -50,8 +50,8 @@ contract VUSD is iERC20 {
     //=====================================CREATION=========================================//
     // Constructor
     constructor(address _vader, address _utils) public {
-        name = 'VADER USD';
-        symbol = 'vUSD';
+        name = 'USD - VADER PROTOCOL';
+        symbol = 'USDv';
         decimals = 18;
         one = 10 ** decimals;
         totalSupply = 0;
@@ -146,18 +146,18 @@ contract VUSD is iERC20 {
             currentEra += 1;                                        // Increment Era
             nextEraTime = now + secondsPerEra;                      // Set next Era time
             uint _balance = iERC20(VADER).balanceOf(address(this)); // Get spare VADER
-            uint _vUSDShare = _twothirds(_balance);                 // Get 2/3rds
-            _convert(_vUSDShare);                                   // Convert it
-            iVAULT(VAULT).pullIncentives();                         // Pull incentives over
+            uint _USDVShare = _twothirds(_balance);                 // Get 2/3rds
+            _convert(_USDVShare);                                   // Convert it
+            iVAULT(VAULT).pullIncentives(iERC20(VADER).balanceOf(address(this)), _USDVShare.div(2));                         // Pull incentives over
         }
     }
     
     //======================================ASSET MINTING========================================//
-    // VADER Holders to convert to vUSD
+    // VADER Holders to convert to USDv
     function convert(uint amount) public returns(uint convertAmount) {
         require(iERC20(VADER).transferTo(address(this), amount));
         iERC20(VADER).burn(amount);
-        convertAmount = iVAULT(VAULT).getVUSDAmount(amount);
+        convertAmount = iVAULT(VAULT).getUSDVAmount(amount);
         _mint(msg.sender, convertAmount);
         return convertAmount;
     }
@@ -165,11 +165,11 @@ contract VUSD is iERC20 {
     // Internal convert
     function _convert(uint amount) internal {
         iERC20(VADER).burn(amount);
-        uint _convertAmount = iVAULT(VAULT).getVUSDAmount(amount);
+        uint _convertAmount = iVAULT(VAULT).getUSDVAmount(amount);
         _mint(address(this), _convertAmount);
     }
-    //======================================VUSD DEPOSITS========================================//
-    // VUSD holders to deposit for Interest Payments
+    //======================================USDV DEPOSITS========================================//
+    // USDV holders to deposit for Interest Payments
     function deposit(uint amount) public {
         depositForMember(msg.sender, amount);
     }
@@ -211,7 +211,7 @@ contract VUSD is iERC20 {
         uint _secondsSinceClaim = now.sub(mapMember_lastTime[member]); // Get time since last claim
         uint _share = calcPayment(member);    // get share of rewards for member
         uint _reward = _share.mul(_secondsSinceClaim).div(secondsPerEra);    // Get owed amount, based on per-day rates
-        uint _reserve = vUSDReserve();
+        uint _reserve = reserveUSDV();
         if(_reward >= _reserve) {
             _reward = _reserve; // Send full reserve if the last person
         }
@@ -220,7 +220,7 @@ contract VUSD is iERC20 {
 
     function calcPayment(address member) public view returns(uint){
         uint _balance = mapMember_deposit[member];
-        uint _reserve = vUSDReserve().div(erasToEarn); // Aim to deplete reserve over a number of days
+        uint _reserve = reserveUSDV().div(erasToEarn); // Aim to deplete reserve over a number of days
         return iUTILS(UTILS).calcShare(_balance, totalFunds, _reserve); // Get member's share of that
     }
 
@@ -237,7 +237,7 @@ contract VUSD is iERC20 {
 
     //============================== HELPERS ================================//
 
-    function vUSDReserve() public view returns(uint){
+    function reserveUSDV() public view returns(uint){
         return balanceOf(address(this)).sub(totalFunds);
     }
 

@@ -22,7 +22,7 @@
           "type": "uint256"
         }
       ],
-      "name": "getVDRAmount",
+      "name": "getUSDVAmount",
       "outputs": [
         {
           "internalType": "uint256",
@@ -41,7 +41,7 @@
           "type": "uint256"
         }
       ],
-      "name": "getVUSDAmount",
+      "name": "getVDRAmount",
       "outputs": [
         {
           "internalType": "uint256",
@@ -53,7 +53,18 @@
       "type": "function"
     },
     {
-      "inputs": [],
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
       "name": "pullIncentives",
       "outputs": [],
       "stateMutability": "nonpayable",

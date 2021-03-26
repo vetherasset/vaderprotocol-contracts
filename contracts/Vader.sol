@@ -4,7 +4,7 @@ pragma solidity ^0.6.8;
 // Interfaces
 import "./iERC20.sol";
 import "./SafeMath.sol";
-import "./iVUSD.sol";
+import "./iUSDV.sol";
 import "./iVAULT.sol";
 
     //======================================VADER=========================================//
@@ -30,7 +30,7 @@ contract Vader is iERC20 {
     uint256 public nextEraTime;
 
     address public VETHER;
-    address public VUSD;
+    address public USDV;
     address public burnAddress;
     address public DAO;
 
@@ -65,10 +65,10 @@ contract Vader is iERC20 {
         VETHER = _vether;
         burnAddress = 0x0111011001100001011011000111010101100101;
     }
-    // Can set VUSD
-    function setVUSD(address _VUSD) public{
-        if(VUSD == address(0)){
-            VUSD = _VUSD;
+    // Can set USDV
+    function setUSDV(address _USDV) public{
+        if(USDV == address(0)){
+            USDV = _USDV;
         }
     }
 
@@ -186,7 +186,7 @@ contract Vader is iERC20 {
             currentEra += 1;                                                               // Increment Era
             nextEraTime = now + secondsPerEra;                                             // Set next Era time
             uint256 _emission = getDailyEmission();                                        // Get Daily Dmission
-            _mint(VUSD, _emission);                                            // Mint to the Incentive Address
+            _mint(USDV, _emission);                                            // Mint to the Incentive Address
             emit NewEra(currentEra, nextEraTime, _emission);                               // Emit Event
         }
     }
@@ -206,11 +206,11 @@ contract Vader is iERC20 {
         require(iERC20(VETHER).transferFrom(msg.sender, burnAddress, amount));
         _mint(msg.sender, amount);
     }
-    // VUSD Owners to redeem back to VDR
+    // USDV Owners to redeem back to VDR
     function redeem(uint amount) public {
-        require(iERC20(VUSD).transferTo(address(this), amount));
-        iERC20(VUSD).burn(amount);
-        uint _redeemAmount = iVAULT(iVUSD(VUSD).VAULT()).getVDRAmount(amount);
+        require(iERC20(USDV).transferTo(address(this), amount));
+        iERC20(USDV).burn(amount);
+        uint _redeemAmount = iVAULT(iUSDV(USDV).VAULT()).getVDRAmount(amount);
         _mint(msg.sender, _redeemAmount);
     }
 }

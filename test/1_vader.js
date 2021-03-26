@@ -2,7 +2,7 @@ const { expect } = require("chai");
 var Utils = artifacts.require('./Utils')
 var Vether = artifacts.require('./Vether')
 var Vader = artifacts.require('./Vader')
-var VUSD = artifacts.require('./VUSD')
+var USDV = artifacts.require('./USDV')
 const BigNumber = require('bignumber.js')
 const truffleAssert = require('truffle-assertions')
 
@@ -13,7 +13,7 @@ function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-var utils; var vader; var vether; var vusd;
+var utils; var vader; var vether; var usdv;
 var acc0; var acc1; var acc2; var acc3; var acc0; var acc5;
 const one = 10**18
 
@@ -27,7 +27,7 @@ before(async function() {
   utils = await Utils.new();
   vether = await Vether.new();
   vader = await Vader.new(vether.address);
-  vusd = await VUSD.new(vader.address, utils.address);
+  usdv = await USDV.new(vader.address, utils.address);
 
   await vether.transfer(acc1, BN2Str(1001))
 // acc  | VTH | VDR  |
@@ -121,8 +121,8 @@ describe("DAO Functions", function() {
     expect(BN2Str(await vader.emissionCurve())).to.equal('1');
   });
   it("DAO changeIncentiveAddress", async function() {
-    await vader.setVUSD(vusd.address)
-    expect(await vader.VUSD()).to.equal(vusd.address);
+    await vader.setUSDV(usdv.address)
+    expect(await vader.USDV()).to.equal(usdv.address);
   });
   it("DAO changeDAO", async function() {
     await vader.changeDAO(acc2)
@@ -150,7 +150,7 @@ describe("Emissions", function() {
 // acc1 |   0 |  800 |
 
     expect(BN2Str(await vader.currentEra())).to.equal('3');
-    expect(BN2Str(await vader.balanceOf(vusd.address))).to.equal(BN2Str('2400'));
+    expect(BN2Str(await vader.balanceOf(usdv.address))).to.equal(BN2Str('2400'));
     expect(BN2Str(await vader.getDailyEmission())).to.equal(BN2Str('3200'));
     
     // await sleep(2000)
@@ -159,7 +159,7 @@ describe("Emissions", function() {
 // acc0 |   0 |  200 |
 // acc1 |   0 |  800 |
     expect(BN2Str(await vader.currentEra())).to.equal('4');
-    expect(BN2Str(await vader.balanceOf(vusd.address))).to.equal(BN2Str('5600'));
+    expect(BN2Str(await vader.balanceOf(usdv.address))).to.equal(BN2Str('5600'));
     expect(BN2Str(await vader.getDailyEmission())).to.equal(BN2Str('6400'));
   });
 
