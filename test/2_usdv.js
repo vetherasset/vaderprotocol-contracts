@@ -180,7 +180,7 @@ describe("Member should deposit for rewards", function() {
 // acc1 |   0 | 1300 |  100 | 200 |
 // usdv |   0 | 467  |  933 |   0 |
     
-    expect(BN2Str(await usdv.USDvReserve())).to.equal(BN2Str(933));
+    expect(BN2Str(await usdv.reserveUSDV())).to.equal(BN2Str(933));
     expect(BN2Str(await usdv.balanceOf(usdv.address))).to.equal(BN2Str(1133));
     expect(BN2Str(await vader.balanceOf(usdv.address))).to.equal(BN2Str(467));
 

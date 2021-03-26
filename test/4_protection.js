@@ -119,4 +119,60 @@ describe("Add liquidity", function() {
 // vault|   0 | 2000 | 2000 | 1000 | 1000 |
 // acc1 |   0 | 1000 | 1000 | 1000 | 1000 |
 
+describe("Should Swap From VDR", function() {
+  it("Swap to USDV", async function() {
+    let tx = await vault.swap(vader.address, '250', usdv.address, {from:acc1})
+    expect(BN2Str(await vader.balanceOf(acc1))).to.equal('750');
+    expect(BN2Str(await vault.mapAsset_tokenAmount(vader.address))).to.equal('1250');
+    expect(BN2Str(await vault.mapAsset_baseAmount(vader.address))).to.equal('840');
+    expect(BN2Str(await usdv.balanceOf(acc1))).to.equal('1160');
+  });
 
+it("Swap to Asset", async function() {
+  let tx = await vault.swap(vader.address, '250', asset.address, {from:acc1})
+  expect(BN2Str(await vader.balanceOf(acc1))).to.equal('500');
+  expect(BN2Str(await vault.mapAsset_tokenAmount(vader.address))).to.equal('1500');
+  expect(BN2Str(await vault.mapAsset_baseAmount(vader.address))).to.equal('724');
+  expect(BN2Str(await vault.mapAsset_baseAmount(asset.address))).to.equal('1116');
+  expect(BN2Str(await vault.mapAsset_tokenAmount(asset.address))).to.equal('907');
+  expect(BN2Str(await asset.balanceOf(acc1))).to.equal('1093');
+});
+
+it("Swap to Anchor", async function() {
+  let tx = await vault.swap(vader.address, '250', anchor.address, {from:acc1})
+  expect(BN2Str(await vader.balanceOf(acc1))).to.equal('250');
+  expect(BN2Str(await vault.mapAnchor_baseAmount(anchor.address))).to.equal('1250');
+  expect(BN2Str(await vault.mapAnchor_tokenAmount(anchor.address))).to.equal('840');
+  expect(BN2Str(await anchor.balanceOf(acc1))).to.equal('1160');
+});
+
+});
+describe("Should Swap From USDV", function() {
+  it("Swap to VDR", async function() {
+    let tx = await vault.swap(usdv.address, '250', vader.address, {from:acc1})
+    expect(BN2Str(await usdv.balanceOf(acc1))).to.equal('910');
+    expect(BN2Str(await vault.mapAsset_tokenAmount(vader.address))).to.equal('1214');
+    expect(BN2Str(await vault.mapAsset_baseAmount(vader.address))).to.equal('974');
+    expect(BN2Str(await vader.balanceOf(acc1))).to.equal('536');
+  });
+it("Swap to Asset", async function() {
+  let tx = await vault.swap(usdv.address, '250', asset.address, {from:acc1})
+  expect(BN2Str(await usdv.balanceOf(acc1))).to.equal('660');
+  expect(BN2Str(await vault.mapAsset_baseAmount(asset.address))).to.equal('1366');
+  expect(BN2Str(await vault.mapAsset_tokenAmount(asset.address))).to.equal('772');
+  expect(BN2Str(await asset.balanceOf(acc1))).to.equal('1228');
+});
+
+it("Swap to Anchor", async function() {
+  let tx = await vault.swap(usdv.address, '250', anchor.address, {from:acc1})
+  expect(BN2Str(await vader.balanceOf(acc1))).to.equal('536');
+  expect(BN2Str(await vault.mapAsset_baseAmount(vader.address))).to.equal('1224');
+  expect(BN2Str(await vault.mapAsset_tokenAmount(vader.address))).to.equal('1017');
+  expect(BN2Str(await vault.mapAnchor_baseAmount(anchor.address))).to.equal('1447');
+  expect(BN2Str(await vault.mapAnchor_tokenAmount(anchor.address))).to.equal('742');
+  expect(BN2Str(await anchor.balanceOf(acc1))).to.equal('1258');
+});
+
+
+
+});

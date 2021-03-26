@@ -262,10 +262,10 @@ contract Vault {
     }
 
     function pullIncentives(uint256 shareVDR, uint256 shareUSDV) public {
-        iERC20(VADER).transferTo(address(this), shareVDR);
-        iERC20(USDV).transferTo(address(this), shareUSDV);
-        reserveVDR = reserveVDR.add(shareVDR);
-        reserveUSDV = reserveUSDV.add(shareUSDV);
+        // iERC20(VADER).transferTo(address(this), shareVDR);
+        // iERC20(USDV).transferTo(address(this), shareUSDV);
+        // reserveVDR = reserveVDR.add(shareVDR);
+        // reserveUSDV = reserveUSDV.add(shareUSDV);
     }
 
     //=================================IMPERMANENT LOSS=====================================//
