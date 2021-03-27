@@ -2,7 +2,7 @@ const { expect } = require("chai");
 var Utils = artifacts.require('./Utils')
 var Vether = artifacts.require('./Vether')
 var Vader = artifacts.require('./Vader')
-var USDV = artifacts.require('./USDV')
+var VSD = artifacts.require('./VSD')
 const BigNumber = require('bignumber.js')
 const truffleAssert = require('truffle-assertions')
 
@@ -27,10 +27,10 @@ before(async function() {
   utils = await Utils.new();
   vether = await Vether.new();
   vader = await Vader.new(vether.address);
-  usdv = await USDV.new(vader.address, utils.address);
+  usdv = await VSD.new(vader.address, utils.address);
 
   await vether.transfer(acc1, BN2Str(1001))
-// acc  | VTH | VDR  |
+// acc  | VTH | VADER  |
 // acc0 |   0 |    0 |
 // acc1 |1001 |    0 |
 
@@ -39,7 +39,7 @@ before(async function() {
 describe("Deploy", function() {
   it("Should deploy", async function() {
     expect(await vader.name()).to.equal("VADER PROTOCOL TOKEN");
-    expect(await vader.symbol()).to.equal("VDR");
+    expect(await vader.symbol()).to.equal("VADER");
     expect(BN2Str(await vader.decimals())).to.equal('18');
     expect(BN2Str(await vader.totalSupply())).to.equal('0');
     expect(BN2Str(await vader.maxSupply())).to.equal(BN2Str(2000000 * one));
@@ -65,7 +65,7 @@ describe("Upgrade", function() {
     expect(BN2Str(await vader.balanceOf(acc1))).to.equal(BN2Str(1000));
     expect(BN2Str(await vader.getDailyEmission())).to.equal(BN2Str('0'));
   });
-// acc  | VTH | VDR  |
+// acc  | VTH | VADER  |
 // acc0 |   0 |    0 |
 // acc1 |   0 | 1000 |
 
@@ -78,7 +78,7 @@ describe("Be a valid ERC-20", function() {
     await vader.transferFrom(acc1, acc0, "100", {from:acc0})
     expect(BN2Str(await vader.balanceOf(acc0))).to.equal('100');
   });
-// acc  | VTH | VDR  |
+// acc  | VTH | VADER  |
 // acc0 |   0 |  100 |
 // acc1 |   0 |  900 |
 
@@ -86,7 +86,7 @@ describe("Be a valid ERC-20", function() {
     await vader.transferTo(acc0, "100", {from:acc1}) 
     expect(BN2Str(await vader.balanceOf(acc0))).to.equal('200');
   });
-// acc  | VTH | VDR  |
+// acc  | VTH | VADER  |
 // acc0 |   0 |  200 |
 // acc1 |   0 |  800 |
 
@@ -95,7 +95,7 @@ describe("Be a valid ERC-20", function() {
     expect(BN2Str(await vader.balanceOf(acc0))).to.equal('100');
     expect(BN2Str(await vader.totalSupply())).to.equal(BN2Str('900'));
   });
-// acc  | VTH | VDR  |
+// acc  | VTH | VADER  |
 // acc0 |   0 |  100 |
 // acc1 |   0 |  800 |
 
@@ -106,7 +106,7 @@ describe("Be a valid ERC-20", function() {
     expect(BN2Str(await vader.balanceOf(acc0))).to.equal('0');
     expect(BN2Str(await vader.totalSupply())).to.equal(BN2Str('800'));
   });
-// acc  | VTH | VDR  |
+// acc  | VTH | VADER  |
 // acc0 |   0 |  0   |
 // acc1 |   0 |  800 |
 
@@ -121,8 +121,8 @@ describe("DAO Functions", function() {
     expect(BN2Str(await vader.emissionCurve())).to.equal('1');
   });
   it("DAO changeIncentiveAddress", async function() {
-    await vader.setUSDV(usdv.address)
-    expect(await vader.USDV()).to.equal(usdv.address);
+    await vader.setVSD(usdv.address)
+    expect(await vader.VSD()).to.equal(usdv.address);
   });
   it("DAO changeDAO", async function() {
     await vader.changeDAO(acc2)
@@ -145,7 +145,7 @@ describe("Emissions", function() {
     // await sleep(2000)
     await vader.transfer(acc0, BN2Str(200), {from:acc1})
     await vader.transfer(acc1, BN2Str(100), {from:acc0})
-// acc  | VTH | VDR  |
+// acc  | VTH | VADER  |
 // acc0 |   0 |  100 |
 // acc1 |   0 |  800 |
 
@@ -155,7 +155,7 @@ describe("Emissions", function() {
     
     // await sleep(2000)
     await vader.transfer(acc0, BN2Str(100), {from:acc1})
-// acc  | VTH | VDR  |
+// acc  | VTH | VADER  |
 // acc0 |   0 |  200 |
 // acc1 |   0 |  800 |
     expect(BN2Str(await vader.currentEra())).to.equal('4');

@@ -1,25 +1,25 @@
 # Vader Protocol - Incentivised Liquidity, Stablecoin and Lending Protocol.
 
-VADER is a liquidity protocol that combines a collateralized stablecoin with liquidity pools. The stablecoin, USDv, is issued by burning VDR tokens, which is issued by burning VETH tokens. Liquidity pools use USDv as the settlement asset. A daily emission rate of VDR funds liquidity incentives, a protocol interest rate, and impermanent loss protection. Pooled capital can be lent out by borrowers, who lock collateral such as pool shares or VDR. The collateral is used to pay an interest rate which is added into the pools to increase returns. 
+VADER is a liquidity protocol that combines a collateralized stablecoin with liquidity pools. The stablecoin, VSD, is issued by burning VADER tokens, which is issued by burning VETH tokens. Liquidity pools use VSD as the settlement asset. A daily emission rate of VADER funds liquidity incentives, a protocol interest rate, and impermanent loss protection. Pooled capital can be lent out by borrowers, who lock collateral such as pool shares or VADER. The collateral is used to pay an interest rate which is added into the pools to increase returns. 
 
 ## Smart Contracts
 
-VADER (VDR)
+VADER (VADER)
 * 1m to VETH holders
 * 2m maxSupply
-* Burn USDv to get VDR
+* Burn VSD to get VADER
 * Daily Emission Rate
 
-VADER USD (USDv)
-* Burn VDR to get USDv
-* Deposit USDv to get interest rate
+VADER USD (VSD)
+* Burn VADER to get VSD
+* Deposit VSD to get interest rate
 * Harvest, withdraw
 * Has a reserve for interest payments
 
 VAULT
 * Add liquidity to Asset or Anchor pools
 * Remove liquidity with 100 Days IL Protection
-* Swap between Asset <> USDv <> VDR <> Anchor
+* Swap between Asset <> VSD <> VADER <> Anchor
 * Get Anchor pricing, replace any Anchor
 * Borrow debt from locked collateral, repay
 * Has a reserve to pay incentives
@@ -29,10 +29,10 @@ VAULT
 * Deploy UTILS
 * Deploy VETHER
 * Deploy VADER(vether.address)
-* Deploy USDV(vader.address, utils.address)
+* Deploy VSD(vader.address, utils.address)
 * Deploy VAULT(vader.address, usdv.address, utils.address)
-* Set VADER.setUSDV(USDV.address)
-* Set USDV.setVault(vault.address)
+* Set VADER.setVSD(VSD.address)
+* Set VSD.setVault(vault.address)
 
 ## Addresses
 

@@ -1,5 +1,5 @@
 {
-  "contractName": "USDV",
+  "contractName": "VSD",
   "abi": [
     {
       "inputs": [
@@ -654,7 +654,7 @@
     },
     {
       "inputs": [],
-      "name": "USDvReserve",
+      "name": "VSDReserve",
       "outputs": [
         {
           "internalType": "uint256",

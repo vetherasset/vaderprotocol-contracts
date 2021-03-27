@@ -4,11 +4,13 @@ pragma solidity ^0.6.8;
 // Interfaces
 import "./iERC20.sol";
 import "./SafeMath.sol";
-import "./iVAULT.sol";
 import "./iUTILS.sol";
+import "./iVADER.sol";
+import "./iVAULT.sol";
+
 
     //======================================VADER=========================================//
-contract USDV is iERC20 {
+contract VSD is iERC20 {
     using SafeMath for uint256;
 
     // ERC-20 Parameters
@@ -20,26 +22,23 @@ contract USDV is iERC20 {
     mapping(address => mapping(address => uint256)) private _allowances;
 
     // Parameters
-    uint256 one;
     uint256 public totalFunds;
-    uint256 public secondsPerEra;
-    uint256 public currentEra;
-    uint256 public nextEraTime;
     uint256 public erasToEarn;
+    uint256 public minimumDepositTime;
 
     address public VADER;
     address public VAULT;
     address public DAO;
     address public UTILS;
 
-    mapping(address => bool) public isMember; // Is Member
-    mapping(address => uint256) public mapMember_deposit;
-    mapping(address => uint256) public mapMember_lastTime;
+    mapping(address => bool) private _isMember; // Is Member
+    mapping(address => uint256) private mapMember_deposit;
+    mapping(address => uint256) private mapMember_lastTime;
 
     // Events
-    event MemberDeposits(address indexed member, uint256 amount, uint256 totalFunds);
+    event MemberDeposits(address indexed member, uint256 newDeposit, uint256 totalDeposit, uint256 totalFunds);
     event MemberWithdraws(address indexed member, uint256 amount, uint256 totalFunds);
-    event MemberHarvests(address indexed member, uint256 payment);
+    event MemberHarvests(address indexed member, uint256 amount);
 
     // Only DAO can execute
     modifier onlyDAO() {
@@ -50,18 +49,15 @@ contract USDV is iERC20 {
     //=====================================CREATION=========================================//
     // Constructor
     constructor(address _vader, address _utils) public {
-        name = 'USD - VADER PROTOCOL';
-        symbol = 'USDv';
+        name = 'VADER STABLE DOLLAR';
+        symbol = 'VSD';
         decimals = 18;
-        one = 10 ** decimals;
         totalSupply = 0;
         DAO = msg.sender;
         VADER = _vader;
         UTILS = _utils;
-        currentEra = 1;
-        secondsPerEra = 1; //86400;
         erasToEarn = 100;
-        nextEraTime = now + secondsPerEra;
+        minimumDepositTime = 1;
     }
 
     // Can set vault
@@ -142,59 +138,53 @@ contract USDV is iERC20 {
    //======================================INCENTIVES========================================//
     // Internal - Update incentives function
     function _checkIncentives() private {
-        if ((now >= nextEraTime)) {                                 // If new Era
-            currentEra += 1;                                        // Increment Era
-            nextEraTime = now + secondsPerEra;                      // Set next Era time
+        if (now >= iVADER(VADER).nextEraTime()) {                  // If new Era
             uint _balance = iERC20(VADER).balanceOf(address(this)); // Get spare VADER
-            uint _USDVShare = _twothirds(_balance);                 // Get 2/3rds
-            _convert(_USDVShare);                                   // Convert it
-            iVAULT(VAULT).pullIncentives(iERC20(VADER).balanceOf(address(this)), _USDVShare.div(2));                         // Pull incentives over
+            uint _VSDShare = _twothirds(_balance);                 // Get 2/3rds
+            _convert(_VSDShare);                                   // Convert it
+            iVAULT(VAULT).pullIncentives(iERC20(VADER).balanceOf(address(this)), _VSDShare.div(2));                         // Pull incentives over
         }
     }
     
     //======================================ASSET MINTING========================================//
-    // VADER Holders to convert to USDv
+    // VADER Holders to convert to VSD
     function convert(uint amount) public returns(uint convertAmount) {
-        require(iERC20(VADER).transferTo(address(this), amount));
-        iERC20(VADER).burn(amount);
-        convertAmount = iVAULT(VAULT).getUSDVAmount(amount);
-        _mint(msg.sender, convertAmount);
+        require(iERC20(VADER).transferTo(address(this), amount));   // Get funds
+        convertAmount = _convert(amount);                           // Get conversion amount, mint here
+        _deposit(msg.sender, convertAmount);                        // Deposit for member in vault
         return convertAmount;
     }
-
     // Internal convert
-    function _convert(uint amount) internal {
+    function _convert(uint amount) internal returns(uint _convertAmount){
         iERC20(VADER).burn(amount);
-        uint _convertAmount = iVAULT(VAULT).getUSDVAmount(amount);
+        _convertAmount = iVAULT(VAULT).getVSDAmount(amount);
         _mint(address(this), _convertAmount);
+        return _convertAmount;
     }
-    //======================================USDV DEPOSITS========================================//
-    // USDV holders to deposit for Interest Payments
+    //======================================VSD DEPOSITS========================================//
+    // VSD holders to deposit for Interest Payments
     function deposit(uint amount) public {
         depositForMember(msg.sender, amount);
     }
     // Wrapper for contracts
     function depositForMember(address member, uint amount) public {
         require(transferTo(address(this), amount));
-        if (!isMember[member]) {
-            mapMember_lastTime[member] = now;
-            isMember[member] = true;
-        }
-        mapMember_deposit[member] = mapMember_deposit[member].add(amount); // Record balance for member
-        totalFunds = totalFunds.add(amount);
-        emit MemberDeposits(member, amount, totalFunds);
+        _deposit(member, amount);
     }
-
     // Harvest, then re-invest
     function harvestAndDeposit() public {
         address member = msg.sender;
-        _checkIncentives(); //
         uint _payment = calcCurrentPayment(member);
-        mapMember_lastTime[member] = now;
-        mapMember_deposit[member] = mapMember_deposit[member].add(_payment); // Record balance for member
-        totalFunds = totalFunds.add(_payment);
-        emit MemberHarvests(member, _payment);
-        emit MemberDeposits(member, _payment, totalFunds);
+        _deposit(member, _payment);
+    }
+    function _deposit(address _member, uint _amount) internal {
+        if (!isMember(_member)) {
+            _isMember[_member] = true;
+        }
+        mapMember_lastTime[_member] = now;
+        mapMember_deposit[_member] = mapMember_deposit[_member].add(_amount); // Record balance for member
+        totalFunds = totalFunds.add(_amount);
+        emit MemberDeposits(_member, _amount, mapMember_deposit[_member], totalFunds);
     }
 
     // Harvest, get rewards immediately
@@ -208,41 +198,66 @@ contract USDV is iERC20 {
 
     // Get the payment owed for a member
     function calcCurrentPayment(address member) public view returns(uint){
-        uint _secondsSinceClaim = now.sub(mapMember_lastTime[member]); // Get time since last claim
-        uint _share = calcPayment(member);    // get share of rewards for member
-        uint _reward = _share.mul(_secondsSinceClaim).div(secondsPerEra);    // Get owed amount, based on per-day rates
-        uint _reserve = reserveUSDV();
+        uint _secondsSinceClaim = now.sub(mapMember_lastTime[member]);      // Get time since last claim
+        uint _share = calcPayment(member);                                  // Get share of rewards for member
+        uint _reward = _share.mul(_secondsSinceClaim).div(iVADER(VADER).secondsPerEra());   // Get owed amount, based on per-day rates
+        uint _reserve = reserveVSD();
         if(_reward >= _reserve) {
-            _reward = _reserve; // Send full reserve if the last person
+            _reward = _reserve;                                             // Send full reserve if the last
         }
         return _reward;
     }
 
     function calcPayment(address member) public view returns(uint){
         uint _balance = mapMember_deposit[member];
-        uint _reserve = reserveUSDV().div(erasToEarn); // Aim to deplete reserve over a number of days
-        return iUTILS(UTILS).calcShare(_balance, totalFunds, _reserve); // Get member's share of that
+        uint _reserve = reserveVSD().div(erasToEarn);                          // Deplete reserve over a number of days
+        return iUTILS(UTILS).calcShare(_balance, totalFunds, _reserve);         // Get member's share of that
     }
 
-    // Member withdraws 
-    function withdraw(uint basisPoints) public {
-        address member = msg.sender;
-        harvestAndDeposit(); // harvest first
-        uint _amount = (mapMember_deposit[member].mul(basisPoints)).div(10000); // In Basis Points
-        mapMember_deposit[member] = mapMember_deposit[member].sub(_amount); // reduce for member
-        totalFunds = totalFunds.sub(_amount); // reduce for total
-        _transfer(address(this), member, _amount);
-        emit MemberWithdraws(member, _amount, totalFunds);
+    // Members to withdraw to VSD
+    function withdrawToVSD(uint basisPoints) public returns(uint redeemedAmount) {
+        address _member = msg.sender;
+        redeemedAmount = _processWithdraw(_member, basisPoints);                         // get VSD to withdraw
+        _transfer(address(this), msg.sender, redeemedAmount);                    // Forward to member
+        return redeemedAmount;
     }
+    // Members to withdraw to VADER
+    function withdrawToVADER(uint basisPoints) public returns(uint redeemedAmount) {
+        address _member = msg.sender;
+        uint _withdrawnAmount = _processWithdraw(_member, basisPoints);              // get VSD to withdraw
+        _transfer(address(this), VADER, _withdrawnAmount);                      // send to VADER
+        redeemedAmount = iVADER(VADER).redeem();                                // Vader burns VSD to VADER, sends back
+        iERC20(VADER).transfer(_member, redeemedAmount);                        // Forward to member
+        return redeemedAmount;
+    }
+    function _processWithdraw(address _member, uint basisPoints) internal returns(uint _amount) {
+        require(now.sub(mapMember_lastTime[_member]) >= minimumDepositTime, "DepositTime");    // stops attacks
+        harvestAndDeposit();                                                    // harvest first
+        _amount = (mapMember_deposit[_member].mul(basisPoints)).div(10000);     // In Basis Points
+        mapMember_deposit[_member] = mapMember_deposit[_member].sub(_amount);   // reduce for member
+        totalFunds = totalFunds.sub(_amount);                                   // reduce for total
+        emit MemberWithdraws(_member, _amount, totalFunds);
+        return _amount;
+    }
+
 
     //============================== HELPERS ================================//
 
-    function reserveUSDV() public view returns(uint){
+    function reserveVSD() public view returns(uint){
         return balanceOf(address(this)).sub(totalFunds);
     }
 
     function _twothirds(uint _amount) internal pure returns(uint){
         return (_amount.mul(2)).div(3);
+    }
+    function getMemberDeposit(address member) public view returns(uint){
+        return mapMember_deposit[member];
+    }
+    function getMemberLastTime(address member) public view returns(uint){
+        return mapMember_lastTime[member];
+    }
+    function isMember(address member) public view returns(bool){
+        return _isMember[member];
     }
 
 }

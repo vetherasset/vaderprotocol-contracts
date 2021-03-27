@@ -12,13 +12,13 @@ contract Vault {
 
     // Parameters
     uint256 one = 10**18;
-    uint256 public reserveVDR;
-    uint256 public reserveUSDV;
+    uint256 public reserveVADER;
+    uint256 public reserveVSD;
     uint256 public rewardReductionFactor;
     uint256 public timeForFullProtection;
     
     address public VADER;
-    address public USDV;
+    address public VSD;
     address public UTILS;
     address public DAO;
     address[] public arrayAnchors;
@@ -50,7 +50,7 @@ contract Vault {
     // Constructor
     constructor(address _vader, address _usdv, address _utils) public {
         VADER = _vader;
-        USDV = _usdv;
+        VSD = _usdv;
         UTILS = _utils;
         DAO = msg.sender;
         rewardReductionFactor = 100;
@@ -61,18 +61,18 @@ contract Vault {
 
     function addLiquidity(address base, uint256 inputBase, address token, uint256 inputToken) public returns(uint liquidityUnits){
         address member = msg.sender;
-        require(token != USDV);
+        require(token != VSD);
         uint _actualInputBase;
         if(base == VADER){
             if(!isAnchor(token)){
                 _isAnchor[token] = true;
             }
             _actualInputBase = getToken(VADER, inputBase);
-        } else if (base == USDV) {
+        } else if (base == VSD) {
             if(!isAsset(token)){
                 _isAsset[token] = true;
             }
-            _actualInputBase = getToken(USDV, inputBase);
+            _actualInputBase = getToken(VSD, inputBase);
         }
         uint _actualInputToken = getToken(token, inputToken);
         liquidityUnits = iUTILS(UTILS).calcLiquidityUnits(_actualInputBase, mapToken_baseAmount[token], _actualInputToken, mapToken_tokenAmount[token], mapToken_Units[token]);
@@ -87,7 +87,7 @@ contract Vault {
 
     function removeLiquidity(address base, address token, uint basisPoints) public returns (uint outputBase, uint outputToken) {
         address member = msg.sender;
-        require(base == USDV || base == VADER);
+        require(base == VSD || base == VADER);
         uint _units = iUTILS(UTILS).calcPart(basisPoints, mapTokenMember_Units[token][member]);
         outputBase = iUTILS(UTILS).calcShare(_units, mapToken_Units[token], mapToken_baseAmount[token]);
         outputToken = iUTILS(UTILS).calcShare(_units, mapToken_Units[token], mapToken_tokenAmount[token]);
@@ -95,14 +95,15 @@ contract Vault {
         mapTokenMember_Units[token][member] = mapTokenMember_Units[token][member].sub(_units);
         mapToken_baseAmount[token] = mapToken_baseAmount[token].sub(outputBase);
         mapToken_tokenAmount[token] = mapToken_tokenAmount[token].sub(outputToken);
-        removeDepositData(member, token, outputBase, outputToken); 
         uint _protection = getILProtection(member, base, token, basisPoints);
+        outputBase = outputBase.add(_protection);
+        removeDepositData(member, token, outputBase, outputToken); 
         if(base == VADER){
-            reserveVDR = reserveVDR.sub(_protection);
-            iERC20(VADER).transfer(member, outputBase.add(_protection));
+            reserveVADER = reserveVADER.sub(_protection);
+            iERC20(VADER).transfer(member, outputBase);
         } else {
-            reserveUSDV = reserveUSDV.sub(_protection);
-            iERC20(USDV).transfer(member, outputBase.add(_protection));
+            reserveVSD = reserveVSD.sub(_protection);
+            iERC20(VSD).transfer(member, outputBase);
         }
         iERC20(token).transfer(member, outputToken);
         emit RemoveLiquidity(member, base, outputBase, token, outputToken, _units, mapToken_Units[token]);
@@ -129,14 +130,14 @@ contract Vault {
         return one;
     }
 
-    // returns the correct amount of Vader for an input of USDv
-    function getVDRAmount(uint USDvAmount) public view returns (uint vaderAmount){
+    // returns the correct amount of Vader for an input of VSD
+    function getVADERAmount(uint VSDAmount) public view returns (uint vaderAmount){
         uint _price = getAnchorPrice();
-        return (_price.mul(USDvAmount)).div(one);
+        return (_price.mul(VSDAmount)).div(one);
     }
 
-    // returns the correct amount of Vader for an input of USDv
-    function getUSDVAmount(uint vaderAmount) public view returns (uint USDvAmount){
+    // returns the correct amount of Vader for an input of VSD
+    function getVSDAmount(uint vaderAmount) public view returns (uint VSDAmount){
         uint _price = getAnchorPrice();
         return (vaderAmount.mul(one)).div(_price);
     }
@@ -147,9 +148,9 @@ contract Vault {
     function swap(address inputToken, uint inputAmount, address outputToken) public returns (uint outputAmount){
         uint _actualInputAmount = getToken(inputToken, inputAmount);
         if(inputToken == VADER){
-            outputAmount = swapFromVDR(inputToken, _actualInputAmount, outputToken);
-        } else if (inputToken == USDV) {
-            outputAmount = swapFromUSDV(_actualInputAmount, outputToken);
+            outputAmount = swapFromVADER(inputToken, _actualInputAmount, outputToken);
+        } else if (inputToken == VSD) {
+            outputAmount = swapFromVSD(_actualInputAmount, outputToken);
         } else if (isAsset(inputToken)) {
             outputAmount = swapFromAsset(inputToken, _actualInputAmount, outputToken);
         } else if (isAnchor(inputToken)) {
@@ -158,23 +159,23 @@ contract Vault {
         iERC20(outputToken).transfer(msg.sender, outputAmount);
     }
 
-    function swapFromVDR(address inputToken, uint inputAmount, address outputToken) public returns (uint outputAmount){
-        // VDR -> USDv
-        // VDR -> USDv -> Asset
-        // VDR -> Anchor
-        if (outputToken == USDV) {
-            outputAmount = swapToUSDV(inputToken, inputAmount);
+    function swapFromVADER(address inputToken, uint inputAmount, address outputToken) public returns (uint outputAmount){
+        // VADER -> VSD
+        // VADER -> VSD -> Asset
+        // VADER -> Anchor
+        if (outputToken == VSD) {
+            outputAmount = swapToVSD(inputToken, inputAmount);
         } else if (isAsset(outputToken)) {
-            uint _outputAmount = swapToUSDV(inputToken, inputAmount);
+            uint _outputAmount = swapToVSD(inputToken, inputAmount);
             outputAmount = swapToAsset(outputToken, _outputAmount);
         } else if (isAnchor(outputToken)) {
             outputAmount = swapToAnchor(outputToken, inputAmount);
         } else {}
     }
-    function swapFromUSDV(uint inputAmount, address outputToken) public returns (uint outputAmount){
-        // USDv -> VDR
-        // USDv -> Asset
-        // USDv -> VDR -> Anchor
+    function swapFromVSD(uint inputAmount, address outputToken) public returns (uint outputAmount){
+        // VSD -> VADER
+        // VSD -> Asset
+        // VSD -> VADER -> Anchor
         if (outputToken == VADER) {
             outputAmount = swapToAsset(outputToken, inputAmount);
         } else if (isAsset(outputToken)) {
@@ -185,37 +186,37 @@ contract Vault {
         } else {}
     }
     function swapFromAsset(address inputToken, uint inputAmount, address outputToken) public returns (uint outputAmount){
-        // Asset -> USDv
-        // Asset -> USDv -> VDR
-        // Asset -> USDv -> VDR -> Anchor
-        if (outputToken == USDV) {
-            outputAmount = swapToUSDV(inputToken, inputAmount);
+        // Asset -> VSD
+        // Asset -> VSD -> VADER
+        // Asset -> VSD -> VADER -> Anchor
+        if (outputToken == VSD) {
+            outputAmount = swapToVSD(inputToken, inputAmount);
         } else if (isAsset(outputToken)) {
-            uint _outputAmount = swapToUSDV(inputToken, inputAmount);
+            uint _outputAmount = swapToVSD(inputToken, inputAmount);
             outputAmount = swapToVADER(outputToken, _outputAmount);
         } else if (isAnchor(outputToken)) {
-            uint _outputAmount1 = swapToUSDV(inputToken, inputAmount);
+            uint _outputAmount1 = swapToVSD(inputToken, inputAmount);
             uint _outputAmount2 = swapToAsset(VADER, _outputAmount1);
             outputAmount = swapToAnchor(outputToken, _outputAmount2);
         } else {}
     }
     function swapFromAnchor(address inputToken, uint inputAmount, address outputToken) public returns (uint outputAmount){
-        // Anchor -> VDR
-        // Anchor -> VDR -> USDv
-        // Anchor -> VDR -> USDv -> Asset
-        if (outputToken == USDV) {
+        // Anchor -> VADER
+        // Anchor -> VADER -> VSD
+        // Anchor -> VADER -> VSD -> Asset
+        if (outputToken == VSD) {
             outputAmount = swapToVADER(inputToken, inputAmount);
         } else if (isAsset(outputToken)) {
             uint _outputAmount = swapToVADER(inputToken, inputAmount);
-            outputAmount = swapToUSDV(outputToken, _outputAmount);
+            outputAmount = swapToVSD(outputToken, _outputAmount);
         } else if (isAnchor(outputToken)) {
             uint _outputAmount1 = swapToVADER(inputToken, inputAmount);
-            uint _outputAmount2 = swapToUSDV(VADER, _outputAmount1);
+            uint _outputAmount2 = swapToVSD(VADER, _outputAmount1);
             outputAmount = swapToAsset(outputToken, _outputAmount2);
         } else {}
     }
 
-    function swapToUSDV(address inputToken, uint inputAmount) public returns (uint outputAmount){
+    function swapToVSD(address inputToken, uint inputAmount) public returns (uint outputAmount){
         outputAmount = iUTILS(UTILS).calcSwapOutput(inputAmount, mapToken_tokenAmount[inputToken], mapToken_baseAmount[inputToken]);
         mapToken_tokenAmount[inputToken] = mapToken_tokenAmount[inputToken].add(inputAmount);
         mapToken_baseAmount[inputToken] = mapToken_baseAmount[inputToken].sub(outputAmount).add(getRewardShare(inputToken));
@@ -245,13 +246,13 @@ contract Vault {
     function getRewardShare(address token) public view returns (uint rewardShare){
         if (isAsset(token)) {
             uint _baseAmount = mapToken_baseAmount[token];
-            uint _totalUSDV = iERC20(USDV).balanceOf(address(this)).sub(reserveUSDV);
-            uint _share = iUTILS(UTILS).calcShare(_baseAmount, _totalUSDV, reserveUSDV);
+            uint _totalVSD = iERC20(VSD).balanceOf(address(this)).sub(reserveVSD);
+            uint _share = iUTILS(UTILS).calcShare(_baseAmount, _totalVSD, reserveVSD);
             rewardShare = getReducedShare(_share);
         } else if(isAnchor(token)) {
             uint _baseAmount = mapToken_baseAmount[token];
-            uint _totalVDR = iERC20(VADER).balanceOf(address(this)).sub(reserveVDR);
-            uint _share = iUTILS(UTILS).calcShare(_baseAmount, _totalVDR, reserveVDR);
+            uint _totalVADER = iERC20(VADER).balanceOf(address(this)).sub(reserveVADER);
+            uint _share = iUTILS(UTILS).calcShare(_baseAmount, _totalVADER, reserveVADER);
             rewardShare = getReducedShare(_share);
         }
         return rewardShare;
@@ -261,11 +262,11 @@ contract Vault {
         return iUTILS(UTILS).calcShare(1, rewardReductionFactor, amount);
     }
 
-    function pullIncentives(uint256 shareVDR, uint256 shareUSDV) public {
-        // iERC20(VADER).transferTo(address(this), shareVDR);
-        // iERC20(USDV).transferTo(address(this), shareUSDV);
-        // reserveVDR = reserveVDR.add(shareVDR);
-        // reserveUSDV = reserveUSDV.add(shareUSDV);
+    function pullIncentives(uint256 shareVADER, uint256 shareVSD) public {
+        // iERC20(VADER).transferTo(address(this), shareVADER);
+        // iERC20(VSD).transferTo(address(this), shareVSD);
+        // reserveVADER = reserveVADER.add(shareVADER);
+        // reserveVSD = reserveVSD.add(shareVSD);
     }
 
     //=================================IMPERMANENT LOSS=====================================//
@@ -282,23 +283,15 @@ contract Vault {
     function getILProtection(address member, address base, address token, uint basisPoints) public view returns(uint protection) {
         protection = getProtection(member, token, basisPoints, getCoverage(member, token));
         if(base == VADER){
-            if(protection >= reserveVDR){
-                protection = reserveVDR; // In case reserve is running out
+            if(protection >= reserveVADER){
+                protection = reserveVADER; // In case reserve is running out
             }
         } else {
-            if(protection >= reserveUSDV){
-                protection = reserveUSDV; // In case reserve is running out
+            if(protection >= reserveVSD){
+                protection = reserveVSD; // In case reserve is running out
             }
         }
         return protection;
-    }
-
-    function getCoverage(address member, address token) public view returns (uint256){
-        uint _B0 = mapMemberToken_depositBase[member][token]; uint _T0 = mapMemberToken_depositToken[member][token];
-        uint _units = mapTokenMember_Units[token][member];
-        uint _B1 = iUTILS(UTILS).calcShare(_units, mapToken_Units[token], mapToken_baseAmount[token]);
-        uint _T1 = iUTILS(UTILS).calcShare(_units, mapToken_Units[token], mapToken_tokenAmount[token]);
-        return computeCoverage(_B0, _T0, _B1, _T1);
     }
 
     function getProtection(address member, address token, uint basisPoints, uint coverage) public view returns(uint protection){
@@ -310,14 +303,14 @@ contract Vault {
         }
         return iUTILS(UTILS).calcPart(basisPoints, protection);
     }
-    function computeCoverage(uint _B0, uint _T0, uint _B1, uint _T1) public pure returns(uint coverage){
-        uint _depositValue = _B0.add((_T0.mul(_B1)).div(_T1)); // B0+(T0*B1/T1)
-        uint _redemptionValue = _B1.add((_T1.mul(_B1)).div(_T1)); // B1+(T1*B1/T1)
-        if(_redemptionValue <= _depositValue){
-            coverage = _depositValue.sub(_redemptionValue);
-        }
-        return coverage;
+    function getCoverage(address member, address token) public view returns (uint256){
+        uint _B0 = mapMemberToken_depositBase[member][token]; uint _T0 = mapMemberToken_depositToken[member][token];
+        uint _units = mapTokenMember_Units[token][member];
+        uint _B1 = iUTILS(UTILS).calcShare(_units, mapToken_Units[token], mapToken_baseAmount[token]);
+        uint _T1 = iUTILS(UTILS).calcShare(_units, mapToken_Units[token], mapToken_tokenAmount[token]);
+        return iUTILS(UTILS).calcCoverage(_B0, _T0, _B1, _T1);
     }
+    
     
     //======================================LENDING=========================================//
     
@@ -341,7 +334,7 @@ contract Vault {
 
     // Safe transferFrom in case token charges transfer fees
     function getToken(address _token, uint _amount) internal returns(uint safeAmount) {
-        if(_token == VADER || _token == USDV){
+        if(_token == VADER || _token == VSD){
             safeAmount = _amount;
             iERC20(_token).transferTo(address(this), _amount);
         } else {

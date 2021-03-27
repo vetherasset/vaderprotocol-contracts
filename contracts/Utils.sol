@@ -228,5 +228,13 @@ contract Utils {
         uint part5 = U.mul(U).mul(U);
         return numerator.div(part5);
     }
+    function calcCoverage(uint _B0, uint _T0, uint _B1, uint _T1) public pure returns(uint coverage){
+        uint _depositValue = _B0.add((_T0.mul(_B1)).div(_T1)); // B0+(T0*B1/T1)
+        uint _redemptionValue = _B1.add((_T1.mul(_B1)).div(_T1)); // B1+(T1*B1/T1)
+        if(_redemptionValue <= _depositValue){
+            coverage = _depositValue.sub(_redemptionValue);
+        }
+        return coverage;
+    }
 
 }
