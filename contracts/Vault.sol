@@ -39,6 +39,7 @@ contract Vault {
     // Events
     event AddLiquidity(address indexed member, address indexed base, uint256 baseAmount, address indexed token, uint256 tokenAmount, uint256 liquidityUnits);
     event RemoveLiquidity(address indexed member, address indexed base, uint256 baseAmount, address indexed token, uint256 tokenAmount, uint256 liquidityUnits, uint256 totalUnits);
+    event Swap(address indexed member, address indexed inputToken, uint256 inputAmount, address indexed outputToken, uint256 outputAmount, uint256 swapFee, uint256 poolReward);
 
     // Only DAO can execute
     modifier onlyDAO() {
@@ -53,7 +54,7 @@ contract Vault {
         VSD = _usdv;
         UTILS = _utils;
         DAO = msg.sender;
-        rewardReductionFactor = 100;
+        rewardReductionFactor = 1;
         timeForFullProtection = 100;//8640000; //100 days
     }
 
@@ -147,6 +148,7 @@ contract Vault {
     
     function swap(address inputToken, uint inputAmount, address outputToken) public returns (uint outputAmount){
         uint _actualInputAmount = getToken(inputToken, inputAmount);
+        uint swapFee; uint poolReward;
         if(inputToken == VADER){
             outputAmount = swapFromVADER(inputToken, _actualInputAmount, outputToken);
         } else if (inputToken == VSD) {
@@ -216,28 +218,40 @@ contract Vault {
         } else {}
     }
 
-    function swapToVSD(address inputToken, uint inputAmount) public returns (uint outputAmount){
+    function swapToVSD(address inputToken, uint inputAmount) public returns (uint outputAmount) {
         outputAmount = iUTILS(UTILS).calcSwapOutput(inputAmount, mapToken_tokenAmount[inputToken], mapToken_baseAmount[inputToken]);
+        uint _swapFee = iUTILS(UTILS).calcSwapFee(inputAmount, mapToken_tokenAmount[inputToken], mapToken_baseAmount[inputToken]);
+        uint _poolReward = getRewardShare(inputToken);
         mapToken_tokenAmount[inputToken] = mapToken_tokenAmount[inputToken].add(inputAmount);
-        mapToken_baseAmount[inputToken] = mapToken_baseAmount[inputToken].sub(outputAmount).add(getRewardShare(inputToken));
+        mapToken_baseAmount[inputToken] = mapToken_baseAmount[inputToken].sub(outputAmount).add(_poolReward);
+        emit Swap(msg.sender, inputToken, inputAmount, VSD, outputAmount, _swapFee, _poolReward);
         return outputAmount;
     }
     function swapToAsset(address outputToken, uint inputAmount) public returns (uint outputAmount){
         outputAmount = iUTILS(UTILS).calcSwapOutput(inputAmount, mapToken_baseAmount[outputToken], mapToken_tokenAmount[outputToken]);
-        mapToken_baseAmount[outputToken] = mapToken_baseAmount[outputToken].add(inputAmount).add(getRewardShare(outputToken));
+        uint _swapFee = iUTILS(UTILS).calcSwapFee(inputAmount, mapToken_baseAmount[outputToken], mapToken_tokenAmount[outputToken]);
+        uint _poolReward = getRewardShare(outputToken);
+        mapToken_baseAmount[outputToken] = mapToken_baseAmount[outputToken].add(inputAmount).add(_poolReward);
         mapToken_tokenAmount[outputToken] = mapToken_tokenAmount[outputToken].sub(outputAmount);
+        emit Swap(msg.sender, VSD, inputAmount, outputToken, outputAmount, _swapFee, _poolReward);
         return outputAmount;
     }
     function swapToVADER(address inputToken, uint inputAmount) public returns (uint outputAmount){
         outputAmount = iUTILS(UTILS).calcSwapOutput(inputAmount, mapToken_tokenAmount[inputToken], mapToken_baseAmount[inputToken]);
+        uint _swapFee = iUTILS(UTILS).calcSwapFee(inputAmount, mapToken_tokenAmount[inputToken], mapToken_baseAmount[inputToken]);
+        uint _poolReward = getRewardShare(inputToken);
         mapToken_tokenAmount[inputToken] = mapToken_tokenAmount[inputToken].add(inputAmount);
-        mapToken_baseAmount[inputToken] = mapToken_baseAmount[inputToken].sub(outputAmount).add(getRewardShare(inputToken));
+        mapToken_baseAmount[inputToken] = mapToken_baseAmount[inputToken].sub(outputAmount).add(_poolReward);
+        emit Swap(msg.sender, inputToken, inputAmount, VADER, outputAmount, _swapFee, _poolReward);
         return outputAmount;
     }
     function swapToAnchor(address outputToken, uint inputAmount) public returns (uint outputAmount){
         outputAmount = iUTILS(UTILS).calcSwapOutput(inputAmount, mapToken_baseAmount[outputToken], mapToken_tokenAmount[outputToken]);
-        mapToken_baseAmount[outputToken] = mapToken_baseAmount[outputToken].add(inputAmount).add(getRewardShare(outputToken));
+        uint _swapFee = iUTILS(UTILS).calcSwapFee(inputAmount, mapToken_baseAmount[outputToken], mapToken_tokenAmount[outputToken]);
+        uint _poolReward = getRewardShare(outputToken);
+        mapToken_baseAmount[outputToken] = mapToken_baseAmount[outputToken].add(inputAmount).add(_poolReward);
         mapToken_tokenAmount[outputToken] = mapToken_tokenAmount[outputToken].sub(outputAmount);
+        emit Swap(msg.sender, VADER, inputAmount, outputToken, outputAmount, _swapFee, _poolReward);
         return outputAmount;
     }
 
