@@ -23,6 +23,8 @@ contract VSD is iERC20 {
 
     // Parameters
     uint256 public totalFunds;
+    uint256 public currentEra;
+    uint256 public nextEraTime;
     uint256 public erasToEarn;
     uint256 public minimumDepositTime;
 
@@ -56,6 +58,8 @@ contract VSD is iERC20 {
         DAO = msg.sender;
         VADER = _vader;
         UTILS = _utils;
+        currentEra = 1;
+        nextEraTime = now + iVADER(VADER).secondsPerEra();
         erasToEarn = 100;
         minimumDepositTime = 1;
     }
@@ -138,7 +142,9 @@ contract VSD is iERC20 {
    //======================================INCENTIVES========================================//
     // Internal - Update incentives function
     function _checkIncentives() private {
-        if (now >= iVADER(VADER).nextEraTime()) {                  // If new Era
+        if (now >= nextEraTime) {                  // If new Era
+            currentEra += 1;                                                               // Increment Era
+            nextEraTime = now + iVADER(VADER).secondsPerEra(); 
             uint _balance = iERC20(VADER).balanceOf(address(this)); // Get spare VADER
             uint _VSDShare = _twothirds(_balance);                 // Get 2/3rds
             _convert(_VSDShare);                                   // Convert it

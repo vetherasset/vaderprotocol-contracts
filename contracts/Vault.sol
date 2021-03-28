@@ -5,7 +5,7 @@ pragma solidity ^0.6.8;
 import "./iERC20.sol";
 import "./SafeMath.sol";
 import "./iUTILS.sol";
-
+import "@nomiclabs/buidler/console.sol";
     //======================================VADER=========================================//
 contract Vault {
     using SafeMath for uint256;
@@ -54,7 +54,7 @@ contract Vault {
         UTILS = _utils;
         DAO = msg.sender;
         rewardReductionFactor = 100;
-        timeForFullProtection = 8640000; //100 days
+        timeForFullProtection = 100;//8640000; //100 days
     }
 
     //====================================LIQUIDITY=========================================//
@@ -263,10 +263,10 @@ contract Vault {
     }
 
     function pullIncentives(uint256 shareVADER, uint256 shareVSD) public {
-        // iERC20(VADER).transferTo(address(this), shareVADER);
-        // iERC20(VSD).transferTo(address(this), shareVSD);
-        // reserveVADER = reserveVADER.add(shareVADER);
-        // reserveVSD = reserveVSD.add(shareVSD);
+        iERC20(VADER).transferTo(address(this), shareVADER);
+        iERC20(VSD).transferTo(address(this), shareVSD);
+        reserveVADER = reserveVADER.add(shareVADER);
+        reserveVSD = reserveVSD.add(shareVSD);
     }
 
     //=================================IMPERMANENT LOSS=====================================//
@@ -274,6 +274,7 @@ contract Vault {
     function addDepositData(address member, address token, uint256 amountBase, uint256 amountToken) internal {
         mapMemberToken_depositBase[member][token] = mapMemberToken_depositBase[member][token].add(amountBase);
         mapMemberToken_depositToken[member][token] = mapMemberToken_depositToken[member][token].add(amountToken);
+        mapMemberToken_lastDeposited[member][token] = now;
     }
     function removeDepositData(address member, address token, uint256 amountBase, uint256 amountToken) internal {
         mapMemberToken_depositBase[member][token] = mapMemberToken_depositBase[member][token].sub(amountBase);
@@ -295,11 +296,11 @@ contract Vault {
     }
 
     function getProtection(address member, address token, uint basisPoints, uint coverage) public view returns(uint protection){
-        uint _duration = now - mapMemberToken_lastDeposited[member][token];
+        uint _duration = now.sub(mapMemberToken_lastDeposited[member][token]);
         if(_duration <= timeForFullProtection) {
-            protection = coverage;
+            protection = iUTILS(UTILS).calcShare(_duration, timeForFullProtection, coverage);
         } else {
-            protection = (_duration.mul(coverage)).div(timeForFullProtection);
+            protection = coverage;
         }
         return iUTILS(UTILS).calcPart(basisPoints, protection);
     }

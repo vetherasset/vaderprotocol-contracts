@@ -56,7 +56,7 @@ contract Vader is iERC20 {
         baseline = _1m;
         totalSupply = 0;
         maxSupply = 2 * _1m;
-        emissionCurve = 2048;
+        emissionCurve = 900;
         emitting = false;
         currentEra = 1;
         secondsPerEra = 1; //86400;
