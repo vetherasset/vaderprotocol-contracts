@@ -34,6 +34,40 @@
       "inputs": [
         {
           "internalType": "uint256",
+          "name": "_B0",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "_T0",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "_B1",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "_T1",
+          "type": "uint256"
+        }
+      ],
+      "name": "calcCoverage",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "coverage",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "pure",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
           "name": "b",
           "type": "uint256"
         },
