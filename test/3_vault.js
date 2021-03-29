@@ -18,6 +18,7 @@ function sleep(ms) {
 }
 
 var utils; var vader; var vether; var vsd; var vault; var anchor; var asset;
+var anchor0; var anchor1; var anchor2; var anchor3; var anchor4;  var anchor5; 
 var acc0; var acc1; var acc2; var acc3; var acc0; var acc5;
 const one = 10**18
 
@@ -34,7 +35,12 @@ before(async function() {
   vsd = await VSD.new(vader.address, utils.address);
   vault = await Vault.new(vader.address, vsd.address, utils.address);
   asset = await Asset.new();
-  anchor = await Anchor.new();
+  anchor0 = await Anchor.new();
+  anchor1 = await Anchor.new();
+  anchor2 = await Anchor.new();
+  anchor3 = await Anchor.new();
+  anchor4 = await Anchor.new();
+  anchor5 = await Anchor.new();
 
   console.log('acc0:', acc0)
   console.log('acc1:', acc1)
@@ -46,19 +52,40 @@ before(async function() {
   console.log('vault:', vault.address)
 
   await vsd.setVault(vault.address)
+  await utils.setVault(vault.address)
   expect(await vsd.VAULT()).to.equal(vault.address);
 
-  await vether.transfer(acc1, BN2Str(6006)) 
-  await anchor.transfer(acc1, BN2Str(2000))
-  await anchor.approve(vault.address, BN2Str(one), {from:acc1})
+  await vether.transfer(acc1, BN2Str(6407)) 
+  await anchor0.transfer(acc1, BN2Str(2000))
+  await anchor0.approve(vault.address, BN2Str(one), {from:acc1})
+  await anchor1.transfer(acc1, BN2Str(2000))
+  await anchor1.approve(vault.address, BN2Str(one), {from:acc1})
+  await anchor2.transfer(acc1, BN2Str(2000))
+  await anchor2.approve(vault.address, BN2Str(one), {from:acc1})
+  await anchor3.transfer(acc1, BN2Str(2000))
+  await anchor3.approve(vault.address, BN2Str(one), {from:acc1})
+  await anchor4.transfer(acc1, BN2Str(2000))
+  await anchor4.approve(vault.address, BN2Str(one), {from:acc1})
+
+  await vether.approve(vader.address, '6400', {from:acc1})
+  await vader.upgrade(BN2Str(6400), {from:acc1}) 
+  await vault.addLiquidity(vader.address, '100', anchor0.address, '98', {from:acc1})
+  await vault.addLiquidity(vader.address, '100', anchor1.address, '99', {from:acc1})
+  await vault.addLiquidity(vader.address, '1000', anchor2.address, '1000', {from:acc1})
+  await vault.addLiquidity(vader.address, '100', anchor3.address, '101', {from:acc1})
+  await vault.addLiquidity(vader.address, '100', anchor4.address, '102', {from:acc1})
+  await vault.listAnchor(anchor0.address, {from:acc1})
+  await vault.listAnchor(anchor1.address, {from:acc1})
+  await vault.listAnchor(anchor2.address, {from:acc1})
+  await vault.listAnchor(anchor3.address, {from:acc1})
+  await vault.listAnchor(anchor4.address, {from:acc1})
+
   await asset.transfer(acc1, BN2Str(2000))
   await asset.approve(vault.address, BN2Str(one), {from:acc1})
 // acc  | VTH | VADER  | VSD | Anr  |  Ass |
 // vault|   0 |    0 |    0 |    0 |    0 |
 // acc1 |2002 |    0 |    0 | 2000 | 2000 |
 
-  await vether.approve(vader.address, '6000', {from:acc1})
-  await vader.upgrade(BN2Str(6000), {from:acc1}) 
   await vsd.convert(BN2Str(3000), {from:acc1})
   await vsd.withdrawToVSD('10000', {from:acc1})
 // acc  | VTH | VADER  | VSD | Anr  |  Ass |
@@ -79,18 +106,18 @@ describe("Deploy", function() {
 
 
 describe("Add liquidity", function() {
-  it("Should add anchor", async function() {
-    let tx = await vault.addLiquidity(vader.address, '1000', anchor.address, '1000', {from:acc1})
-    // console.log(BN2Str(tx.logs[0].args.baseAmount))
-    // console.log(BN2Str(tx.logs[0].args.tokenAmount))
-    // console.log(BN2Str(tx.logs[0].args.liquidityUnits))
-    // console.log(BN2Str(tx.logs[0].args.totalUnits))
+  // it("Should add anchor", async function() {
+  //   let tx = await vault.addLiquidity(vader.address, '1000', anchor0.address, '1000', {from:acc1})
+  //   // console.log(BN2Str(tx.logs[0].args.baseAmount))
+  //   // console.log(BN2Str(tx.logs[0].args.tokenAmount))
+  //   // console.log(BN2Str(tx.logs[0].args.liquidityUnits))
+  //   // console.log(BN2Str(tx.logs[0].args.totalUnits))
 
-    expect(BN2Str(await vault.mapToken_Units(anchor.address))).to.equal('1000');
-    expect(BN2Str(await vault.mapToken_baseAmount(anchor.address))).to.equal(BN2Str(1000));
-    expect(BN2Str(await vault.mapToken_tokenAmount(anchor.address))).to.equal('1000');
-    expect(BN2Str(await vault.mapTokenMember_Units(anchor.address, acc1))).to.equal('1000');
-  });
+  //   expect(BN2Str(await vault.mapToken_Units(anchor0.address))).to.equal('1000');
+  //   expect(BN2Str(await vault.mapToken_baseAmount(anchor0.address))).to.equal(BN2Str(1000));
+  //   expect(BN2Str(await vault.mapToken_tokenAmount(anchor0.address))).to.equal('1000');
+  //   expect(BN2Str(await vault.mapTokenMember_Units(anchor0.address, acc1))).to.equal('1000');
+  // });
   it("Should add asset vdr-vsd", async function() {
     let tx = await vault.addLiquidity(vsd.address, '1000', vader.address, '1000', {from:acc1})
     // console.log(BN2Str(tx.logs[0].args.baseAmount))
@@ -140,11 +167,11 @@ it("Swap to Asset", async function() {
 });
 
 it("Swap to Anchor", async function() {
-  let tx = await vault.swap(vader.address, '250', anchor.address, {from:acc1})
+  let tx = await vault.swap(vader.address, '250', anchor2.address, {from:acc1})
   expect(BN2Str(await vader.balanceOf(acc1))).to.equal('250');
-  expect(BN2Str(await vault.mapToken_baseAmount(anchor.address))).to.equal('1250');
-  expect(BN2Str(await vault.mapToken_tokenAmount(anchor.address))).to.equal('840');
-  expect(BN2Str(await anchor.balanceOf(acc1))).to.equal('1160');
+  expect(BN2Str(await vault.mapToken_baseAmount(anchor2.address))).to.equal('1250');
+  expect(BN2Str(await vault.mapToken_tokenAmount(anchor2.address))).to.equal('840');
+  expect(BN2Str(await anchor2.balanceOf(acc1))).to.equal('1160');
 });
 
 });
@@ -165,13 +192,13 @@ it("Swap to Asset", async function() {
 });
 
 it("Swap to Anchor", async function() {
-  let tx = await vault.swap(vsd.address, '250', anchor.address, {from:acc1})
+  let tx = await vault.swap(vsd.address, '250', anchor2.address, {from:acc1})
   expect(BN2Str(await vader.balanceOf(acc1))).to.equal('536');
   expect(BN2Str(await vault.mapToken_baseAmount(vader.address))).to.equal('1224');
   expect(BN2Str(await vault.mapToken_tokenAmount(vader.address))).to.equal('1017');
-  expect(BN2Str(await vault.mapToken_baseAmount(anchor.address))).to.equal('1447');
-  expect(BN2Str(await vault.mapToken_tokenAmount(anchor.address))).to.equal('742');
-  expect(BN2Str(await anchor.balanceOf(acc1))).to.equal('1258');
+  expect(BN2Str(await vault.mapToken_baseAmount(anchor2.address))).to.equal('1447');
+  expect(BN2Str(await vault.mapToken_tokenAmount(anchor2.address))).to.equal('742');
+  expect(BN2Str(await anchor2.balanceOf(acc1))).to.equal('1258');
 });
 
 

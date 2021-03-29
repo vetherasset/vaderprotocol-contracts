@@ -5,12 +5,14 @@ pragma experimental ABIEncoderV2;
 // Interfaces
 import "./iERC20.sol";
 import "./SafeMath.sol";
+import "./iVAULT.sol";
 
 contract Utils {
 
     using SafeMath for uint;
 
     uint256 private one = 10**18;
+    address public VAULT;
 
     // struct GlobalDetails {
     //     uint totalStaked;
@@ -36,6 +38,12 @@ contract Utils {
     // }
 
     constructor () public payable {
+    }
+        // Can set vault
+    function setVault(address _vault) public {
+        if(VAULT == address(0)){
+            VAULT = _vault;
+        }
     }
 
     // function getMemberShare(address token, address member) public view returns(uint baseAmt, uint tokenAmt){
@@ -114,15 +122,15 @@ contract Utils {
 
     //====================================PRICING====================================//
 
-//     function calcValueInBase(address token, uint amount) public view returns (uint value){
-//        address payable pool = getPool(token);
-//        return calcValueInBaseWithPool(pool, amount);
-//     }
+    function calcValueInBase(address token, uint amount) public view returns (uint){
+       (uint _baseAmt, uint _tokenAmt) = iVAULT(VAULT).getPoolAmounts(token);
+       return (amount.mul(_baseAmt)).div(_tokenAmt);
+    }
 
-//     function calcValueInToken(address token, uint amount) public view returns (uint value){
-//         address payable pool = getPool(token);
-//         return calcValueInTokenWithPool(pool, amount);
-//     }
+    function calcValueInToken(address token, uint amount) public view returns (uint){
+        (uint _baseAmt, uint _tokenAmt) = iVAULT(VAULT).getPoolAmounts(token);
+        return (amount.mul(_tokenAmt)).div(_baseAmt);
+    }
 
 //     function calcTokenPPinBase(address token, uint amount) public view returns (uint _output){
 //         address payable pool = getPool(token);
@@ -132,18 +140,6 @@ contract Utils {
 //     function calcBasePPinToken(address token, uint amount) public view returns (uint _output){
 //         address payable pool = getPool(token);
 //         return  calcValueInBaseWithPool(pool, amount);
-//     }
-
-//     function calcValueInBaseWithPool(address payable pool, uint amount) public view returns (uint value){
-//        uint _baseAmt = iVAULT(pool).baseAmt();
-//        uint _tokenAmt = iVAULT(pool).tokenAmt();
-//        return (amount.mul(_baseAmt)).div(_tokenAmt);
-//     }
-
-//     function calcValueInTokenWithPool(address payable pool, uint amount) public view returns (uint value){
-//         uint _baseAmt = iVAULT(pool).baseAmt();
-//         uint _tokenAmt = iVAULT(pool).tokenAmt();
-//         return (amount.mul(_tokenAmt)).div(_baseAmt);
 //     }
 
 //     function calcTokenPPinBaseWithPool(address payable pool, uint amount) public view returns (uint _output){

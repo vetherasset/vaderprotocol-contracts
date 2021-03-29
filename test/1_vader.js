@@ -43,7 +43,7 @@ describe("Deploy", function() {
     expect(BN2Str(await vader.decimals())).to.equal('18');
     expect(BN2Str(await vader.totalSupply())).to.equal('0');
     expect(BN2Str(await vader.maxSupply())).to.equal(BN2Str(2000000 * one));
-    expect(BN2Str(await vader.emissionCurve())).to.equal('2048');
+    expect(BN2Str(await vader.emissionCurve())).to.equal('900');
     expect(await vader.emitting()).to.equal(false);
     expect(BN2Str(await vader.currentEra())).to.equal('1');
     expect(BN2Str(await vader.secondsPerEra())).to.equal('1');
@@ -63,7 +63,7 @@ describe("Upgrade", function() {
     expect(BN2Str(await vader.totalSupply())).to.equal(BN2Str(1000));
     expect(BN2Str(await vether.balanceOf(acc1))).to.equal(BN2Str(0));
     expect(BN2Str(await vader.balanceOf(acc1))).to.equal(BN2Str(1000));
-    expect(BN2Str(await vader.getDailyEmission())).to.equal(BN2Str('0'));
+    expect(BN2Str(await vader.getDailyEmission())).to.equal(BN2Str('1'));
   });
 // acc  | VTH | VADER  |
 // acc0 |   0 |    0 |

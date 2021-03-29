@@ -5,4 +5,5 @@ interface iVAULT{
     function getAnchorPrice() external returns (uint);
     function getVSDAmount(uint) external view returns (uint);
     function getVADERAmount(uint) external view returns (uint);
+    function getPoolAmounts(address) external view returns(uint, uint);
 }
