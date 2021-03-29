@@ -7,7 +7,7 @@ import "./SafeMath.sol";
 import "./iUTILS.sol";
 import "./iVADER.sol";
 import "./iVAULT.sol";
-
+import "@nomiclabs/buidler/console.sol";
 
     //======================================VADER=========================================//
 contract VSD is iERC20 {
@@ -68,6 +68,8 @@ contract VSD is iERC20 {
     function setVault(address _vault) public {
         if(VAULT == address(0)){
             VAULT = _vault;
+            iERC20(VADER).approve(VAULT, uint(-1));
+            _approve(address(this), VAULT, uint(-1));
         }
     }
 

@@ -12,6 +12,7 @@ contract Vault {
 
     // Parameters
     uint256 one = 10**18;
+    uint256 _10k = 10000;
     uint256 public reserveVADER;
     uint256 public reserveVSD;
     uint256 public rewardReductionFactor;
@@ -22,6 +23,7 @@ contract Vault {
     address public UTILS;
     address public DAO;
     address[] public arrayAnchors;
+    uint256[] public arrayPrices;
 
     mapping(address => bool) _isMember;
     mapping(address => bool) _isAsset;
@@ -112,43 +114,70 @@ contract Vault {
     }
 
     //=====================================ANCHORS==========================================//
-     
-    function listAnchor(address anchor) public {
-        require(arrayAnchors.length <= 5);
-        arrayAnchors.push(anchor);
+
+    function listAnchor(address token) public {
+        require(arrayAnchors.length < 5);
+        require(isAnchor(token));
+        arrayAnchors.push(token);
+        arrayPrices.push(iUTILS(UTILS).calcValueInBase(token, one));
+        updateAnchorPrices();
     }
 
-    function replaceAnchor(address oldAnchor, address newAnchor) public {
-        // if baseAmount is greater than old base amount
-        // if price newAnchor <2%
-        // if price oldAnchor >5%
+    function replaceAnchor(address oldToken, address newToken) public {
+        require(isAnchor(newToken), "Not anchor");
+        require((mapToken_baseAmount[newToken] > mapToken_baseAmount[oldToken]), "Not deeper");
+        _requirePriceBounds(oldToken, 500, false);                              // if price oldToken >5%
+        _requirePriceBounds(newToken, 200, true);                               // if price newToken <2%
         // list/delist, add to arrayAnchors
+        for(uint i = 0; i<arrayAnchors.length; i++){
+            if(arrayAnchors[i] == oldToken){
+                arrayAnchors[i] = newToken;
+            }
+        }
+        updateAnchorPrices();
     }
 
-    // price of 1 VADER in USD
+    function _requirePriceBounds(address token, uint bound, bool inside) internal view {
+        uint _targetPrice = getAnchorPrice();
+        uint _testingPrice = iUTILS(UTILS).calcValueInBase(token, one);
+        uint _lower = iUTILS(UTILS).calcPart(_10k.sub(bound), _targetPrice);
+        uint _upper = (_targetPrice.mul(_10k.add(bound))).div(_10k);
+        if(inside){
+            require((_testingPrice >= _lower && _testingPrice <= _upper), "Not inside");
+        } else {
+            require((_testingPrice <= _lower || _testingPrice >= _upper), "Not outside");
+        }
+    }
+
+    // Anyone to update prices
+    function updateAnchorPrices() public {
+        for(uint i = 0; i<arrayAnchors.length; i++){
+            arrayPrices[i] = iUTILS(UTILS).calcValueInBase(arrayAnchors[i], one);
+        }
+    }
+
+    // Price of 1 VADER in USD
     function getAnchorPrice() public view returns (uint anchorPrice){
-        // get median of arrayAnchors
-        return one;
+        uint[] memory _sortedAnchorFeed = _sortArray(arrayPrices);  // Sort price array
+        return _sortedAnchorFeed[2];                                // Return the middle
     }
 
-    // returns the correct amount of Vader for an input of VSD
+    // The correct amount of Vader for an input of USDV
     function getVADERAmount(uint VSDAmount) public view returns (uint vaderAmount){
         uint _price = getAnchorPrice();
         return (_price.mul(VSDAmount)).div(one);
     }
 
-    // returns the correct amount of Vader for an input of VSD
+    // The correct amount of USDV for an input of VADER
     function getVSDAmount(uint vaderAmount) public view returns (uint VSDAmount){
         uint _price = getAnchorPrice();
         return (vaderAmount.mul(one)).div(_price);
     }
-
     
     //=======================================SWAP===========================================//
     
     function swap(address inputToken, uint inputAmount, address outputToken) public returns (uint outputAmount){
         uint _actualInputAmount = getToken(inputToken, inputAmount);
-        uint swapFee; uint poolReward;
         if(inputToken == VADER){
             outputAmount = swapFromVADER(inputToken, _actualInputAmount, outputToken);
         } else if (inputToken == VSD) {
@@ -216,6 +245,7 @@ contract Vault {
             uint _outputAmount2 = swapToVSD(VADER, _outputAmount1);
             outputAmount = swapToAsset(outputToken, _outputAmount2);
         } else {}
+        updateAnchorPrices();
     }
 
     function swapToVSD(address inputToken, uint inputAmount) public returns (uint outputAmount) {
@@ -251,6 +281,7 @@ contract Vault {
         uint _poolReward = getRewardShare(outputToken);
         mapToken_baseAmount[outputToken] = mapToken_baseAmount[outputToken].add(inputAmount).add(_poolReward);
         mapToken_tokenAmount[outputToken] = mapToken_tokenAmount[outputToken].sub(outputAmount);
+        updateAnchorPrices();
         emit Swap(msg.sender, VADER, inputAmount, outputToken, outputAmount, _swapFee, _poolReward);
         return outputAmount;
     }
@@ -277,8 +308,8 @@ contract Vault {
     }
 
     function pullIncentives(uint256 shareVADER, uint256 shareVSD) public {
-        iERC20(VADER).transferTo(address(this), shareVADER);
-        iERC20(VSD).transferTo(address(this), shareVSD);
+        iERC20(VADER).transferFrom(msg.sender, address(this), shareVADER);
+        iERC20(VSD).transferFrom(msg.sender, address(this), shareVSD);
         reserveVADER = reserveVADER.add(shareVADER);
         reserveVSD = reserveVSD.add(shareVSD);
     }
@@ -372,5 +403,23 @@ contract Vault {
     function isAnchor(address token) public view returns(bool) {
         return _isAnchor[token];
     }
+    function getPoolAmounts(address token) public view returns(uint baseAmount, uint tokenAmount) {
+        baseAmount = mapToken_baseAmount[token];
+        tokenAmount = mapToken_tokenAmount[token];
+        return (baseAmount, tokenAmount);
+    }
 
+    function _sortArray(uint[] memory array) internal pure returns (uint[] memory){
+        uint l = array.length;
+        for(uint i = 0; i < l; i++){
+            for(uint j = i+1; j < l; j++){
+                if(array[i] > array[j]){
+                    uint temp = array[i];
+                    array[i] = array[j];
+                    array[j] = temp;
+                }
+            }
+        }
+        return array;
+    }
 }
