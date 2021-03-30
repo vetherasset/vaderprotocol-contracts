@@ -11,19 +11,18 @@ contract Vault {
     using SafeMath for uint256;
 
     // Parameters
-    uint256 one = 10**18;
-    uint256 _10k = 10000;
     uint256 public reserveVADER;
     uint256 public reserveVSD;
+    uint256 public pooledVADER;
+    uint256 public pooledVSD;
     uint256 public rewardReductionFactor;
     uint256 public timeForFullProtection;
     
     address public VADER;
     address public VSD;
     address public UTILS;
+    address public ROUTER;
     address public DAO;
-    address[] public arrayAnchors;
-    uint256[] public arrayPrices;
 
     mapping(address => bool) _isMember;
     mapping(address => bool) _isAsset;
@@ -43,41 +42,37 @@ contract Vault {
     event RemoveLiquidity(address indexed member, address indexed base, uint256 baseAmount, address indexed token, uint256 tokenAmount, uint256 liquidityUnits, uint256 totalUnits);
     event Swap(address indexed member, address indexed inputToken, uint256 inputAmount, address indexed outputToken, uint256 outputAmount, uint256 swapFee, uint256 poolReward);
 
-    // Only DAO can execute
-    modifier onlyDAO() {
-        require(msg.sender == DAO, "Not DAO");
-        _;
-    }
-
     //=====================================CREATION=========================================//
     // Constructor
-    constructor(address _vader, address _usdv, address _utils) public {
+    constructor(address _vader, address _usdv, address _utils, address _router) public {
         VADER = _vader;
         VSD = _usdv;
         UTILS = _utils;
         DAO = msg.sender;
+        ROUTER = _router;
         rewardReductionFactor = 1;
         timeForFullProtection = 100;//8640000; //100 days
     }
 
     //====================================LIQUIDITY=========================================//
 
-    function addLiquidity(address base, uint256 inputBase, address token, uint256 inputToken) public returns(uint liquidityUnits){
-        address member = msg.sender;
+    function addLiquidity(address base, address token, address member) public returns(uint liquidityUnits){
         require(token != VSD);
         uint _actualInputBase;
         if(base == VADER){
             if(!isAnchor(token)){
                 _isAnchor[token] = true;
             }
-            _actualInputBase = getToken(VADER, inputBase);
+            _actualInputBase = getAddedAmount(VADER, token);
+            pooledVADER = pooledVADER.add(_actualInputBase);
         } else if (base == VSD) {
             if(!isAsset(token)){
                 _isAsset[token] = true;
             }
-            _actualInputBase = getToken(VSD, inputBase);
+            _actualInputBase = getAddedAmount(VSD, token);
+            pooledVSD = pooledVSD.add(_actualInputBase);
         }
-        uint _actualInputToken = getToken(token, inputToken);
+        uint _actualInputToken = getAddedAmount(token, token);
         liquidityUnits = iUTILS(UTILS).calcLiquidityUnits(_actualInputBase, mapToken_baseAmount[token], _actualInputToken, mapToken_tokenAmount[token], mapToken_Units[token]);
         mapTokenMember_Units[token][member] = mapTokenMember_Units[token][member].add(liquidityUnits);
         mapToken_Units[token] = mapToken_Units[token].add(liquidityUnits);
@@ -89,7 +84,12 @@ contract Vault {
     }
 
     function removeLiquidity(address base, address token, uint basisPoints) public returns (uint outputBase, uint outputToken) {
-        address member = msg.sender;
+        return _removeLiquidity(base, token, basisPoints, tx.origin);
+    }
+    function removeLiquidityDirectly(address base, address token, uint basisPoints) public returns (uint outputBase, uint outputToken) {
+        return _removeLiquidity(base, token, basisPoints, msg.sender);
+    }
+    function _removeLiquidity(address base, address token, uint basisPoints, address member) internal returns (uint outputBase, uint outputToken) {
         require(base == VSD || base == VADER);
         uint _units = iUTILS(UTILS).calcPart(basisPoints, mapTokenMember_Units[token][member]);
         outputBase = iUTILS(UTILS).calcShare(_units, mapToken_Units[token], mapToken_baseAmount[token]);
@@ -101,188 +101,130 @@ contract Vault {
         uint _protection = getILProtection(member, base, token, basisPoints);
         outputBase = outputBase.add(_protection);
         removeDepositData(member, token, outputBase, outputToken); 
-        if(base == VADER){
-            reserveVADER = reserveVADER.sub(_protection);
-            iERC20(VADER).transfer(member, outputBase);
-        } else {
-            reserveVSD = reserveVSD.sub(_protection);
-            iERC20(VSD).transfer(member, outputBase);
-        }
-        iERC20(token).transfer(member, outputToken);
         emit RemoveLiquidity(member, base, outputBase, token, outputToken, _units, mapToken_Units[token]);
+        transferOut(base, outputBase, member);
+        transferOut(token, outputToken, member);
         return (outputBase, outputToken);
-    }
-
-    //=====================================ANCHORS==========================================//
-
-    function listAnchor(address token) public {
-        require(arrayAnchors.length < 5);
-        require(isAnchor(token));
-        arrayAnchors.push(token);
-        arrayPrices.push(iUTILS(UTILS).calcValueInBase(token, one));
-        updateAnchorPrices();
-    }
-
-    function replaceAnchor(address oldToken, address newToken) public {
-        require(isAnchor(newToken), "Not anchor");
-        require((mapToken_baseAmount[newToken] > mapToken_baseAmount[oldToken]), "Not deeper");
-        _requirePriceBounds(oldToken, 500, false);                              // if price oldToken >5%
-        _requirePriceBounds(newToken, 200, true);                               // if price newToken <2%
-        // list/delist, add to arrayAnchors
-        for(uint i = 0; i<arrayAnchors.length; i++){
-            if(arrayAnchors[i] == oldToken){
-                arrayAnchors[i] = newToken;
-            }
-        }
-        updateAnchorPrices();
-    }
-
-    function _requirePriceBounds(address token, uint bound, bool inside) internal view {
-        uint _targetPrice = getAnchorPrice();
-        uint _testingPrice = iUTILS(UTILS).calcValueInBase(token, one);
-        uint _lower = iUTILS(UTILS).calcPart(_10k.sub(bound), _targetPrice);
-        uint _upper = (_targetPrice.mul(_10k.add(bound))).div(_10k);
-        if(inside){
-            require((_testingPrice >= _lower && _testingPrice <= _upper), "Not inside");
-        } else {
-            require((_testingPrice <= _lower || _testingPrice >= _upper), "Not outside");
-        }
-    }
-
-    // Anyone to update prices
-    function updateAnchorPrices() public {
-        for(uint i = 0; i<arrayAnchors.length; i++){
-            arrayPrices[i] = iUTILS(UTILS).calcValueInBase(arrayAnchors[i], one);
-        }
-    }
-
-    // Price of 1 VADER in USD
-    function getAnchorPrice() public view returns (uint anchorPrice){
-        uint[] memory _sortedAnchorFeed = _sortArray(arrayPrices);  // Sort price array
-        return _sortedAnchorFeed[2];                                // Return the middle
-    }
-
-    // The correct amount of Vader for an input of USDV
-    function getVADERAmount(uint VSDAmount) public view returns (uint vaderAmount){
-        uint _price = getAnchorPrice();
-        return (_price.mul(VSDAmount)).div(one);
-    }
-
-    // The correct amount of USDV for an input of VADER
-    function getVSDAmount(uint vaderAmount) public view returns (uint VSDAmount){
-        uint _price = getAnchorPrice();
-        return (vaderAmount.mul(one)).div(_price);
     }
     
     //=======================================SWAP===========================================//
-    
-    function swap(address inputToken, uint inputAmount, address outputToken) public returns (uint outputAmount){
-        uint _actualInputAmount = getToken(inputToken, inputAmount);
+    function swap(address inputToken, address outputToken, address member) public returns (uint outputAmount){
+        uint _actualInput;
         if(inputToken == VADER){
-            outputAmount = swapFromVADER(inputToken, _actualInputAmount, outputToken);
+            _actualInput = getAddedAmount(VADER, inputToken);
+            outputAmount = swapFromVADER(_actualInput, outputToken, member);
         } else if (inputToken == VSD) {
-            outputAmount = swapFromVSD(_actualInputAmount, outputToken);
+            _actualInput = getAddedAmount(VSD, inputToken);
+            outputAmount = swapFromVSD(_actualInput, outputToken, member);
         } else if (isAsset(inputToken)) {
-            outputAmount = swapFromAsset(inputToken, _actualInputAmount, outputToken);
+            _actualInput = getAddedAmount(inputToken, inputToken);
+            outputAmount = swapFromAsset(inputToken, _actualInput, outputToken, member);
         } else if (isAnchor(inputToken)) {
-            outputAmount = swapFromAnchor(inputToken, _actualInputAmount, outputToken);
-        } else {}
-        iERC20(outputToken).transfer(msg.sender, outputAmount);
+            _actualInput = getAddedAmount(inputToken, inputToken);
+            outputAmount = swapFromAnchor(inputToken, _actualInput, outputToken, member);
+        }
+        transferOut(outputToken, outputAmount, member);
     }
-
-    function swapFromVADER(address inputToken, uint inputAmount, address outputToken) public returns (uint outputAmount){
+    
+    function swapFromVADER(uint inputAmount, address outputToken, address member) public returns (uint outputAmount){
         // VADER -> VSD
         // VADER -> VSD -> Asset
         // VADER -> Anchor
         if (outputToken == VSD) {
-            outputAmount = swapToVSD(inputToken, inputAmount);
+            outputAmount = swapToVSD(inputAmount, VADER, member);
         } else if (isAsset(outputToken)) {
-            uint _outputAmount = swapToVSD(inputToken, inputAmount);
-            outputAmount = swapToAsset(outputToken, _outputAmount);
+            uint _outputAmount = swapToVSD(inputAmount, VADER, member);
+            outputAmount = swapToAsset(_outputAmount, outputToken, member);
         } else if (isAnchor(outputToken)) {
-            outputAmount = swapToAnchor(outputToken, inputAmount);
+            outputAmount = swapToAnchor(inputAmount, outputToken, member);
         } else {}
     }
-    function swapFromVSD(uint inputAmount, address outputToken) public returns (uint outputAmount){
+    function swapFromVSD(uint inputAmount, address outputToken, address member) public returns (uint outputAmount){
         // VSD -> VADER
         // VSD -> Asset
         // VSD -> VADER -> Anchor
         if (outputToken == VADER) {
-            outputAmount = swapToAsset(outputToken, inputAmount);
+            outputAmount = swapToAsset(inputAmount, outputToken, member);
         } else if (isAsset(outputToken)) {
-            outputAmount = swapToAsset(outputToken, inputAmount);
+            outputAmount = swapToAsset(inputAmount, outputToken, member);
         } else if (isAnchor(outputToken)) {
-            uint _outputAmount = swapToAsset(VADER, inputAmount);
-            outputAmount = swapToAnchor(outputToken, _outputAmount);
+            uint _outputAmount = swapToAsset(inputAmount, VADER, member);
+            outputAmount = swapToAnchor(_outputAmount, outputToken, member);
         } else {}
     }
-    function swapFromAsset(address inputToken, uint inputAmount, address outputToken) public returns (uint outputAmount){
+    function swapFromAsset(address inputToken, uint inputAmount, address outputToken, address member) public returns (uint outputAmount){
         // Asset -> VSD
         // Asset -> VSD -> VADER
         // Asset -> VSD -> VADER -> Anchor
+        // Asset -> VSD -> Asset
         if (outputToken == VSD) {
-            outputAmount = swapToVSD(inputToken, inputAmount);
-        } else if (isAsset(outputToken)) {
-            uint _outputAmount = swapToVSD(inputToken, inputAmount);
-            outputAmount = swapToVADER(outputToken, _outputAmount);
+            outputAmount = swapToVSD(inputAmount, inputToken, member);
+        } else if (outputToken == VADER) {
+            uint _outputAmount = swapToVSD(inputAmount, inputToken, member);
+            outputAmount = swapToVADER(_outputAmount, outputToken, member);
         } else if (isAnchor(outputToken)) {
-            uint _outputAmount1 = swapToVSD(inputToken, inputAmount);
-            uint _outputAmount2 = swapToAsset(VADER, _outputAmount1);
-            outputAmount = swapToAnchor(outputToken, _outputAmount2);
-        } else {}
+            uint _outputAmount1 = swapToVSD(inputAmount, inputToken, member);
+            uint _outputAmount2 = swapToAsset(_outputAmount1, VADER, member);
+            outputAmount = swapToAnchor(_outputAmount2, outputToken, member);
+        } else if (isAsset(outputToken)) {
+            uint _outputAmount = swapToVSD(inputAmount, inputToken, member);
+            outputAmount = swapToAsset(_outputAmount, outputToken, member);
+        }
     }
-    function swapFromAnchor(address inputToken, uint inputAmount, address outputToken) public returns (uint outputAmount){
+    function swapFromAnchor(address inputToken, uint inputAmount, address outputToken, address member) public returns (uint outputAmount){
         // Anchor -> VADER
         // Anchor -> VADER -> VSD
         // Anchor -> VADER -> VSD -> Asset
-        if (outputToken == VSD) {
-            outputAmount = swapToVADER(inputToken, inputAmount);
+        // Anchor -> VADER -> Anchor
+        if (outputToken == VADER) {
+            outputAmount = swapToVADER(inputAmount, inputToken, member);
+        } else if (outputToken == VSD) {
+            uint _outputAmount = swapToVADER(inputAmount, inputToken, member);
+            outputAmount = swapToVSD(_outputAmount, outputToken, member);
         } else if (isAsset(outputToken)) {
-            uint _outputAmount = swapToVADER(inputToken, inputAmount);
-            outputAmount = swapToVSD(outputToken, _outputAmount);
+            uint _outputAmount1 = swapToVADER(inputAmount, inputToken, member);
+            uint _outputAmount2 = swapToVSD(_outputAmount1, VADER, member);
+            outputAmount = swapToAsset(_outputAmount2, outputToken, member);
         } else if (isAnchor(outputToken)) {
-            uint _outputAmount1 = swapToVADER(inputToken, inputAmount);
-            uint _outputAmount2 = swapToVSD(VADER, _outputAmount1);
-            outputAmount = swapToAsset(outputToken, _outputAmount2);
-        } else {}
-        updateAnchorPrices();
+            uint _outputAmount = swapToVADER(inputAmount, inputToken, member);
+            outputAmount = swapToAsset(_outputAmount, outputToken, member);
+        }
     }
 
-    function swapToVSD(address inputToken, uint inputAmount) public returns (uint outputAmount) {
+    function swapToVSD(uint inputAmount, address inputToken, address member) public returns (uint outputAmount) {
         outputAmount = iUTILS(UTILS).calcSwapOutput(inputAmount, mapToken_tokenAmount[inputToken], mapToken_baseAmount[inputToken]);
         uint _swapFee = iUTILS(UTILS).calcSwapFee(inputAmount, mapToken_tokenAmount[inputToken], mapToken_baseAmount[inputToken]);
         uint _poolReward = getRewardShare(inputToken);
         mapToken_tokenAmount[inputToken] = mapToken_tokenAmount[inputToken].add(inputAmount);
         mapToken_baseAmount[inputToken] = mapToken_baseAmount[inputToken].sub(outputAmount).add(_poolReward);
-        emit Swap(msg.sender, inputToken, inputAmount, VSD, outputAmount, _swapFee, _poolReward);
+        emit Swap(member, inputToken, inputAmount, VSD, outputAmount, _swapFee, _poolReward);
         return outputAmount;
     }
-    function swapToAsset(address outputToken, uint inputAmount) public returns (uint outputAmount){
+    function swapToAsset(uint inputAmount, address outputToken, address member) public returns (uint outputAmount){
         outputAmount = iUTILS(UTILS).calcSwapOutput(inputAmount, mapToken_baseAmount[outputToken], mapToken_tokenAmount[outputToken]);
         uint _swapFee = iUTILS(UTILS).calcSwapFee(inputAmount, mapToken_baseAmount[outputToken], mapToken_tokenAmount[outputToken]);
         uint _poolReward = getRewardShare(outputToken);
         mapToken_baseAmount[outputToken] = mapToken_baseAmount[outputToken].add(inputAmount).add(_poolReward);
         mapToken_tokenAmount[outputToken] = mapToken_tokenAmount[outputToken].sub(outputAmount);
-        emit Swap(msg.sender, VSD, inputAmount, outputToken, outputAmount, _swapFee, _poolReward);
+        emit Swap(member, VSD, inputAmount, outputToken, outputAmount, _swapFee, _poolReward);
         return outputAmount;
     }
-    function swapToVADER(address inputToken, uint inputAmount) public returns (uint outputAmount){
+    function swapToVADER(uint inputAmount, address inputToken, address member) public returns (uint outputAmount){
         outputAmount = iUTILS(UTILS).calcSwapOutput(inputAmount, mapToken_tokenAmount[inputToken], mapToken_baseAmount[inputToken]);
         uint _swapFee = iUTILS(UTILS).calcSwapFee(inputAmount, mapToken_tokenAmount[inputToken], mapToken_baseAmount[inputToken]);
         uint _poolReward = getRewardShare(inputToken);
         mapToken_tokenAmount[inputToken] = mapToken_tokenAmount[inputToken].add(inputAmount);
         mapToken_baseAmount[inputToken] = mapToken_baseAmount[inputToken].sub(outputAmount).add(_poolReward);
-        emit Swap(msg.sender, inputToken, inputAmount, VADER, outputAmount, _swapFee, _poolReward);
+        emit Swap(member, inputToken, inputAmount, VADER, outputAmount, _swapFee, _poolReward);
         return outputAmount;
     }
-    function swapToAnchor(address outputToken, uint inputAmount) public returns (uint outputAmount){
+    function swapToAnchor(uint inputAmount, address outputToken, address member) public returns (uint outputAmount){
         outputAmount = iUTILS(UTILS).calcSwapOutput(inputAmount, mapToken_baseAmount[outputToken], mapToken_tokenAmount[outputToken]);
         uint _swapFee = iUTILS(UTILS).calcSwapFee(inputAmount, mapToken_baseAmount[outputToken], mapToken_tokenAmount[outputToken]);
         uint _poolReward = getRewardShare(outputToken);
         mapToken_baseAmount[outputToken] = mapToken_baseAmount[outputToken].add(inputAmount).add(_poolReward);
         mapToken_tokenAmount[outputToken] = mapToken_tokenAmount[outputToken].sub(outputAmount);
-        updateAnchorPrices();
-        emit Swap(msg.sender, VADER, inputAmount, outputToken, outputAmount, _swapFee, _poolReward);
+        emit Swap(member, VADER, inputAmount, outputToken, outputAmount, _swapFee, _poolReward);
         return outputAmount;
     }
 
@@ -360,38 +302,35 @@ contract Vault {
     
     //======================================LENDING=========================================//
     
-    function borrow() public {
-
-    }
-
-    function payBack() public {
-        
-    }
-
-    function purgeMember() public {
-
-    }
-
-    function getInterestPayment() public {
-        
-    }
 
     //======================================HELPERS=========================================//
 
-    // Safe transferFrom in case token charges transfer fees
-    function getToken(address _token, uint _amount) internal returns(uint safeAmount) {
-        if(_token == VADER || _token == VSD){
-            safeAmount = _amount;
-            iERC20(_token).transferTo(address(this), _amount);
+    // Safe
+    function getAddedAmount(address _token, address _pool) internal returns(uint addedAmount) {
+        if(_token == VADER && _pool == VADER){
+            addedAmount = (iERC20(_token).balanceOf(address(this))).sub(mapToken_tokenAmount[_pool]).sub(reserveVADER).sub(pooledVADER);
+            pooledVADER = pooledVADER.add(addedAmount);
+        } else if(_token == VADER && _pool != VADER){
+            addedAmount = (iERC20(_token).balanceOf(address(this))).sub(mapToken_baseAmount[_pool]).sub(reserveVADER).sub(pooledVADER);
+            pooledVADER = pooledVADER.add(addedAmount);
+        } else if(_token == VSD) {
+            addedAmount = (iERC20(_token).balanceOf(address(this))).sub(mapToken_tokenAmount[_pool]).sub(reserveVSD).sub(pooledVSD);
+            pooledVSD = pooledVSD.add(addedAmount);
         } else {
-            safeAmount = safeTransferFrom(_token, _amount);
+            addedAmount = (iERC20(_token).balanceOf(address(this))).sub(mapToken_tokenAmount[_pool]);
         }
     }
-    // Safe transferFrom in case token charges transfer fees
-    function safeTransferFrom(address _token, uint _amount) internal returns(uint) {
-        uint _startBal = iERC20(_token).balanceOf(address(this));
-        iERC20(_token).transferFrom(msg.sender, address(this), _amount);
-        return iERC20(_token).balanceOf(address(this)).sub(_startBal);
+    function transferOut(address _token, uint _amount, address _recipient) internal {
+        if(_token == VADER){
+            pooledVADER = pooledVADER.sub(_amount);
+            iERC20(_token).transfer(_recipient, _amount);
+        } else if(_token == VSD) {
+            pooledVSD = pooledVSD.sub(_amount);
+            iERC20(_token).transfer(_recipient, _amount);
+        } else {
+            iERC20(_token).transfer(_recipient, _amount);
+        }
+        
     }
 
     function isMember(address member) public view returns(bool) {
@@ -403,23 +342,13 @@ contract Vault {
     function isAnchor(address token) public view returns(bool) {
         return _isAnchor[token];
     }
-    function getPoolAmounts(address token) public view returns(uint baseAmount, uint tokenAmount) {
-        baseAmount = mapToken_baseAmount[token];
-        tokenAmount = mapToken_tokenAmount[token];
-        return (baseAmount, tokenAmount);
+    function getPoolAmounts(address token) public view returns(uint, uint) {
+        return (getBaseAmount(token), getTokenAmount(token));
     }
-
-    function _sortArray(uint[] memory array) internal pure returns (uint[] memory){
-        uint l = array.length;
-        for(uint i = 0; i < l; i++){
-            for(uint j = i+1; j < l; j++){
-                if(array[i] > array[j]){
-                    uint temp = array[i];
-                    array[i] = array[j];
-                    array[j] = temp;
-                }
-            }
-        }
-        return array;
+    function getBaseAmount(address token) public view returns(uint) {
+        return mapToken_baseAmount[token];
+    }
+    function getTokenAmount(address token) public view returns(uint) {
+        return mapToken_tokenAmount[token];
     }
 }
