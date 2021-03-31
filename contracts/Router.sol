@@ -15,14 +15,23 @@ contract Router {
     // Parameters
     uint256 one = 10**18;
     uint256 _10k = 10000;
+    uint256 public rewardReductionFactor;
+    uint256 public timeForFullProtection;
+    uint256 public reserveVADER;
+    uint256 public reserveVSD;
     
     address public VADER;
     address public VSD;
     address public UTILS;
     address public DAO;
     address public VAULT;
+
     address[] public arrayAnchors;
     uint256[] public arrayPrices;
+
+    mapping(address => mapping(address => uint256)) public mapMemberToken_depositBase;
+    mapping(address => mapping(address => uint256)) public mapMemberToken_depositToken;
+    mapping(address => mapping(address => uint256)) public mapMemberToken_lastDeposited;
 
     // Only DAO can execute
     modifier onlyDAO() {
@@ -37,6 +46,8 @@ contract Router {
         VSD = _usdv;
         UTILS = _utils;
         DAO = msg.sender;
+        rewardReductionFactor = 1;
+        timeForFullProtection = 100;//8640000; //100 days
     }
 
     // Can set vault
@@ -51,27 +62,128 @@ contract Router {
     //====================================LIQUIDITY=========================================//
 
     function addLiquidity(address base, uint256 inputBase, address token, uint256 inputToken) public returns(uint){
-        moveTokenToVault(base, inputBase);
-        moveTokenToVault(token, inputToken);
+        uint _actualInputBase = moveTokenToVault(base, inputBase);
+        uint _actualInputToken = moveTokenToVault(token, inputToken);
+        addDepositData(msg.sender, token, _actualInputBase, _actualInputToken); 
         return iVAULT(VAULT).addLiquidity(base, token, msg.sender);
     }
 
-    function removeLiquidity(address base, address token, uint basisPoints) public returns (uint, uint) {
-        return iVAULT(VAULT).removeLiquidity(base, token, basisPoints);
+    function removeLiquidity(address base, address token, uint basisPoints) public returns (uint amountBase, uint amountToken) {
+        (amountBase, amountToken) = iVAULT(VAULT).removeLiquidity(base, token, basisPoints);
+        address _member = msg.sender;
+        uint _protection = getILProtection(_member, base, token, basisPoints);
+        removeDepositData(_member, token, basisPoints, _protection); 
+        iERC20(base).transfer(_member, _protection);
     }
 
       //=======================================SWAP===========================================//
     
-    function swap(address inputToken, uint inputAmount, address outputToken) public returns (uint outputAmount){
+    function swap(uint inputAmount, address inputToken, address outputToken) public returns (uint outputAmount){
+        address _member = msg.sender;
         moveTokenToVault(inputToken, inputAmount);
-        outputAmount = iVAULT(VAULT).swap(inputToken, outputToken, msg.sender);
-        if(iVAULT(VAULT).isAnchor(inputToken)){
+        address _base;
+        if(iVAULT(VAULT).isAnchor(inputToken) || iVAULT(VAULT).isAnchor(outputToken)) {
+            _base = VADER;
+        } else {
+            _base = VSD;
+        }
+        if (isBase(outputToken)) {
+            // Token -> BASE
+            outputAmount = iVAULT(VAULT).swap(_base, inputToken, _member, true);
+            iERC20(_base).transfer(VAULT, getRewardShare(inputToken));
+            iVAULT(VAULT).sync(_base, inputToken);
             updateAnchorPrice(inputToken);
-        }
-        if(iVAULT(VAULT).isAnchor(outputToken)){
+        } else if (isBase(inputToken)) {
+            // BASE -> Token
+            outputAmount = iVAULT(VAULT).swap(_base, outputToken, _member, false);
+            iERC20(_base).transfer(VAULT, getRewardShare(outputToken));
+            iVAULT(VAULT).sync(_base, outputToken);
             updateAnchorPrice(outputToken);
-        }
+        } else if (!isBase(inputToken) && !isBase(outputToken)) {
+            // Token -> Token
+            iVAULT(VAULT).swap(_base, inputToken, address(this), true);
+            iERC20(_base).transfer(VAULT, getRewardShare(inputToken));
+            iVAULT(VAULT).sync(_base, inputToken);
+            updateAnchorPrice(inputToken);
+            outputAmount = iVAULT(VAULT).swap(_base, outputToken, _member, false);
+            iERC20(_base).transfer(VAULT, getRewardShare(outputToken));
+            iVAULT(VAULT).sync(_base, outputToken);
+            updateAnchorPrice(outputToken);
+        } 
         return outputAmount;
+    }
+
+        //====================================INCENTIVES========================================//
+    
+    function getRewardShare(address token) public view returns (uint rewardShare){
+        uint _baseAmount = iVAULT(VAULT).getBaseAmount(token);
+        if (iVAULT(VAULT).isAsset(token)) {
+            uint _totalVSD = iERC20(VSD).balanceOf(address(this)).sub(reserveVSD);
+            uint _share = iUTILS(UTILS).calcShare(_baseAmount, _totalVSD, reserveVSD);
+            rewardShare = getReducedShare(_share);
+        } else if(iVAULT(VAULT).isAnchor(token)) {
+            uint _totalVADER = iERC20(VADER).balanceOf(address(this)).sub(reserveVADER);
+            uint _share = iUTILS(UTILS).calcShare(_baseAmount, _totalVADER, reserveVADER);
+            rewardShare = getReducedShare(_share);
+        }
+        return rewardShare;
+    }
+
+    function getReducedShare(uint amount) public view returns(uint){
+        return iUTILS(UTILS).calcShare(1, rewardReductionFactor, amount);
+    }
+
+    function pullIncentives(uint256 shareVADER, uint256 shareVSD) public {
+        iERC20(VADER).transferFrom(msg.sender, address(this), shareVADER);
+        iERC20(VSD).transferFrom(msg.sender, address(this), shareVSD);
+        reserveVADER = reserveVADER.add(shareVADER);
+        reserveVSD = reserveVSD.add(shareVSD);
+    }
+
+    //=================================IMPERMANENT LOSS=====================================//
+    
+    function addDepositData(address member, address token, uint256 amountBase, uint256 amountToken) internal {
+        mapMemberToken_depositBase[member][token] = mapMemberToken_depositBase[member][token].add(amountBase);
+        mapMemberToken_depositToken[member][token] = mapMemberToken_depositToken[member][token].add(amountToken);
+        mapMemberToken_lastDeposited[member][token] = now;
+    }
+    function removeDepositData(address member, address token, uint256 basisPoints, uint256 protection) internal {
+        mapMemberToken_depositBase[member][token] = mapMemberToken_depositBase[member][token].add(protection);
+        uint _baseToRemove = iUTILS(UTILS).calcPart(basisPoints, mapMemberToken_depositBase[member][token]);
+        uint _tokenToRemove = iUTILS(UTILS).calcPart(basisPoints, mapMemberToken_depositToken[member][token]);
+        mapMemberToken_depositBase[member][token] = mapMemberToken_depositBase[member][token].sub(_baseToRemove);
+        mapMemberToken_depositToken[member][token] = mapMemberToken_depositToken[member][token].sub(_tokenToRemove);
+    }
+
+    function getILProtection(address member, address base, address token, uint basisPoints) public view returns(uint protection) {
+        protection = getProtection(member, token, basisPoints, getCoverage(member, token));
+        if(base == VADER){
+            if(protection >= reserveVADER){
+                protection = reserveVADER; // In case reserve is running out
+            }
+        } else {
+            if(protection >= reserveVSD){
+                protection = reserveVSD; // In case reserve is running out
+            }
+        }
+        return protection;
+    }
+
+    function getProtection(address member, address token, uint basisPoints, uint coverage) public view returns(uint protection){
+        uint _duration = now.sub(mapMemberToken_lastDeposited[member][token]);
+        if(_duration <= timeForFullProtection) {
+            protection = iUTILS(UTILS).calcShare(_duration, timeForFullProtection, coverage);
+        } else {
+            protection = coverage;
+        }
+        return iUTILS(UTILS).calcPart(basisPoints, protection);
+    }
+    function getCoverage(address member, address token) public view returns (uint256){
+        uint _B0 = mapMemberToken_depositBase[member][token]; uint _T0 = mapMemberToken_depositToken[member][token];
+        uint _units = iVAULT(VAULT).getMemberUnits(token, member);
+        uint _B1 = iUTILS(UTILS).calcShare(_units, iVAULT(VAULT).getUnits(token), iVAULT(VAULT).getBaseAmount(token));
+        uint _T1 = iUTILS(UTILS).calcShare(_units, iVAULT(VAULT).getUnits(token), iVAULT(VAULT).getTokenAmount(token));
+        return iUTILS(UTILS).calcCoverage(_B0, _T0, _B1, _T1);
     }
 
     //=====================================ANCHORS==========================================//
@@ -158,13 +270,25 @@ contract Router {
 
     //======================================HELPERS=========================================//
 
+    function isBase(address token) public view returns(bool _isBase) {
+        _isBase = false;
+        if(token == VADER || token == VSD){
+            _isBase = true;
+        }
+        return _isBase;
+    }
+
     // Safe transferFrom in case token charges transfer fees
-    function moveTokenToVault(address _token, uint _amount) internal {
+    function moveTokenToVault(address _token, uint _amount) internal returns(uint safeAmount) {
         if(_token == VADER || _token == VSD){
+            safeAmount = _amount;
             iERC20(_token).transferTo(VAULT, _amount);
         } else {
+            uint _startBal = iERC20(_token).balanceOf(VAULT);
             iERC20(_token).transferFrom(msg.sender, VAULT, _amount);
+            safeAmount = iERC20(_token).balanceOf(VAULT).sub(_startBal);
         }
+        return safeAmount;
     }
 
     function _sortArray(uint[] memory array) internal pure returns (uint[] memory){

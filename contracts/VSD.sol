@@ -6,7 +6,8 @@ import "./iERC20.sol";
 import "./SafeMath.sol";
 import "./iUTILS.sol";
 import "./iVADER.sol";
-import "./iVAULT.sol";
+import "./iROUTER.sol";
+
 import "@nomiclabs/buidler/console.sol";
 
     //======================================VADER=========================================//
@@ -29,9 +30,9 @@ contract VSD is iERC20 {
     uint256 public minimumDepositTime;
 
     address public VADER;
-    address public VAULT;
     address public DAO;
     address public UTILS;
+    address public ROUTER;
 
     mapping(address => bool) private _isMember; // Is Member
     mapping(address => uint256) private mapMember_deposit;
@@ -64,12 +65,12 @@ contract VSD is iERC20 {
         minimumDepositTime = 1;
     }
 
-    // Can set vault
-    function setVault(address _vault) public {
-        if(VAULT == address(0)){
-            VAULT = _vault;
-            iERC20(VADER).approve(VAULT, uint(-1));
-            _approve(address(this), VAULT, uint(-1));
+    // Can set Router
+    function setRouter(address _router) public {
+        if(ROUTER == address(0)){
+            ROUTER = _router;
+            iERC20(VADER).approve(ROUTER, uint(-1));
+            _approve(address(this), ROUTER, uint(-1));
         }
     }
 
@@ -150,7 +151,7 @@ contract VSD is iERC20 {
             uint _balance = iERC20(VADER).balanceOf(address(this)); // Get spare VADER
             uint _VSDShare = _twothirds(_balance);                 // Get 2/3rds
             _convert(_VSDShare);                                   // Convert it
-            iVAULT(VAULT).pullIncentives(iERC20(VADER).balanceOf(address(this)), _VSDShare.div(2));                         // Pull incentives over
+            iROUTER(ROUTER).pullIncentives(iERC20(VADER).balanceOf(address(this)), _VSDShare.div(2));                         // Pull incentives over
         }
     }
     
@@ -165,7 +166,7 @@ contract VSD is iERC20 {
     // Internal convert
     function _convert(uint amount) internal returns(uint _convertAmount){
         iERC20(VADER).burn(amount);
-        _convertAmount = iVAULT(VAULT).getVSDAmount(amount);
+        _convertAmount = iROUTER(ROUTER).getVSDAmount(amount);
         _mint(address(this), _convertAmount);
         return _convertAmount;
     }

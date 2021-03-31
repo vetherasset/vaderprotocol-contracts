@@ -5,7 +5,7 @@ pragma solidity ^0.6.8;
 import "./iERC20.sol";
 import "./SafeMath.sol";
 import "./iVSD.sol";
-import "./iVAULT.sol";
+import "./iROUTER.sol";
 
     //======================================VADER=========================================//
 contract Vader is iERC20 {
@@ -210,7 +210,7 @@ contract Vader is iERC20 {
     function redeem() public returns (uint redeemAmount){
         uint _amount = iERC20(VSD).balanceOf(address(this)); 
         iERC20(VSD).burn(_amount);
-        redeemAmount = iVAULT(iVSD(VSD).VAULT()).getVADERAmount(_amount);
+        redeemAmount = iROUTER(iVSD(VSD).ROUTER()).getVADERAmount(_amount);
         _mint(msg.sender, redeemAmount);
     }
 }
