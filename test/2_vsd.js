@@ -5,7 +5,6 @@ var Vader = artifacts.require('./Vader')
 var USDV = artifacts.require('./USDV')
 var VAULT = artifacts.require('./Vault')
 var Router = artifacts.require('./Router')
-var Anchor = artifacts.require('./Token2')
 
 const BigNumber = require('bignumber.js')
 const truffleAssert = require('truffle-assertions')
@@ -19,8 +18,6 @@ function sleep(ms) {
 
 var utils; var vader; var vether; var usdv; var router; var vault;
 var acc0; var acc1; var acc2; var acc3; var acc0; var acc5;
-var anchor0; var anchor1; var anchor2; var anchor3; var anchor4;  var anchor5; 
-const one = 10**18
 
 // 
 
@@ -31,7 +28,6 @@ before(async function() {
   acc2 = await accounts[2].getAddress()
   acc3 = await accounts[3].getAddress()
   
-
   utils = await Utils.new();
   vether = await Vether.new();
   vader = await Vader.new();
@@ -43,13 +39,6 @@ before(async function() {
   await usdv.init(vader.address, utils.address, router.address)
   await router.init(vader.address, usdv.address, utils.address, vault.address);
   await vault.init(vader.address, usdv.address, utils.address, router.address);
-  
-  anchor0 = await Anchor.new();
-  anchor1 = await Anchor.new();
-  anchor2 = await Anchor.new();
-  anchor3 = await Anchor.new();
-  anchor4 = await Anchor.new();
-  anchor5 = await Anchor.new();
 
   await vether.transfer(acc1, '3403') 
   await vether.approve(vader.address, '3400', {from:acc1})
