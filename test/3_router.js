@@ -60,15 +60,9 @@ before(async function() {
   await asset.approve(router.address, BN2Str(one), {from:acc1})
   await asset2.transfer(acc1, BN2Str(2000))
   await asset2.approve(router.address, BN2Str(one), {from:acc1})
-// acc  | VTH | VADER  | USDV | Anr  |  Ass |
-// vault|   0 |    0 |    0 |    0 |    0 |
-// acc1 |2002 |    0 |    0 | 2000 | 2000 |
 
   await usdv.convert(BN2Str(3000), {from:acc1})
   await usdv.withdrawToVSD('10000', {from:acc1})
-// acc  | VTH | VADER  | USDV | Anr  |  Ass |
-// vault|   0 |    0 |    0 |    0 |    0 |
-// acc1 |   0 | 3000 | 3000 | 2000 | 2000 |
 
 })
 
@@ -98,13 +92,6 @@ describe("Add liquidity", function() {
     expect(BN2Str(await vault.getTokenAmount(anchor2.address))).to.equal('1000');
     expect(BN2Str(await vault.getMemberUnits(anchor2.address, acc1))).to.equal('1000');
   });
-  // it("Should add asset vdr-usdv", async function() {
-  //   let tx = await router.addLiquidity(usdv.address, '1000', vader.address, '1000', {from:acc1})
-  //   expect(BN2Str(await vault.mapToken_Units(vader.address))).to.equal('1000');
-  //   expect(BN2Str(await vault.mapToken_baseAmount(vader.address))).to.equal(BN2Str(1000));
-  //   expect(BN2Str(await vault.mapToken_tokenAmount(vader.address))).to.equal('1000');
-  //   expect(BN2Str(await vault.mapTokenMember_Units(vader.address, acc1))).to.equal('1000');
-  // });
   it("Should add asset", async function() {
     let tx = await router.addLiquidity(usdv.address, '1000', asset.address, '1000', {from:acc1})
     expect(BN2Str(await vault.mapToken_Units(asset.address))).to.equal('1000');
@@ -120,9 +107,6 @@ describe("Add liquidity", function() {
     expect(BN2Str(await vault.mapTokenMember_Units(asset2.address, acc1))).to.equal('1000');
   });
 });
-// acc  | VTH | VADER  | USDV | Anr  |  Ass |
-// vault|   0 | 2000 | 2000 | 1000 | 1000 |
-// acc1 |   0 | 1000 | 1000 | 1000 | 1000 |
 
 describe("Should Swap VADER Pools", function() {
   it("Swap from Vader to Anchor", async function() {

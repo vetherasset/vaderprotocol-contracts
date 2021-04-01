@@ -4,11 +4,13 @@ var Vether = artifacts.require('./Vether')
 var Vader = artifacts.require('./Vader')
 var USDV = artifacts.require('./USDV')
 var Vault = artifacts.require('./Vault')
+var Router = artifacts.require('./Router')
 var Asset = artifacts.require('./Token1')
 var Anchor = artifacts.require('./Token2')
 
 const BigNumber = require('bignumber.js')
-const truffleAssert = require('truffle-assertions')
+const truffleAssert = require('truffle-assertions');
+const { VoidSigner } = require("@ethersproject/abstract-signer");
 
 function BN2Str(BN) { return ((new BigNumber(BN)).toFixed()) }
 function getBN(BN) { return (new BigNumber(BN)) }
@@ -17,7 +19,7 @@ function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-var utils; var vader; var vether; var usdv; var vault; var anchor; var asset;
+var utils; var vader; var vether; var usdv; var vault; var anchor; var asset; var router;
 var anchor0; var anchor1; var anchor2; var anchor3; var anchor4;  var anchor5; 
 var acc0; var acc1; var acc2; var acc3; var acc0; var acc5;
 const one = 10**18
@@ -31,67 +33,33 @@ before(async function() {
 
   utils = await Utils.new();
   vether = await Vether.new();
-  vader = await Vader.new(vether.address);
-  usdv = await USDV.new(vader.address, utils.address);
-  vault = await Vault.new(vader.address, usdv.address, utils.address);
-  asset = await Asset.new();
-  anchor0 = await Anchor.new();
-  anchor1 = await Anchor.new();
-  anchor2 = await Anchor.new();
-  anchor3 = await Anchor.new();
-  anchor4 = await Anchor.new();
-  anchor5 = await Anchor.new();
+  vader = await Vader.new();
+  usdv = await USDV.new();
+  router = await Router.new();
+  vault = await Vault.new();
 
-  console.log('acc0:', acc0)
-  console.log('acc1:', acc1)
-  console.log('acc2:', acc2)
-  console.log('utils:', utils.address)
-  console.log('vether:', vether.address)
-  console.log('vader:', vader.address)
-  console.log('usdv:', usdv.address)
-  console.log('vault:', vault.address)
+  await vader.startEmissions()
+  await usdv.startEmissions()
+  await router.startEmissions()
 
-  await usdv.setVault(vault.address)
-  await utils.setVault(vault.address)
-  await vader.setVSD(usdv.address)
-  // await vader.changeEmissionCurve('1')
-  await vader.startEmissions() 
+  await vader.init(vether.address, usdv.address)
+  await usdv.init(vader.address, utils.address, router.address)
+  await router.init(vader.address, usdv.address, utils.address, vault.address);
+  await vault.init(vader.address, usdv.address, utils.address, router.address);
 
-  await vether.transfer(acc1, BN2Str(6407)) 
-  await vether.approve(vader.address, '6400', {from:acc1})
-  await vader.upgrade(BN2Str(6400), {from:acc1}) 
+  anchor = await Anchor.new();
 
-  await anchor0.transfer(acc1, BN2Str(2000))
-  await anchor0.approve(vault.address, BN2Str(one), {from:acc1})
-  await anchor1.transfer(acc1, BN2Str(2000))
-  await anchor1.approve(vault.address, BN2Str(one), {from:acc1})
-  await anchor2.transfer(acc1, BN2Str(2000))
-  await anchor2.approve(vault.address, BN2Str(one), {from:acc1})
-  await anchor3.transfer(acc1, BN2Str(2000))
-  await anchor3.approve(vault.address, BN2Str(one), {from:acc1})
-  await anchor4.transfer(acc1, BN2Str(2000))
-  await anchor4.approve(vault.address, BN2Str(one), {from:acc1})
-  await vault.addLiquidity(vader.address, '100', anchor0.address, '98', {from:acc1})
-  await vault.addLiquidity(vader.address, '100', anchor1.address, '99', {from:acc1})
-  await vault.addLiquidity(vader.address, '1000', anchor2.address, '1000', {from:acc1})
-  await vault.addLiquidity(vader.address, '100', anchor3.address, '101', {from:acc1})
-  await vault.addLiquidity(vader.address, '100', anchor4.address, '102', {from:acc1})
-  await vault.listAnchor(anchor0.address, {from:acc1})
-  await vault.listAnchor(anchor1.address, {from:acc1})
-  await vault.listAnchor(anchor2.address, {from:acc1})
-  await vault.listAnchor(anchor3.address, {from:acc1})
-  await vault.listAnchor(anchor4.address, {from:acc1})
+  await vether.transfer(acc1, BN2Str(7407)) 
+  await anchor.transfer(acc1, BN2Str(2000))
+  await anchor.approve(router.address, BN2Str(one), {from:acc1})
 
-  await asset.transfer(acc1, BN2Str(2000))
-  await asset.approve(vault.address, BN2Str(one), {from:acc1})
-  await usdv.convert(BN2Str(3000), {from:acc1})
+  await vether.approve(vader.address, '7400', {from:acc1})
+  await vader.upgrade(BN2Str(7400), {from:acc1}) 
+
+  await usdv.convert(BN2Str(1000), {from:acc1})
   await usdv.withdrawToVSD('10000', {from:acc1})
-// acc  | VTH | VADER  | USDV | Anr  |  Ass |
-// vault|   0 |    0 |    0 |    0 |    0 |
-// acc1 |   0 | 3000 | 3000 | 2000 | 2000 |
-  await vault.addLiquidity(usdv.address, '1000', vader.address, '1000', {from:acc1})
-  await vault.addLiquidity(usdv.address, '1000', asset.address, '1000', {from:acc1})
 
+  await router.addLiquidity(vader.address, '1000', anchor.address, '1000', {from:acc1})
 })
 // acc  | VTH | VADER  | USDV | Anr  |  Ass |
 // vault|   0 | 2000 | 2000 | 1000 | 1000 |
@@ -99,10 +67,10 @@ before(async function() {
 
 describe("Deploy right", function() {
   it("Should have right reserves", async function() {
-    expect(BN2Str(await vader.getDailyEmission())).to.equal('3');
-    expect(BN2Str(await usdv.reserveVSD())).to.equal('16');
-    expect(BN2Str(await vault.reserveVSD())).to.equal('16');
-    expect(BN2Str(await vault.reserveVADER())).to.equal('16');
+    expect(BN2Str(await vader.getDailyEmission())).to.equal('7');
+    expect(BN2Str(await usdv.reserveVSD())).to.equal('3');
+    expect(BN2Str(await router.reserveVSD())).to.equal('2');
+    expect(BN2Str(await router.reserveVADER())).to.equal('3');
     
   });
 });
@@ -118,21 +86,21 @@ describe("Should do IL Protection", function() {
   it("Small swap, need protection", async function() {
     expect(BN2Str(await usdv.balanceOf(acc1))).to.equal('1000');
     for(let i = 0; i<9; i++){
-      await vault.swap(usdv.address, '100', vader.address, {from:acc1})
+      await router.swap('100', anchor.address, vader.address, {from:acc1})
     }
     // expect(BN2Str(await vault.mapToken_tokenAmount(vader.address))).to.equal('1080');
     // expect(BN2Str(await vault.mapToken_baseAmount(vader.address))).to.equal('931');
     // expect(BN2Str(await usdv.balanceOf(acc1))).to.equal('1053');
-    expect(BN2Str(await vault.mapMemberToken_depositBase(acc1, vader.address))).to.equal('1000');
-    expect(BN2Str(await vault.mapMemberToken_depositToken(acc1, vader.address))).to.equal('1000');
+    expect(BN2Str(await router.mapMemberToken_depositBase(acc1, anchor.address))).to.equal('1000');
+    expect(BN2Str(await router.mapMemberToken_depositToken(acc1, anchor.address))).to.equal('1000');
 
     // console.log("membe units", BN2Str(await vault.mapTokenMember_Units(vader.address, acc1)));
     // console.log("units", BN2Str(await vault.mapToken_Units(vader.address)));
-    let coverage = await vault.getCoverage(acc1, vader.address)
-    expect(BN2Str(coverage)).to.equal('556');
-    expect(BN2Str(await vault.getProtection(acc1, vader.address, "10000", coverage))).to.equal('556');
-    let reserveVSD = BN2Str(await vault.reserveVSD())
-    expect(BN2Str(await vault.getILProtection(acc1, usdv.address, vader.address, '10000'))).to.equal(reserveVSD);
+    let coverage = await router.getCoverage(acc1, anchor.address)
+    expect(BN2Str(coverage)).to.equal('183');
+    expect(BN2Str(await router.getProtection(acc1, anchor.address, "10000", coverage))).to.equal('16');
+    let reserveVADER = BN2Str(await router.reserveVADER())
+    expect(BN2Str(await router.getILProtection(acc1, vader.address, anchor.address, '10000'))).to.equal(reserveVADER);
 
 
   });
