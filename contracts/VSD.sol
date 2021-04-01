@@ -23,6 +23,8 @@ contract VSD is iERC20 {
     mapping(address => mapping(address => uint256)) private _allowances;
 
     // Parameters
+    bool private inited;
+    bool public emitting;
     uint256 public totalFunds;
     uint256 public currentEra;
     uint256 public nextEraTime;
@@ -51,27 +53,24 @@ contract VSD is iERC20 {
 
     //=====================================CREATION=========================================//
     // Constructor
-    constructor(address _vader, address _utils) public {
+    constructor() public {
         name = 'VADER STABLE DOLLAR';
         symbol = 'VSD';
         decimals = 18;
         totalSupply = 0;
         DAO = msg.sender;
+    }
+    function init(address _vader, address _utils, address _router) public onlyDAO {
+        require(inited == false);
         VADER = _vader;
         UTILS = _utils;
+        ROUTER = _router;
+        iERC20(VADER).approve(ROUTER, uint(-1));
+        _approve(address(this), ROUTER, uint(-1));
         currentEra = 1;
         nextEraTime = now + iVADER(VADER).secondsPerEra();
         erasToEarn = 100;
         minimumDepositTime = 1;
-    }
-
-    // Can set Router
-    function setRouter(address _router) public {
-        if(ROUTER == address(0)){
-            ROUTER = _router;
-            iERC20(VADER).approve(ROUTER, uint(-1));
-            _approve(address(this), ROUTER, uint(-1));
-        }
     }
 
     //========================================iERC20=========================================//
@@ -142,10 +141,34 @@ contract VSD is iERC20 {
         emit Transfer(account, address(0), amount);
     }
 
+    //=========================================DAO=========================================//
+    // Can start
+    function startEmissions() public onlyDAO{
+        emitting = true;
+    }
+    // Can stop
+    function stopEmissions() public onlyDAO{
+        emitting = false;
+    }
+    // Can set params
+    function setParams(uint _one, uint _two) public onlyDAO {
+        erasToEarn = _one;
+        minimumDepositTime = _two;//8640000; //100 days
+    }
+    // Can change DAO
+    function changeDAO(address newDAO) public onlyDAO{
+        require(newDAO != address(0), "address err");
+        DAO = newDAO;
+    }
+    // Can purge DAO
+    function purgeDAO() public onlyDAO{
+        DAO = address(0);
+    }
+
    //======================================INCENTIVES========================================//
     // Internal - Update incentives function
     function _checkIncentives() private {
-        if (now >= nextEraTime) {                  // If new Era
+        if (now >= nextEraTime && emitting) {                  // If new Era
             currentEra += 1;                                                               // Increment Era
             nextEraTime = now + iVADER(VADER).secondsPerEra(); 
             uint _balance = iERC20(VADER).balanceOf(address(this)); // Get spare VADER

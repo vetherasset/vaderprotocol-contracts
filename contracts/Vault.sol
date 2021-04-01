@@ -11,6 +11,7 @@ contract Vault {
     using SafeMath for uint256;
 
     // Parameters
+    bool private inited;
     uint256 public pooledVADER;
     uint256 public pooledVSD;
     
@@ -18,7 +19,6 @@ contract Vault {
     address public VSD;
     address public UTILS;
     address public ROUTER;
-    address public DAO;
 
     mapping(address => bool) _isMember;
     mapping(address => bool) _isAsset;
@@ -37,11 +37,13 @@ contract Vault {
 
     //=====================================CREATION=========================================//
     // Constructor
-    constructor(address _vader, address _usdv, address _utils, address _router) public {
+    constructor() public {}
+    // Init
+    function init(address _vader, address _usdv, address _utils, address _router) public {
+        require(inited == false);
         VADER = _vader;
         VSD = _usdv;
         UTILS = _utils;
-        DAO = msg.sender;
         ROUTER = _router;
     }
 

@@ -13,6 +13,8 @@ contract Router {
     using SafeMath for uint256;
 
     // Parameters
+    bool private inited;
+    bool public emitting;
     uint256 one = 10**18;
     uint256 _10k = 10000;
     uint256 public rewardReductionFactor;
@@ -41,22 +43,44 @@ contract Router {
 
     //=====================================CREATION=========================================//
     // Constructor
-    constructor(address _vader, address _usdv, address _utils) public {
+    constructor() public {
+        DAO = msg.sender;
+    }
+    // Init
+    function init(address _vader, address _usdv, address _utils, address _vault) public onlyDAO {
+        require(inited == false);
         VADER = _vader;
         VSD = _usdv;
         UTILS = _utils;
-        DAO = msg.sender;
+        VAULT = _vault;
+        iERC20(VADER).approve(VAULT, uint(-1));
+        iERC20(VSD).approve(VAULT, uint(-1));
         rewardReductionFactor = 1;
         timeForFullProtection = 100;//8640000; //100 days
     }
 
-    // Can set vault
-    function setVault(address _vault) public {
-        if(VAULT == address(0)){
-            VAULT = _vault;
-            iERC20(VADER).approve(VAULT, uint(-1));
-            iERC20(VSD).approve(VAULT, uint(-1));
-        }
+    //=========================================DAO=========================================//
+    // Can start
+    function startEmissions() public onlyDAO{
+        emitting = true;
+    }
+    // Can stop
+    function stopEmissions() public onlyDAO{
+        emitting = false;
+    }
+    // Can set params
+    function setParams(uint _one, uint _two) public onlyDAO {
+        rewardReductionFactor = _one;
+        timeForFullProtection = _two;
+    }
+    // Can change DAO
+    function changeDAO(address newDAO) public onlyDAO{
+        require(newDAO != address(0), "address err");
+        DAO = newDAO;
+    }
+    // Can purge DAO
+    function purgeDAO() public onlyDAO{
+        DAO = address(0);
     }
 
     //====================================LIQUIDITY=========================================//
@@ -116,15 +140,17 @@ contract Router {
         //====================================INCENTIVES========================================//
     
     function getRewardShare(address token) public view returns (uint rewardShare){
-        uint _baseAmount = iVAULT(VAULT).getBaseAmount(token);
-        if (iVAULT(VAULT).isAsset(token)) {
-            uint _totalVSD = iERC20(VSD).balanceOf(address(this)).sub(reserveVSD);
-            uint _share = iUTILS(UTILS).calcShare(_baseAmount, _totalVSD, reserveVSD);
-            rewardShare = getReducedShare(_share);
-        } else if(iVAULT(VAULT).isAnchor(token)) {
-            uint _totalVADER = iERC20(VADER).balanceOf(address(this)).sub(reserveVADER);
-            uint _share = iUTILS(UTILS).calcShare(_baseAmount, _totalVADER, reserveVADER);
-            rewardShare = getReducedShare(_share);
+        if(emitting){
+            uint _baseAmount = iVAULT(VAULT).getBaseAmount(token);
+            if (iVAULT(VAULT).isAsset(token)) {
+                uint _totalVSD = iERC20(VSD).balanceOf(address(this)).sub(reserveVSD);
+                uint _share = iUTILS(UTILS).calcShare(_baseAmount, _totalVSD, reserveVSD);
+                rewardShare = getReducedShare(_share);
+            } else if(iVAULT(VAULT).isAnchor(token)) {
+                uint _totalVADER = iERC20(VADER).balanceOf(address(this)).sub(reserveVADER);
+                uint _share = iUTILS(UTILS).calcShare(_baseAmount, _totalVADER, reserveVADER);
+                rewardShare = getReducedShare(_share);
+            }
         }
         return rewardShare;
     }
