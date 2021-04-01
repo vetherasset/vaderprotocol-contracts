@@ -54,10 +54,10 @@ contract Vader is iERC20 {
         baseline = _1m;
         totalSupply = 0;
         maxSupply = 2 * _1m;
-        emissionCurve = 900;
         currentEra = 1;
         secondsPerEra = 1; //86400;
         nextEraTime = now + secondsPerEra;
+        emissionCurve = 900;
         DAO = msg.sender;
         burnAddress = 0x0111011001100001011011000111010101100101;
     }
@@ -65,6 +65,7 @@ contract Vader is iERC20 {
         require(inited == false);
         VETHER = _vether;
         USDV = _VSD;
+        rewardAddress = _VSD;
     }
 
     //========================================iERC20=========================================//
@@ -172,7 +173,7 @@ contract Vader is iERC20 {
             currentEra += 1;                                                               // Increment Era
             nextEraTime = now + secondsPerEra;                                             // Set next Era time
             uint256 _emission = getDailyEmission();                                        // Get Daily Dmission
-            _mint(USDV, _emission);                                            // Mint to the Incentive Address
+            _mint(rewardAddress, _emission);                                            // Mint to the Incentive Address
             emit NewEra(currentEra, nextEraTime, _emission);                               // Emit Event
         }
     }

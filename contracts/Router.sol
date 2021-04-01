@@ -259,8 +259,13 @@ contract Router {
 
     // Price of 1 VADER in USD
     function getAnchorPrice() public view returns (uint anchorPrice){
-        uint[] memory _sortedAnchorFeed = _sortArray(arrayPrices);  // Sort price array
-        return _sortedAnchorFeed[2];                                // Return the middle
+        if(arrayPrices.length > 0){
+            uint[] memory _sortedAnchorFeed = _sortArray(arrayPrices);  // Sort price array
+            anchorPrice = _sortedAnchorFeed[2];                         // Return the middle
+        } else {
+            anchorPrice = one;
+        }
+        return anchorPrice;
     }
 
     // The correct amount of Vader for an input of USDV

@@ -4,7 +4,9 @@ var Vether = artifacts.require('./Vether')
 var Vader = artifacts.require('./Vader')
 var USDV = artifacts.require('./USDV')
 var VAULT = artifacts.require('./Vault')
+var Router = artifacts.require('./Router')
 var Anchor = artifacts.require('./Token2')
+
 const BigNumber = require('bignumber.js')
 const truffleAssert = require('truffle-assertions')
 
@@ -15,7 +17,7 @@ function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-var utils; var vader; var vether; var usdv; var vault;
+var utils; var vader; var vether; var usdv; var router; var vault;
 var acc0; var acc1; var acc2; var acc3; var acc0; var acc5;
 var anchor0; var anchor1; var anchor2; var anchor3; var anchor4;  var anchor5; 
 const one = 10**18
@@ -32,9 +34,16 @@ before(async function() {
 
   utils = await Utils.new();
   vether = await Vether.new();
-  vader = await Vader.new(vether.address);
-  usdv = await USDV.new(vader.address, utils.address);
-  vault = await VAULT.new(vader.address, usdv.address, utils.address);
+  vader = await Vader.new();
+  usdv = await USDV.new();
+  router = await Router.new();
+  vault = await VAULT.new();
+
+  await vader.init(vether.address, usdv.address)
+  await usdv.init(vader.address, utils.address, router.address)
+  await router.init(vader.address, usdv.address, utils.address, vault.address);
+  await vault.init(vader.address, usdv.address, utils.address, router.address);
+  
   anchor0 = await Anchor.new();
   anchor1 = await Anchor.new();
   anchor2 = await Anchor.new();
@@ -42,35 +51,10 @@ before(async function() {
   anchor4 = await Anchor.new();
   anchor5 = await Anchor.new();
 
-  await usdv.setVault(vault.address)
-  await utils.setVault(vault.address)
-  await vader.setVSD(usdv.address)
-
-  await vether.transfer(acc1, BN2Str(3403)) 
+  await vether.transfer(acc1, '3403') 
   await vether.approve(vader.address, '3400', {from:acc1})
   await vader.upgrade('3400', {from:acc1}) 
 
-  await anchor0.transfer(acc1, BN2Str(2000))
-  await anchor0.approve(vault.address, BN2Str(one), {from:acc1})
-  await anchor1.transfer(acc1, BN2Str(2000))
-  await anchor1.approve(vault.address, BN2Str(one), {from:acc1})
-  await anchor2.transfer(acc1, BN2Str(2000))
-  await anchor2.approve(vault.address, BN2Str(one), {from:acc1})
-  await anchor3.transfer(acc1, BN2Str(2000))
-  await anchor3.approve(vault.address, BN2Str(one), {from:acc1})
-  await anchor4.transfer(acc1, BN2Str(2000))
-  await anchor4.approve(vault.address, BN2Str(one), {from:acc1})
-
-  await vault.addLiquidity(vader.address, '100', anchor0.address, '98', {from:acc1})
-  await vault.addLiquidity(vader.address, '100', anchor1.address, '99', {from:acc1})
-  await vault.addLiquidity(vader.address, '1000', anchor2.address, '1000', {from:acc1})
-  await vault.addLiquidity(vader.address, '100', anchor3.address, '101', {from:acc1})
-  await vault.addLiquidity(vader.address, '100', anchor4.address, '102', {from:acc1})
-  await vault.listAnchor(anchor0.address, {from:acc1})
-  await vault.listAnchor(anchor1.address, {from:acc1})
-  await vault.listAnchor(anchor2.address, {from:acc1})
-  await vault.listAnchor(anchor3.address, {from:acc1})
-  await vault.listAnchor(anchor4.address, {from:acc1})
 })
 
 // acc  | VTH | VADER  | USDV |
@@ -96,7 +80,7 @@ describe("Convert to USDV", function() {
     await usdv.convert('1000', {from:acc1})
     expect(BN2Str(await vader.totalSupply())).to.equal(BN2Str(2400));
     expect(BN2Str(await usdv.totalSupply())).to.equal(BN2Str(1000));
-    expect(BN2Str(await vader.balanceOf(acc1))).to.equal(BN2Str(1000));
+    expect(BN2Str(await vader.balanceOf(acc1))).to.equal(BN2Str(2400));
     expect(BN2Str(await usdv.getMemberDeposit(acc1))).to.equal(BN2Str(1000));
   });
   it("Should withdraw USDV", async function() {
@@ -110,7 +94,7 @@ describe("Convert to USDV", function() {
     expect(BN2Str(await usdv.getMemberDeposit(acc1))).to.equal(BN2Str(0));
     expect(BN2Str(await usdv.totalSupply())).to.equal(BN2Str(500));
     expect(BN2Str(await vader.totalSupply())).to.equal(BN2Str(2900));
-    expect(BN2Str(await vader.balanceOf(acc1))).to.equal(BN2Str(1500));
+    expect(BN2Str(await vader.balanceOf(acc1))).to.equal(BN2Str(2900));
   });
   it("Should convert acc1", async function() {
     await usdv.convert('500', {from:acc1})
@@ -183,12 +167,13 @@ describe("Member should deposit for rewards", function() {
 // acc1 |   0 | 1400 |  100 | 200 |
 
   it("Should calc rewards", async function() {
+    await vader.startEmissions()
+    await vader.setParams('1', '2')
+    await usdv.startEmissions()
+    
     let balanceStart = await vader.balanceOf(usdv.address)
     expect(BN2Str(balanceStart)).to.equal(BN2Str(0));
-    await vader.startEmissions()
-    await vader.changeEmissionCurve('2')
     expect(BN2Str(await vader.getDailyEmission())).to.equal(BN2Str('1200'));
-
     await vader.transfer(acc0, BN2Str(100), {from:acc1})
     expect(BN2Str(await vader.currentEra())).to.equal(BN2Str(2));
     expect(BN2Str(await vader.getDailyEmission())).to.equal(BN2Str('1800'));
@@ -198,28 +183,28 @@ describe("Member should deposit for rewards", function() {
     expect(BN2Str(await usdv.balanceOf(usdv.address))).to.equal(BN2Str(600));
     expect(BN2Str(await vader.balanceOf(usdv.address))).to.equal(BN2Str(1400));
     expect(BN2Str(await usdv.calcPayment(acc1))).to.equal(BN2Str(4)); // 666/100
-    expect(BN2Str(await usdv.calcCurrentPayment(acc1))).to.equal(BN2Str(16)); // * by seconds
+    expect(BN2Str(await usdv.calcCurrentPayment(acc1))).to.equal(BN2Str(20)); // * by seconds
   });
   it("Should harvest", async function() {
     expect(BN2Str(await usdv.balanceOf(acc1))).to.equal(BN2Str(500));
-    expect(BN2Str(await usdv.calcCurrentPayment(acc1))).to.equal(BN2Str(16)); // * by seconds
+    expect(BN2Str(await usdv.calcCurrentPayment(acc1))).to.equal(BN2Str(20)); // * by seconds
     expect(BN2Str(await usdv.balanceOf(usdv.address))).to.equal(BN2Str(600));
     expect(BN2Str(await usdv.reserveVSD())).to.equal(BN2Str(400));
     expect(BN2Str(await vader.balanceOf(usdv.address))).to.equal(BN2Str(1400));
-    expect(BN2Str(await vault.getAnchorPrice())).to.equal('1000000000000000000')
-    expect(BN2Str(await vault.getVADERAmount('100'))).to.equal('100')
+    expect(BN2Str(await router.getAnchorPrice())).to.equal('1000000000000000000')
+    expect(BN2Str(await router.getVADERAmount('100'))).to.equal('100')
 
     await usdv.harvest({from:acc1})
-    expect(BN2Str(await usdv.balanceOf(acc1))).to.equal(BN2Str(520));
-    expect(BN2Str(await usdv.balanceOf(usdv.address))).to.equal(BN2Str(1047));
+    expect(BN2Str(await usdv.balanceOf(acc1))).to.equal(BN2Str(524));
+    expect(BN2Str(await usdv.balanceOf(usdv.address))).to.equal(BN2Str(1043));
   });
   it("Should withdraw", async function() {
-    expect(BN2Str(await usdv.balanceOf(acc1))).to.equal(BN2Str(520));
+    expect(BN2Str(await usdv.balanceOf(acc1))).to.equal(BN2Str(524));
     expect(BN2Str(await usdv.getMemberDeposit(acc1))).to.equal(BN2Str(200));
-    expect(BN2Str(await usdv.balanceOf(usdv.address))).to.equal(BN2Str(1047));
+    expect(BN2Str(await usdv.balanceOf(usdv.address))).to.equal(BN2Str(1043));
     let tx = await usdv.withdrawToVSD("10000",{from:acc1})
-    expect(BN2Str(await usdv.balanceOf(acc1))).to.equal(BN2Str(728));
-    expect(BN2Str(await usdv.balanceOf(usdv.address))).to.equal(BN2Str(1383));
+    expect(BN2Str(await usdv.balanceOf(acc1))).to.equal(BN2Str(732));
+    expect(BN2Str(await usdv.balanceOf(usdv.address))).to.equal(BN2Str(1379));
   });
 });
 
