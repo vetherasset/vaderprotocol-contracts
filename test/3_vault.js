@@ -4,6 +4,7 @@ var Vether = artifacts.require('./Vether')
 var Vader = artifacts.require('./Vader')
 var USDV = artifacts.require('./USDV')
 var Vault = artifacts.require('./Vault')
+var Router = artifacts.require('./Router')
 var Asset = artifacts.require('./Token1')
 var Anchor = artifacts.require('./Token2')
 
@@ -31,9 +32,16 @@ before(async function() {
 
   utils = await Utils.new();
   vether = await Vether.new();
-  vader = await Vader.new(vether.address);
-  usdv = await USDV.new(vader.address, utils.address);
-  vault = await Vault.new(vader.address, usdv.address, utils.address);
+  vader = await Vader.new();
+  usdv = await USDV.new();
+  router = await Router.new();
+  vault = await Vault.new();
+
+  await vader.init(vether.address, usdv.address)
+  await usdv.init(vader.address, utils.address, router.address)
+  await router.init(vader.address, usdv.address, utils.address, vault.address);
+  await vault.init(vader.address, usdv.address, utils.address, router.address);
+
   asset = await Asset.new();
   anchor0 = await Anchor.new();
   anchor1 = await Anchor.new();
@@ -42,18 +50,14 @@ before(async function() {
   anchor4 = await Anchor.new();
   anchor5 = await Anchor.new();
 
-  console.log('acc0:', acc0)
-  console.log('acc1:', acc1)
-  console.log('acc2:', acc2)
-  console.log('utils:', utils.address)
-  console.log('vether:', vether.address)
-  console.log('vader:', vader.address)
-  console.log('usdv:', usdv.address)
-  console.log('vault:', vault.address)
-
-  await usdv.setVault(vault.address)
-  await utils.setVault(vault.address)
-  expect(await usdv.VAULT()).to.equal(vault.address);
+  // console.log('acc0:', acc0)
+  // console.log('acc1:', acc1)
+  // console.log('acc2:', acc2)
+  // console.log('utils:', utils.address)
+  // console.log('vether:', vether.address)
+  // console.log('vader:', vader.address)
+  // console.log('usdv:', usdv.address)
+  // console.log('vault:', vault.address)
 
   await vether.transfer(acc1, BN2Str(6407)) 
   await anchor0.transfer(acc1, BN2Str(2000))

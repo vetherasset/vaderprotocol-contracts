@@ -57,13 +57,11 @@ contract Vault {
                 _isAnchor[token] = true;
             }
             _actualInputBase = getAddedAmount(VADER, token);
-            pooledVADER = pooledVADER.add(_actualInputBase);
         } else if (base == USDV) {
             if(!isAsset(token)){
                 _isAsset[token] = true;
             }
             _actualInputBase = getAddedAmount(USDV, token);
-            pooledVSD = pooledVSD.add(_actualInputBase);
         }
         uint _actualInputToken = getAddedAmount(token, token);
         liquidityUnits = iUTILS(UTILS).calcLiquidityUnits(_actualInputBase, mapToken_baseAmount[token], _actualInputToken, mapToken_tokenAmount[token], mapToken_Units[token]);
@@ -136,13 +134,13 @@ contract Vault {
     // Safe
     function getAddedAmount(address _token, address _pool) internal returns(uint addedAmount) {
         if(_token == VADER && _pool == VADER){
-            addedAmount = (iERC20(_token).balanceOf(address(this))).sub(mapToken_tokenAmount[_pool]).sub(pooledVADER);
+            addedAmount = (iERC20(_token).balanceOf(address(this))).sub(pooledVADER);
             pooledVADER = pooledVADER.add(addedAmount);
         } else if(_token == VADER && _pool != VADER){
-            addedAmount = (iERC20(_token).balanceOf(address(this))).sub(mapToken_baseAmount[_pool]).sub(pooledVADER);
+            addedAmount = (iERC20(_token).balanceOf(address(this))).sub(pooledVADER);
             pooledVADER = pooledVADER.add(addedAmount);
         } else if(_token == USDV) {
-            addedAmount = (iERC20(_token).balanceOf(address(this))).sub(mapToken_tokenAmount[_pool]).sub(pooledVSD);
+            addedAmount = (iERC20(_token).balanceOf(address(this))).sub(pooledVSD);
             pooledVSD = pooledVSD.add(addedAmount);
         } else {
             addedAmount = (iERC20(_token).balanceOf(address(this))).sub(mapToken_tokenAmount[_pool]);

@@ -125,11 +125,11 @@ contract Router {
             updateAnchorPrice(outputToken);
         } else if (!isBase(inputToken) && !isBase(outputToken)) {
             // Token -> Token
-            iVAULT(VAULT).swap(_base, inputToken, address(this), true);
+            iVAULT(VAULT).swap(_base, inputToken, VAULT, true);
+            outputAmount = iVAULT(VAULT).swap(_base, outputToken, _member, false);
             iERC20(_base).transfer(VAULT, getRewardShare(inputToken));
             iVAULT(VAULT).sync(_base, inputToken);
             updateAnchorPrice(inputToken);
-            outputAmount = iVAULT(VAULT).swap(_base, outputToken, _member, false);
             iERC20(_base).transfer(VAULT, getRewardShare(outputToken));
             iVAULT(VAULT).sync(_base, outputToken);
             updateAnchorPrice(outputToken);
