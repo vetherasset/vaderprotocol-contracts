@@ -40,7 +40,7 @@ contract Utils {
     constructor () public payable {
     }
         // Can set vault
-    function setVault(address _vault) public {
+    function init(address _vault) public {
         if(VAULT == address(0)){
             VAULT = _vault;
         }

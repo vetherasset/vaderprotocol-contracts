@@ -33,6 +33,7 @@ contract Vader is iERC20 {
     address public VETHER;
     address public VSD;
     address public burnAddress;
+    address public rewardAddress;
     address public DAO;
 
     event NewEra(uint256 currentEra, uint256 nextEraTime, uint256 emission);
@@ -64,11 +65,6 @@ contract Vader is iERC20 {
         require(inited == false);
         VETHER = _vether;
         VSD = _VSD;
-    }
-    // Can set params
-    function setParams(uint _one, uint _two) public onlyDAO {
-        secondsPerEra = _one;
-        emissionCurve = _two;
     }
 
     //========================================iERC20=========================================//
@@ -149,6 +145,15 @@ contract Vader is iERC20 {
     // Can stop
     function stopEmissions() public onlyDAO{
         emitting = false;
+    }
+    // Can set params
+    function setParams(uint _one, uint _two) public onlyDAO {
+        secondsPerEra = _one;
+        emissionCurve = _two;
+    }
+    // Can set params
+    function setRewardAddress(address _address) public onlyDAO {
+        rewardAddress = _address;
     }
     // Can change DAO
     function changeDAO(address newDAO) public onlyDAO{
