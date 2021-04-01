@@ -2,7 +2,7 @@ const { expect } = require("chai");
 var Utils = artifacts.require('./Utils')
 var Vether = artifacts.require('./Vether')
 var Vader = artifacts.require('./Vader')
-var VSD = artifacts.require('./VSD')
+var USDV = artifacts.require('./USDV')
 var Vault = artifacts.require('./Vault')
 var Asset = artifacts.require('./Token1')
 var Anchor = artifacts.require('./Token2')
@@ -17,7 +17,7 @@ function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-var utils; var vader; var vether; var vsd; var vault; var anchor; var asset;
+var utils; var vader; var vether; var usdv; var vault; var anchor; var asset;
 var anchor0; var anchor1; var anchor2; var anchor3; var anchor4;  var anchor5; 
 var acc0; var acc1; var acc2; var acc3; var acc0; var acc5;
 const one = 10**18
@@ -32,8 +32,8 @@ before(async function() {
   utils = await Utils.new();
   vether = await Vether.new();
   vader = await Vader.new(vether.address);
-  vsd = await VSD.new(vader.address, utils.address);
-  vault = await Vault.new(vader.address, vsd.address, utils.address);
+  usdv = await USDV.new(vader.address, utils.address);
+  vault = await Vault.new(vader.address, usdv.address, utils.address);
   asset = await Asset.new();
   anchor0 = await Anchor.new();
   anchor1 = await Anchor.new();
@@ -48,12 +48,12 @@ before(async function() {
   console.log('utils:', utils.address)
   console.log('vether:', vether.address)
   console.log('vader:', vader.address)
-  console.log('vsd:', vsd.address)
+  console.log('usdv:', usdv.address)
   console.log('vault:', vault.address)
 
-  await vsd.setVault(vault.address)
+  await usdv.setVault(vault.address)
   await utils.setVault(vault.address)
-  await vader.setVSD(vsd.address)
+  await vader.setVSD(usdv.address)
   // await vader.changeEmissionCurve('1')
   await vader.startEmissions() 
 
@@ -84,23 +84,23 @@ before(async function() {
 
   await asset.transfer(acc1, BN2Str(2000))
   await asset.approve(vault.address, BN2Str(one), {from:acc1})
-  await vsd.convert(BN2Str(3000), {from:acc1})
-  await vsd.withdrawToVSD('10000', {from:acc1})
-// acc  | VTH | VADER  | VSD | Anr  |  Ass |
+  await usdv.convert(BN2Str(3000), {from:acc1})
+  await usdv.withdrawToVSD('10000', {from:acc1})
+// acc  | VTH | VADER  | USDV | Anr  |  Ass |
 // vault|   0 |    0 |    0 |    0 |    0 |
 // acc1 |   0 | 3000 | 3000 | 2000 | 2000 |
-  await vault.addLiquidity(vsd.address, '1000', vader.address, '1000', {from:acc1})
-  await vault.addLiquidity(vsd.address, '1000', asset.address, '1000', {from:acc1})
+  await vault.addLiquidity(usdv.address, '1000', vader.address, '1000', {from:acc1})
+  await vault.addLiquidity(usdv.address, '1000', asset.address, '1000', {from:acc1})
 
 })
-// acc  | VTH | VADER  | VSD | Anr  |  Ass |
+// acc  | VTH | VADER  | USDV | Anr  |  Ass |
 // vault|   0 | 2000 | 2000 | 1000 | 1000 |
 // acc1 |   0 | 1000 | 1000 | 1000 | 1000 |
 
 describe("Deploy right", function() {
   it("Should have right reserves", async function() {
     expect(BN2Str(await vader.getDailyEmission())).to.equal('3');
-    expect(BN2Str(await vsd.reserveVSD())).to.equal('16');
+    expect(BN2Str(await usdv.reserveVSD())).to.equal('16');
     expect(BN2Str(await vault.reserveVSD())).to.equal('16');
     expect(BN2Str(await vault.reserveVADER())).to.equal('16');
     
@@ -116,13 +116,13 @@ describe("Should do IL Protection", function() {
     expect(BN2Str(await utils.calcCoverage('100', '1000', '20', '2000'))).to.equal('70');
   });
   it("Small swap, need protection", async function() {
-    expect(BN2Str(await vsd.balanceOf(acc1))).to.equal('1000');
+    expect(BN2Str(await usdv.balanceOf(acc1))).to.equal('1000');
     for(let i = 0; i<9; i++){
-      await vault.swap(vsd.address, '100', vader.address, {from:acc1})
+      await vault.swap(usdv.address, '100', vader.address, {from:acc1})
     }
     // expect(BN2Str(await vault.mapToken_tokenAmount(vader.address))).to.equal('1080');
     // expect(BN2Str(await vault.mapToken_baseAmount(vader.address))).to.equal('931');
-    // expect(BN2Str(await vsd.balanceOf(acc1))).to.equal('1053');
+    // expect(BN2Str(await usdv.balanceOf(acc1))).to.equal('1053');
     expect(BN2Str(await vault.mapMemberToken_depositBase(acc1, vader.address))).to.equal('1000');
     expect(BN2Str(await vault.mapMemberToken_depositToken(acc1, vader.address))).to.equal('1000');
 
@@ -132,7 +132,7 @@ describe("Should do IL Protection", function() {
     expect(BN2Str(coverage)).to.equal('556');
     expect(BN2Str(await vault.getProtection(acc1, vader.address, "10000", coverage))).to.equal('556');
     let reserveVSD = BN2Str(await vault.reserveVSD())
-    expect(BN2Str(await vault.getILProtection(acc1, vsd.address, vader.address, '10000'))).to.equal(reserveVSD);
+    expect(BN2Str(await vault.getILProtection(acc1, usdv.address, vader.address, '10000'))).to.equal(reserveVSD);
 
 
   });

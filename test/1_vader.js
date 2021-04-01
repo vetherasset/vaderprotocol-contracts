@@ -2,7 +2,7 @@ const { expect } = require("chai");
 var Utils = artifacts.require('./Utils')
 var Vether = artifacts.require('./Vether')
 var Vader = artifacts.require('./Vader')
-var VSD = artifacts.require('./VSD')
+var USDV = artifacts.require('./USDV')
 var Router = artifacts.require('./Router')
 
 const BigNumber = require('bignumber.js')
@@ -29,7 +29,7 @@ before(async function() {
   utils = await Utils.new();
   vether = await Vether.new();
   vader = await Vader.new();
-  usdv = await VSD.new();
+  usdv = await USDV.new();
   router = await Router.new();
   await vader.init(vether.address, usdv.address)
   await usdv.init(vader.address, utils.address, router.address)

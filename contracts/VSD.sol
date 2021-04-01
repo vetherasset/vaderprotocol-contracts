@@ -11,7 +11,7 @@ import "./iROUTER.sol";
 import "@nomiclabs/buidler/console.sol";
 
     //======================================VADER=========================================//
-contract VSD is iERC20 {
+contract USDV is iERC20 {
     using SafeMath for uint256;
 
     // ERC-20 Parameters
@@ -55,7 +55,7 @@ contract VSD is iERC20 {
     // Constructor
     constructor() public {
         name = 'VADER STABLE DOLLAR';
-        symbol = 'VSD';
+        symbol = 'USDV';
         decimals = 18;
         totalSupply = 0;
         DAO = msg.sender;
@@ -179,7 +179,7 @@ contract VSD is iERC20 {
     }
     
     //======================================ASSET MINTING========================================//
-    // VADER Holders to convert to VSD
+    // VADER Holders to convert to USDV
     function convert(uint amount) public returns(uint convertAmount) {
         require(iERC20(VADER).transferTo(address(this), amount));   // Get funds
         convertAmount = _convert(amount);                           // Get conversion amount, mint here
@@ -193,8 +193,8 @@ contract VSD is iERC20 {
         _mint(address(this), _convertAmount);
         return _convertAmount;
     }
-    //======================================VSD DEPOSITS========================================//
-    // VSD holders to deposit for Interest Payments
+    //======================================USDV DEPOSITS========================================//
+    // USDV holders to deposit for Interest Payments
     function deposit(uint amount) public {
         depositForMember(msg.sender, amount);
     }
@@ -246,19 +246,19 @@ contract VSD is iERC20 {
         return iUTILS(UTILS).calcShare(_balance, totalFunds, _reserve);         // Get member's share of that
     }
 
-    // Members to withdraw to VSD
+    // Members to withdraw to USDV
     function withdrawToVSD(uint basisPoints) public returns(uint redeemedAmount) {
         address _member = msg.sender;
-        redeemedAmount = _processWithdraw(_member, basisPoints);                         // get VSD to withdraw
+        redeemedAmount = _processWithdraw(_member, basisPoints);                         // get USDV to withdraw
         _transfer(address(this), msg.sender, redeemedAmount);                    // Forward to member
         return redeemedAmount;
     }
     // Members to withdraw to VADER
     function withdrawToVADER(uint basisPoints) public returns(uint redeemedAmount) {
         address _member = msg.sender;
-        uint _withdrawnAmount = _processWithdraw(_member, basisPoints);              // get VSD to withdraw
+        uint _withdrawnAmount = _processWithdraw(_member, basisPoints);              // get USDV to withdraw
         _transfer(address(this), VADER, _withdrawnAmount);                      // send to VADER
-        redeemedAmount = iVADER(VADER).redeem();                                // Vader burns VSD to VADER, sends back
+        redeemedAmount = iVADER(VADER).redeem();                                // Vader burns USDV to VADER, sends back
         iERC20(VADER).transfer(_member, redeemedAmount);                        // Forward to member
         return redeemedAmount;
     }

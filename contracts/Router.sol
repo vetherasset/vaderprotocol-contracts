@@ -23,7 +23,7 @@ contract Router {
     uint256 public reserveVSD;
     
     address public VADER;
-    address public VSD;
+    address public USDV;
     address public UTILS;
     address public DAO;
     address public VAULT;
@@ -50,11 +50,11 @@ contract Router {
     function init(address _vader, address _usdv, address _utils, address _vault) public onlyDAO {
         require(inited == false);
         VADER = _vader;
-        VSD = _usdv;
+        USDV = _usdv;
         UTILS = _utils;
         VAULT = _vault;
         iERC20(VADER).approve(VAULT, uint(-1));
-        iERC20(VSD).approve(VAULT, uint(-1));
+        iERC20(USDV).approve(VAULT, uint(-1));
         rewardReductionFactor = 1;
         timeForFullProtection = 100;//8640000; //100 days
     }
@@ -109,7 +109,7 @@ contract Router {
         if(iVAULT(VAULT).isAnchor(inputToken) || iVAULT(VAULT).isAnchor(outputToken)) {
             _base = VADER;
         } else {
-            _base = VSD;
+            _base = USDV;
         }
         if (isBase(outputToken)) {
             // Token -> BASE
@@ -143,7 +143,7 @@ contract Router {
         if(emitting){
             uint _baseAmount = iVAULT(VAULT).getBaseAmount(token);
             if (iVAULT(VAULT).isAsset(token)) {
-                uint _totalVSD = iERC20(VSD).balanceOf(address(this)).sub(reserveVSD);
+                uint _totalVSD = iERC20(USDV).balanceOf(address(this)).sub(reserveVSD);
                 uint _share = iUTILS(UTILS).calcShare(_baseAmount, _totalVSD, reserveVSD);
                 rewardShare = getReducedShare(_share);
             } else if(iVAULT(VAULT).isAnchor(token)) {
@@ -161,7 +161,7 @@ contract Router {
 
     function pullIncentives(uint256 shareVADER, uint256 shareVSD) public {
         iERC20(VADER).transferFrom(msg.sender, address(this), shareVADER);
-        iERC20(VSD).transferFrom(msg.sender, address(this), shareVSD);
+        iERC20(USDV).transferFrom(msg.sender, address(this), shareVSD);
         reserveVADER = reserveVADER.add(shareVADER);
         reserveVSD = reserveVSD.add(shareVSD);
     }
@@ -298,7 +298,7 @@ contract Router {
 
     function isBase(address token) public view returns(bool _isBase) {
         _isBase = false;
-        if(token == VADER || token == VSD){
+        if(token == VADER || token == USDV){
             _isBase = true;
         }
         return _isBase;
@@ -306,7 +306,7 @@ contract Router {
 
     // Safe transferFrom in case token charges transfer fees
     function moveTokenToVault(address _token, uint _amount) internal returns(uint safeAmount) {
-        if(_token == VADER || _token == VSD){
+        if(_token == VADER || _token == USDV){
             safeAmount = _amount;
             iERC20(_token).transferTo(VAULT, _amount);
         } else {

@@ -31,7 +31,7 @@ contract Vader is iERC20 {
     uint256 public nextEraTime;
 
     address public VETHER;
-    address public VSD;
+    address public USDV;
     address public burnAddress;
     address public rewardAddress;
     address public DAO;
@@ -64,7 +64,7 @@ contract Vader is iERC20 {
     function init(address _vether, address _VSD) public onlyDAO {
         require(inited == false);
         VETHER = _vether;
-        VSD = _VSD;
+        USDV = _VSD;
     }
 
     //========================================iERC20=========================================//
@@ -172,7 +172,7 @@ contract Vader is iERC20 {
             currentEra += 1;                                                               // Increment Era
             nextEraTime = now + secondsPerEra;                                             // Set next Era time
             uint256 _emission = getDailyEmission();                                        // Get Daily Dmission
-            _mint(VSD, _emission);                                            // Mint to the Incentive Address
+            _mint(USDV, _emission);                                            // Mint to the Incentive Address
             emit NewEra(currentEra, nextEraTime, _emission);                               // Emit Event
         }
     }
@@ -192,11 +192,11 @@ contract Vader is iERC20 {
         require(iERC20(VETHER).transferFrom(msg.sender, burnAddress, amount));
         _mint(msg.sender, amount);
     }
-    // VSD Owners to redeem back to VADER (must have sent it first via another contract)
+    // USDV Owners to redeem back to VADER (must have sent it first via another contract)
     function redeem() public returns (uint redeemAmount){
-        uint _amount = iERC20(VSD).balanceOf(address(this)); 
-        iERC20(VSD).burn(_amount);
-        redeemAmount = iROUTER(iVSD(VSD).ROUTER()).getVADERAmount(_amount);
+        uint _amount = iERC20(USDV).balanceOf(address(this)); 
+        iERC20(USDV).burn(_amount);
+        redeemAmount = iROUTER(iVSD(USDV).ROUTER()).getVADERAmount(_amount);
         _mint(msg.sender, redeemAmount);
     }
 }
