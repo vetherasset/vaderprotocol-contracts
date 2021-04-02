@@ -2,7 +2,9 @@ const { expect } = require("chai");
 var Utils = artifacts.require('./Utils')
 var Vether = artifacts.require('./Vether')
 var Vader = artifacts.require('./Vader')
-var VSD = artifacts.require('./VSD')
+var USDV = artifacts.require('./USDV')
+var Router = artifacts.require('./Router')
+
 const BigNumber = require('bignumber.js')
 const truffleAssert = require('truffle-assertions')
 
@@ -13,7 +15,7 @@ function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-var utils; var vader; var vether; var usdv;
+var utils; var vader; var vether; var usdv; var router;
 var acc0; var acc1; var acc2; var acc3; var acc0; var acc5;
 const one = 10**18
 
@@ -26,8 +28,11 @@ before(async function() {
 
   utils = await Utils.new();
   vether = await Vether.new();
-  vader = await Vader.new(vether.address);
-  usdv = await VSD.new(vader.address, utils.address);
+  vader = await Vader.new();
+  usdv = await USDV.new();
+  router = await Router.new();
+  await vader.init(vether.address, usdv.address)
+  await usdv.init(vader.address, utils.address, router.address)
 
   await vether.transfer(acc1, BN2Str(1001))
 // acc  | VTH | VADER  |
@@ -36,7 +41,7 @@ before(async function() {
 
 })
 
-describe("Deploy", function() {
+describe("Deploy Vader", function() {
   it("Should deploy", async function() {
     expect(await vader.name()).to.equal("VADER PROTOCOL TOKEN");
     expect(await vader.symbol()).to.equal("VADER");
@@ -117,12 +122,13 @@ describe("DAO Functions", function() {
     await truffleAssert.reverts(vader.startEmissions({from:acc1}))
   });
   it("DAO changeEmissionCurve", async function() {
-    await vader.changeEmissionCurve('1')
+    await vader.setParams('1', '1')
+    expect(BN2Str(await vader.secondsPerEra())).to.equal('1');
     expect(BN2Str(await vader.emissionCurve())).to.equal('1');
   });
   it("DAO changeIncentiveAddress", async function() {
-    await vader.setVSD(usdv.address)
-    expect(await vader.VSD()).to.equal(usdv.address);
+    await vader.setRewardAddress(usdv.address)
+    expect(await vader.rewardAddress()).to.equal(usdv.address);
   });
   it("DAO changeDAO", async function() {
     await vader.changeDAO(acc2)
@@ -161,11 +167,6 @@ describe("Emissions", function() {
     expect(BN2Str(await vader.currentEra())).to.equal('4');
     expect(BN2Str(await vader.balanceOf(usdv.address))).to.equal(BN2Str('5600'));
     expect(BN2Str(await vader.getDailyEmission())).to.equal(BN2Str('6400'));
-  });
-
-  it("DAO changeEraDuration", async function() {
-    await vader.changeEraDuration('200',{from:acc2})
-    expect(BN2Str(await vader.secondsPerEra())).to.equal('200');
   });
 });
 

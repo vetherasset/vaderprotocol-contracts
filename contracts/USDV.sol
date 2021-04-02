@@ -6,11 +6,12 @@ import "./iERC20.sol";
 import "./SafeMath.sol";
 import "./iUTILS.sol";
 import "./iVADER.sol";
-import "./iVAULT.sol";
+import "./iROUTER.sol";
+
 import "@nomiclabs/buidler/console.sol";
 
     //======================================VADER=========================================//
-contract VSD is iERC20 {
+contract USDV is iERC20 {
     using SafeMath for uint256;
 
     // ERC-20 Parameters
@@ -22,6 +23,8 @@ contract VSD is iERC20 {
     mapping(address => mapping(address => uint256)) private _allowances;
 
     // Parameters
+    bool private inited;
+    bool public emitting;
     uint256 public totalFunds;
     uint256 public currentEra;
     uint256 public nextEraTime;
@@ -29,9 +32,9 @@ contract VSD is iERC20 {
     uint256 public minimumDepositTime;
 
     address public VADER;
-    address public VAULT;
     address public DAO;
     address public UTILS;
+    address public ROUTER;
 
     mapping(address => bool) private _isMember; // Is Member
     mapping(address => uint256) private mapMember_deposit;
@@ -50,27 +53,24 @@ contract VSD is iERC20 {
 
     //=====================================CREATION=========================================//
     // Constructor
-    constructor(address _vader, address _utils) public {
+    constructor() public {
         name = 'VADER STABLE DOLLAR';
-        symbol = 'VSD';
+        symbol = 'USDV';
         decimals = 18;
         totalSupply = 0;
         DAO = msg.sender;
+    }
+    function init(address _vader, address _utils, address _router) public onlyDAO {
+        require(inited == false);
         VADER = _vader;
         UTILS = _utils;
+        ROUTER = _router;
+        iERC20(VADER).approve(ROUTER, uint(-1));
+        _approve(address(this), ROUTER, uint(-1));
         currentEra = 1;
         nextEraTime = now + iVADER(VADER).secondsPerEra();
         erasToEarn = 100;
         minimumDepositTime = 1;
-    }
-
-    // Can set vault
-    function setVault(address _vault) public {
-        if(VAULT == address(0)){
-            VAULT = _vault;
-            iERC20(VADER).approve(VAULT, uint(-1));
-            _approve(address(this), VAULT, uint(-1));
-        }
     }
 
     //========================================iERC20=========================================//
@@ -141,21 +141,45 @@ contract VSD is iERC20 {
         emit Transfer(account, address(0), amount);
     }
 
+    //=========================================DAO=========================================//
+    // Can start
+    function startEmissions() public onlyDAO{
+        emitting = true;
+    }
+    // Can stop
+    function stopEmissions() public onlyDAO{
+        emitting = false;
+    }
+    // Can set params
+    function setParams(uint _one, uint _two) public onlyDAO {
+        erasToEarn = _one;
+        minimumDepositTime = _two;//8640000; //100 days
+    }
+    // Can change DAO
+    function changeDAO(address newDAO) public onlyDAO{
+        require(newDAO != address(0), "address err");
+        DAO = newDAO;
+    }
+    // Can purge DAO
+    function purgeDAO() public onlyDAO{
+        DAO = address(0);
+    }
+
    //======================================INCENTIVES========================================//
     // Internal - Update incentives function
     function _checkIncentives() private {
-        if (now >= nextEraTime) {                  // If new Era
+        if (now >= nextEraTime && emitting) {                  // If new Era
             currentEra += 1;                                                               // Increment Era
             nextEraTime = now + iVADER(VADER).secondsPerEra(); 
             uint _balance = iERC20(VADER).balanceOf(address(this)); // Get spare VADER
-            uint _VSDShare = _twothirds(_balance);                 // Get 2/3rds
-            _convert(_VSDShare);                                   // Convert it
-            iVAULT(VAULT).pullIncentives(iERC20(VADER).balanceOf(address(this)), _VSDShare.div(2));                         // Pull incentives over
+            uint _USDVShare = _twothirds(_balance);                 // Get 2/3rds
+            _convert(_USDVShare);                                   // Convert it
+            iROUTER(ROUTER).pullIncentives(iERC20(VADER).balanceOf(address(this)), _USDVShare.div(2));                         // Pull incentives over
         }
     }
     
     //======================================ASSET MINTING========================================//
-    // VADER Holders to convert to VSD
+    // VADER Holders to convert to USDV
     function convert(uint amount) public returns(uint convertAmount) {
         require(iERC20(VADER).transferTo(address(this), amount));   // Get funds
         convertAmount = _convert(amount);                           // Get conversion amount, mint here
@@ -165,12 +189,12 @@ contract VSD is iERC20 {
     // Internal convert
     function _convert(uint amount) internal returns(uint _convertAmount){
         iERC20(VADER).burn(amount);
-        _convertAmount = iVAULT(VAULT).getVSDAmount(amount);
+        _convertAmount = iROUTER(ROUTER).getUSDVAmount(amount);
         _mint(address(this), _convertAmount);
         return _convertAmount;
     }
-    //======================================VSD DEPOSITS========================================//
-    // VSD holders to deposit for Interest Payments
+    //======================================USDV DEPOSITS========================================//
+    // USDV holders to deposit for Interest Payments
     function deposit(uint amount) public {
         depositForMember(msg.sender, amount);
     }
@@ -209,7 +233,7 @@ contract VSD is iERC20 {
         uint _secondsSinceClaim = now.sub(mapMember_lastTime[member]);      // Get time since last claim
         uint _share = calcPayment(member);                                  // Get share of rewards for member
         uint _reward = _share.mul(_secondsSinceClaim).div(iVADER(VADER).secondsPerEra());   // Get owed amount, based on per-day rates
-        uint _reserve = reserveVSD();
+        uint _reserve = reserveUSDV();
         if(_reward >= _reserve) {
             _reward = _reserve;                                             // Send full reserve if the last
         }
@@ -218,23 +242,23 @@ contract VSD is iERC20 {
 
     function calcPayment(address member) public view returns(uint){
         uint _balance = mapMember_deposit[member];
-        uint _reserve = reserveVSD().div(erasToEarn);                          // Deplete reserve over a number of days
+        uint _reserve = reserveUSDV().div(erasToEarn);                          // Deplete reserve over a number of days
         return iUTILS(UTILS).calcShare(_balance, totalFunds, _reserve);         // Get member's share of that
     }
 
-    // Members to withdraw to VSD
-    function withdrawToVSD(uint basisPoints) public returns(uint redeemedAmount) {
+    // Members to withdraw to USDV
+    function withdrawToUSDV(uint basisPoints) public returns(uint redeemedAmount) {
         address _member = msg.sender;
-        redeemedAmount = _processWithdraw(_member, basisPoints);                         // get VSD to withdraw
+        redeemedAmount = _processWithdraw(_member, basisPoints);                         // get USDV to withdraw
         _transfer(address(this), msg.sender, redeemedAmount);                    // Forward to member
         return redeemedAmount;
     }
     // Members to withdraw to VADER
     function withdrawToVADER(uint basisPoints) public returns(uint redeemedAmount) {
         address _member = msg.sender;
-        uint _withdrawnAmount = _processWithdraw(_member, basisPoints);              // get VSD to withdraw
+        uint _withdrawnAmount = _processWithdraw(_member, basisPoints);              // get USDV to withdraw
         _transfer(address(this), VADER, _withdrawnAmount);                      // send to VADER
-        redeemedAmount = iVADER(VADER).redeem();                                // Vader burns VSD to VADER, sends back
+        redeemedAmount = iVADER(VADER).redeem();                                // Vader burns USDV to VADER, sends back
         iERC20(VADER).transfer(_member, redeemedAmount);                        // Forward to member
         return redeemedAmount;
     }
@@ -251,7 +275,7 @@ contract VSD is iERC20 {
 
     //============================== HELPERS ================================//
 
-    function reserveVSD() public view returns(uint){
+    function reserveUSDV() public view returns(uint){
         return balanceOf(address(this)).sub(totalFunds);
     }
 

@@ -4,8 +4,8 @@ pragma solidity ^0.6.8;
 // Interfaces
 import "./iERC20.sol";
 import "./SafeMath.sol";
-import "./iVSD.sol";
-import "./iVAULT.sol";
+import "./iUSDV.sol";
+import "./iROUTER.sol";
 
     //======================================VADER=========================================//
 contract Vader is iERC20 {
@@ -20,9 +20,10 @@ contract Vader is iERC20 {
     mapping(address => mapping(address => uint256)) private _allowances;
 
     // Parameters
+    bool private inited;
+    bool public emitting;
     uint256 _1m;
     uint256 public baseline;
-    bool public emitting;
     uint256 public emissionCurve;
     uint256 public maxSupply;
     uint256 public secondsPerEra;
@@ -30,15 +31,12 @@ contract Vader is iERC20 {
     uint256 public nextEraTime;
 
     address public VETHER;
-    address public VSD;
+    address public USDV;
     address public burnAddress;
+    address public rewardAddress;
     address public DAO;
 
-    // Events
-    event NewCurve(address indexed DAO, uint256 newCurve);
     event NewEra(uint256 currentEra, uint256 nextEraTime, uint256 emission);
-    event NewDAO(address indexed DAO, address newOwner);
-    event NewDuration(address indexed DAO, uint256 newDuration);
 
     // Only DAO can execute
     modifier onlyDAO() {
@@ -48,7 +46,7 @@ contract Vader is iERC20 {
 
     //=====================================CREATION=========================================//
     // Constructor
-    constructor(address _vether) public {
+    constructor() public {
         name = 'VADER PROTOCOL TOKEN';
         symbol = 'VADER';
         decimals = 18;
@@ -56,20 +54,18 @@ contract Vader is iERC20 {
         baseline = _1m;
         totalSupply = 0;
         maxSupply = 2 * _1m;
-        emissionCurve = 900;
-        emitting = false;
         currentEra = 1;
         secondsPerEra = 1; //86400;
         nextEraTime = now + secondsPerEra;
+        emissionCurve = 900;
         DAO = msg.sender;
-        VETHER = _vether;
         burnAddress = 0x0111011001100001011011000111010101100101;
     }
-    // Can set VSD
-    function setVSD(address _VSD) public{
-        if(VSD == address(0)){
-            VSD = _VSD;
-        }
+    function init(address _vether, address _USDV) public onlyDAO {
+        require(inited == false);
+        VETHER = _vether;
+        USDV = _USDV;
+        rewardAddress = _USDV;
     }
 
     //========================================iERC20=========================================//
@@ -144,39 +140,30 @@ contract Vader is iERC20 {
 
     //=========================================DAO=========================================//
     // Can start
-    function startEmissions() public onlyDAO returns(bool){
+    function startEmissions() public onlyDAO{
         emitting = true;
-        return true;
     }
     // Can stop
-    function stopEmissions() public onlyDAO returns(bool){
+    function stopEmissions() public onlyDAO{
         emitting = false;
-        return true;
     }
-    // Can change emissionCurve
-    function changeEmissionCurve(uint256 newCurve) public onlyDAO returns(bool){
-        emissionCurve = newCurve;
-        emit NewCurve(msg.sender, newCurve);
-        return true;
+    // Can set params
+    function setParams(uint _one, uint _two) public onlyDAO {
+        secondsPerEra = _one;
+        emissionCurve = _two;
     }
-    // Can change daily time
-    function changeEraDuration(uint256 newDuration) public onlyDAO returns(bool) {
-        secondsPerEra = newDuration;
-        emit NewDuration(msg.sender, newDuration);
-        return true;
+    // Can set params
+    function setRewardAddress(address _address) public onlyDAO {
+        rewardAddress = _address;
     }
     // Can change DAO
-    function changeDAO(address newDAO) public onlyDAO returns(bool){
+    function changeDAO(address newDAO) public onlyDAO{
         require(newDAO != address(0), "address err");
         DAO = newDAO;
-        emit NewDAO(msg.sender, newDAO);
-        return true;
     }
     // Can purge DAO
-    function purgeDAO() public onlyDAO returns(bool){
+    function purgeDAO() public onlyDAO{
         DAO = address(0);
-        emit NewDAO(msg.sender, address(0));
-        return true;
     }
 
    //======================================EMISSION========================================//
@@ -186,7 +173,7 @@ contract Vader is iERC20 {
             currentEra += 1;                                                               // Increment Era
             nextEraTime = now + secondsPerEra;                                             // Set next Era time
             uint256 _emission = getDailyEmission();                                        // Get Daily Dmission
-            _mint(VSD, _emission);                                            // Mint to the Incentive Address
+            _mint(rewardAddress, _emission);                                            // Mint to the Incentive Address
             emit NewEra(currentEra, nextEraTime, _emission);                               // Emit Event
         }
     }
@@ -206,11 +193,11 @@ contract Vader is iERC20 {
         require(iERC20(VETHER).transferFrom(msg.sender, burnAddress, amount));
         _mint(msg.sender, amount);
     }
-    // VSD Owners to redeem back to VADER (must have sent it first via another contract)
+    // USDV Owners to redeem back to VADER (must have sent it first via another contract)
     function redeem() public returns (uint redeemAmount){
-        uint _amount = iERC20(VSD).balanceOf(address(this)); 
-        iERC20(VSD).burn(_amount);
-        redeemAmount = iVAULT(iVSD(VSD).VAULT()).getVADERAmount(_amount);
+        uint _amount = iERC20(USDV).balanceOf(address(this)); 
+        iERC20(USDV).burn(_amount);
+        redeemAmount = iROUTER(iUSDV(USDV).ROUTER()).getVADERAmount(_amount);
         _mint(msg.sender, redeemAmount);
     }
 }

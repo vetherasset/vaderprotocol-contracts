@@ -40,7 +40,7 @@ contract Utils {
     constructor () public payable {
     }
         // Can set vault
-    function setVault(address _vault) public {
+    function init(address _vault) public {
         if(VAULT == address(0)){
             VAULT = _vault;
         }
@@ -164,7 +164,10 @@ contract Utils {
 
     function calcShare(uint part, uint total, uint amount) public pure returns (uint share){
         // share = amount * part/total
-        return(amount.mul(part)).div(total);
+        if(total > 0){
+            share = (amount.mul(part)).div(total);
+        }
+        return share;
     }
 
     function calcSwapOutput(uint x, uint X, uint Y) public pure returns (uint output){
@@ -225,10 +228,12 @@ contract Utils {
         return numerator.div(part5);
     }
     function calcCoverage(uint _B0, uint _T0, uint _B1, uint _T1) public pure returns(uint coverage){
-        uint _depositValue = _B0.add((_T0.mul(_B1)).div(_T1)); // B0+(T0*B1/T1)
-        uint _redemptionValue = _B1.add((_T1.mul(_B1)).div(_T1)); // B1+(T1*B1/T1)
-        if(_redemptionValue <= _depositValue){
-            coverage = _depositValue.sub(_redemptionValue);
+        if(_B1 > 0 && _T1 > 0){
+            uint _depositValue = _B0.add((_T0.mul(_B1)).div(_T1)); // B0+(T0*B1/T1)
+            uint _redemptionValue = _B1.add((_T1.mul(_B1)).div(_T1)); // B1+(T1*B1/T1)
+            if(_redemptionValue <= _depositValue){
+                coverage = _depositValue.sub(_redemptionValue);
+            }
         }
         return coverage;
     }
