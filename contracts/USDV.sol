@@ -172,9 +172,9 @@ contract USDV is iERC20 {
             currentEra += 1;                                                               // Increment Era
             nextEraTime = now + iVADER(VADER).secondsPerEra(); 
             uint _balance = iERC20(VADER).balanceOf(address(this)); // Get spare VADER
-            uint _VSDShare = _twothirds(_balance);                 // Get 2/3rds
-            _convert(_VSDShare);                                   // Convert it
-            iROUTER(ROUTER).pullIncentives(iERC20(VADER).balanceOf(address(this)), _VSDShare.div(2));                         // Pull incentives over
+            uint _USDVShare = _twothirds(_balance);                 // Get 2/3rds
+            _convert(_USDVShare);                                   // Convert it
+            iROUTER(ROUTER).pullIncentives(iERC20(VADER).balanceOf(address(this)), _USDVShare.div(2));                         // Pull incentives over
         }
     }
     
@@ -189,7 +189,7 @@ contract USDV is iERC20 {
     // Internal convert
     function _convert(uint amount) internal returns(uint _convertAmount){
         iERC20(VADER).burn(amount);
-        _convertAmount = iROUTER(ROUTER).getVSDAmount(amount);
+        _convertAmount = iROUTER(ROUTER).getUSDVAmount(amount);
         _mint(address(this), _convertAmount);
         return _convertAmount;
     }
@@ -233,7 +233,7 @@ contract USDV is iERC20 {
         uint _secondsSinceClaim = now.sub(mapMember_lastTime[member]);      // Get time since last claim
         uint _share = calcPayment(member);                                  // Get share of rewards for member
         uint _reward = _share.mul(_secondsSinceClaim).div(iVADER(VADER).secondsPerEra());   // Get owed amount, based on per-day rates
-        uint _reserve = reserveVSD();
+        uint _reserve = reserveUSDV();
         if(_reward >= _reserve) {
             _reward = _reserve;                                             // Send full reserve if the last
         }
@@ -242,12 +242,12 @@ contract USDV is iERC20 {
 
     function calcPayment(address member) public view returns(uint){
         uint _balance = mapMember_deposit[member];
-        uint _reserve = reserveVSD().div(erasToEarn);                          // Deplete reserve over a number of days
+        uint _reserve = reserveUSDV().div(erasToEarn);                          // Deplete reserve over a number of days
         return iUTILS(UTILS).calcShare(_balance, totalFunds, _reserve);         // Get member's share of that
     }
 
     // Members to withdraw to USDV
-    function withdrawToVSD(uint basisPoints) public returns(uint redeemedAmount) {
+    function withdrawToUSDV(uint basisPoints) public returns(uint redeemedAmount) {
         address _member = msg.sender;
         redeemedAmount = _processWithdraw(_member, basisPoints);                         // get USDV to withdraw
         _transfer(address(this), msg.sender, redeemedAmount);                    // Forward to member
@@ -275,7 +275,7 @@ contract USDV is iERC20 {
 
     //============================== HELPERS ================================//
 
-    function reserveVSD() public view returns(uint){
+    function reserveUSDV() public view returns(uint){
         return balanceOf(address(this)).sub(totalFunds);
     }
 

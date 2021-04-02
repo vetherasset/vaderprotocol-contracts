@@ -50,7 +50,7 @@ before(async function() {
   anchor = await Anchor.new();
 
   await vether.transfer(acc1, BN2Str(7407)) 
-  await anchor.transfer(acc1, BN2Str(2000))
+  await anchor.transfer(acc1, BN2Str(3000))
   await anchor.approve(router.address, BN2Str(one), {from:acc1})
 
   await vether.approve(vader.address, '7400', {from:acc1})
@@ -75,34 +75,20 @@ describe("Deploy right", function() {
   });
 });
 
-describe("Should do IL Protection", function() {
-  it("Core math", async function() {
-    expect(BN2Str(await utils.calcCoverage('1000', '1000', '1100', '918'))).to.equal('0');
-    expect(BN2Str(await utils.calcCoverage('1000', '1000', '1200', '820'))).to.equal('63');
+describe("Should do pool rewards", function() {
 
-    expect(BN2Str(await utils.calcCoverage('100', '1000', '75', '2000'))).to.equal('0');
-    expect(BN2Str(await utils.calcCoverage('100', '1000', '20', '2000'))).to.equal('70');
-  });
-  it("Small swap, need protection", async function() {
-    expect(BN2Str(await usdv.balanceOf(acc1))).to.equal('1000');
-    for(let i = 0; i<9; i++){
-      await router.swap('100', anchor.address, vader.address, {from:acc1})
-    }
-    // expect(BN2Str(await vault.mapToken_tokenAmount(vader.address))).to.equal('1080');
-    // expect(BN2Str(await vault.mapToken_baseAmount(vader.address))).to.equal('931');
-    // expect(BN2Str(await usdv.balanceOf(acc1))).to.equal('1053');
-    expect(BN2Str(await router.mapMemberToken_depositBase(acc1, anchor.address))).to.equal('1000');
-    expect(BN2Str(await router.mapMemberToken_depositToken(acc1, anchor.address))).to.equal('1000');
-
-    // console.log("membe units", BN2Str(await vault.mapTokenMember_Units(vader.address, acc1)));
-    // console.log("units", BN2Str(await vault.mapToken_Units(vader.address)));
-    let coverage = await router.getCoverage(acc1, anchor.address)
-    expect(BN2Str(coverage)).to.equal('183');
-    expect(BN2Str(await router.getProtection(acc1, anchor.address, "10000", coverage))).to.equal('16');
-    let reserveVADER = BN2Str(await router.reserveVADER())
-    expect(BN2Str(await router.getILProtection(acc1, vader.address, anchor.address, '10000'))).to.equal(reserveVADER);
-
-
+  it("Swaps, get rewards", async function() {
+    expect(BN2Str(await router.reserveVADER())).to.equal('3');
+    expect(await router.emitting()).to.equal(true);
+    expect(BN2Str(await vader.balanceOf(router.address))).to.equal('3');
+    expect(BN2Str(await router.getRewardShare(anchor.address))).to.equal('3');
+    expect(BN2Str(await router.getReducedShare('3'))).to.equal('3');
+    expect(BN2Str(await vault.getBaseAmount(anchor.address))).to.equal('1000');
+    await router.swap('100', vader.address, anchor.address, {from:acc1})
+    expect(BN2Str(await vault.getBaseAmount(anchor.address))).to.equal('1103');
+    expect(BN2Str(await router.reserveVADER())).to.equal('0');
+    expect(BN2Str(await router.getRewardShare(anchor.address))).to.equal('0');
+    expect(BN2Str(await router.getReducedShare('0'))).to.equal('0');
   });
 
 });

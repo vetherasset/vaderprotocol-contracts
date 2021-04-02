@@ -31,7 +31,7 @@ VAULT
 * Deploy VADER(vether.address)
 * Deploy USDV(vader.address, utils.address)
 * Deploy VAULT(vader.address, usdv.address, utils.address)
-* Set VADER.setVSD(USDV.address)
+* Set VADER.setUSDV(USDV.address)
 * Set USDV.setVault(vault.address)
 
 ## Addresses

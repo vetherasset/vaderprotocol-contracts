@@ -62,7 +62,7 @@ before(async function() {
   await asset2.approve(router.address, BN2Str(one), {from:acc1})
 
   await usdv.convert(BN2Str(3000), {from:acc1})
-  await usdv.withdrawToVSD('10000', {from:acc1})
+  await usdv.withdrawToUSDV('10000', {from:acc1})
 
 })
 

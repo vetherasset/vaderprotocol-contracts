@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.6.8;
 interface iVAULT{
+    function pooledVADER() external view returns(uint);
+    function pooledUSDV() external view returns(uint);
     function addLiquidity(address, address, address) external returns(uint);
     function removeLiquidity(address, address, uint) external returns (uint, uint);
     function sync(address, address) external;

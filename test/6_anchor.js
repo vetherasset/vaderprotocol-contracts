@@ -53,7 +53,7 @@ before(async function() {
 
   await usdv.setVault(vault.address)
   await utils.setVault(vault.address)
-  await vader.setVSD(usdv.address)
+  await vader.setUSDV(usdv.address)
 
   await vether.transfer(acc1, BN2Str(6006)) 
   await anchor0.transfer(acc1, BN2Str(2000))
@@ -109,7 +109,7 @@ describe("Handle Anchors", function() {
     await vault.updateAnchorPrices()
     expect(BN2Str(await vault.getAnchorPrice())).to.equal('990099009900990099')
     expect(BN2Str(await vault.getVADERAmount('100'))).to.equal('99')
-    expect(BN2Str(await vault.getVSDAmount('100'))).to.equal('101')
+    expect(BN2Str(await vault.getUSDVAmount('100'))).to.equal('101')
   });
   it("Replace Median", async function() {
     await vault.swap(vader.address, '2', anchor4.address, {from:acc1})
@@ -118,7 +118,7 @@ describe("Handle Anchors", function() {
     expect(BN2Str(await utils.calcValueInBase(anchor4.address, '100'))).to.equal('100');
     expect(BN2Str(await vault.getAnchorPrice())).to.equal('1000000000000000000')
     expect(BN2Str(await vault.getVADERAmount('100'))).to.equal('100')
-    expect(BN2Str(await vault.getVSDAmount('100'))).to.equal('100')
+    expect(BN2Str(await vault.getUSDVAmount('100'))).to.equal('100')
   });
   it("Create outlier", async function() {
     await vault.swap(vader.address, '10', anchor0.address, {from:acc1})
@@ -127,7 +127,7 @@ describe("Handle Anchors", function() {
     expect(BN2Str(await utils.calcValueInBase(anchor0.address, '100'))).to.equal('120');
     expect(BN2Str(await vault.getAnchorPrice())).to.equal('1000000000000000000')
     expect(BN2Str(await vault.getVADERAmount('100'))).to.equal('100')
-    expect(BN2Str(await vault.getVSDAmount('100'))).to.equal('100')
+    expect(BN2Str(await vault.getUSDVAmount('100'))).to.equal('100')
   });
   it("Replace Outlier", async function() {
     expect(await vault.arrayAnchors('0')).to.equal(anchor0.address)
@@ -140,7 +140,7 @@ describe("Handle Anchors", function() {
     expect(await vault.arrayAnchors('0')).to.equal(anchor5.address)
     expect(BN2Str(await vault.getAnchorPrice())).to.equal('1000000000000000000')
     expect(BN2Str(await vault.getVADERAmount('100'))).to.equal('100')
-    expect(BN2Str(await vault.getVSDAmount('100'))).to.equal('100')
+    expect(BN2Str(await vault.getUSDVAmount('100'))).to.equal('100')
     
   });
 

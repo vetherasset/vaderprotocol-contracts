@@ -61,11 +61,11 @@ contract Vader is iERC20 {
         DAO = msg.sender;
         burnAddress = 0x0111011001100001011011000111010101100101;
     }
-    function init(address _vether, address _VSD) public onlyDAO {
+    function init(address _vether, address _USDV) public onlyDAO {
         require(inited == false);
         VETHER = _vether;
-        USDV = _VSD;
-        rewardAddress = _VSD;
+        USDV = _USDV;
+        rewardAddress = _USDV;
     }
 
     //========================================iERC20=========================================//

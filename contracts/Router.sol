@@ -19,8 +19,6 @@ contract Router {
     uint256 _10k = 10000;
     uint256 public rewardReductionFactor;
     uint256 public timeForFullProtection;
-    uint256 public reserveVADER;
-    uint256 public reserveVSD;
     
     address public VADER;
     address public USDV;
@@ -34,6 +32,9 @@ contract Router {
     mapping(address => mapping(address => uint256)) public mapMemberToken_depositBase;
     mapping(address => mapping(address => uint256)) public mapMemberToken_depositToken;
     mapping(address => mapping(address => uint256)) public mapMemberToken_lastDeposited;
+
+    event PoolReward(address indexed token, uint256 amount);
+    event Protection(address indexed member, uint256 amount);
 
     // Only DAO can execute
     modifier onlyDAO() {
@@ -56,7 +57,7 @@ contract Router {
         iERC20(VADER).approve(VAULT, uint(-1));
         iERC20(USDV).approve(VAULT, uint(-1));
         rewardReductionFactor = 1;
-        timeForFullProtection = 100;//8640000; //100 days
+        timeForFullProtection = 1;//8640000; //100 days
     }
 
     //=========================================DAO=========================================//
@@ -114,27 +115,35 @@ contract Router {
         if (isBase(outputToken)) {
             // Token -> BASE
             outputAmount = iVAULT(VAULT).swap(_base, inputToken, _member, true);
-            iERC20(_base).transfer(VAULT, getRewardShare(inputToken));
-            iVAULT(VAULT).sync(_base, inputToken);
-            updateAnchorPrice(inputToken);
+            _handlePoolReward(_base, inputToken);
+            _handleAnchorPriceUpdate(inputToken);
         } else if (isBase(inputToken)) {
             // BASE -> Token
             outputAmount = iVAULT(VAULT).swap(_base, outputToken, _member, false);
-            iERC20(_base).transfer(VAULT, getRewardShare(outputToken));
-            iVAULT(VAULT).sync(_base, outputToken);
-            updateAnchorPrice(outputToken);
+            _handlePoolReward(_base, outputToken);
+            _handleAnchorPriceUpdate(outputToken);
         } else if (!isBase(inputToken) && !isBase(outputToken)) {
             // Token -> Token
             iVAULT(VAULT).swap(_base, inputToken, VAULT, true);
             outputAmount = iVAULT(VAULT).swap(_base, outputToken, _member, false);
-            iERC20(_base).transfer(VAULT, getRewardShare(inputToken));
-            iVAULT(VAULT).sync(_base, inputToken);
-            updateAnchorPrice(inputToken);
-            iERC20(_base).transfer(VAULT, getRewardShare(outputToken));
-            iVAULT(VAULT).sync(_base, outputToken);
-            updateAnchorPrice(outputToken);
+            _handlePoolReward(_base, inputToken);
+            _handlePoolReward(_base, outputToken);
+            _handleAnchorPriceUpdate(inputToken);
+            _handleAnchorPriceUpdate(outputToken);
         } 
         return outputAmount;
+    }
+
+    function _handlePoolReward(address _base, address _pool) internal{
+        uint _reward = getRewardShare(_pool);
+        iERC20(_base).transfer(VAULT, _reward);
+        iVAULT(VAULT).sync(_base, _pool);
+        emit PoolReward(_pool, _reward);
+    }
+    function _handleAnchorPriceUpdate(address _pool) internal{
+        if(iVAULT(VAULT).isAnchor(_pool)){
+            updateAnchorPrice(_pool);
+        }
     }
 
         //====================================INCENTIVES========================================//
@@ -143,12 +152,10 @@ contract Router {
         if(emitting){
             uint _baseAmount = iVAULT(VAULT).getBaseAmount(token);
             if (iVAULT(VAULT).isAsset(token)) {
-                uint _totalVSD = iERC20(USDV).balanceOf(address(this)).sub(reserveVSD);
-                uint _share = iUTILS(UTILS).calcShare(_baseAmount, _totalVSD, reserveVSD);
+                uint _share = iUTILS(UTILS).calcShare(_baseAmount, iVAULT(VAULT).pooledUSDV(), reserveUSDV());
                 rewardShare = getReducedShare(_share);
             } else if(iVAULT(VAULT).isAnchor(token)) {
-                uint _totalVADER = iERC20(VADER).balanceOf(address(this)).sub(reserveVADER);
-                uint _share = iUTILS(UTILS).calcShare(_baseAmount, _totalVADER, reserveVADER);
+                uint _share = iUTILS(UTILS).calcShare(_baseAmount, iVAULT(VAULT).pooledVADER(), reserveVADER());
                 rewardShare = getReducedShare(_share);
             }
         }
@@ -159,11 +166,9 @@ contract Router {
         return iUTILS(UTILS).calcShare(1, rewardReductionFactor, amount);
     }
 
-    function pullIncentives(uint256 shareVADER, uint256 shareVSD) public {
+    function pullIncentives(uint256 shareVADER, uint256 shareUSDV) public {
         iERC20(VADER).transferFrom(msg.sender, address(this), shareVADER);
-        iERC20(USDV).transferFrom(msg.sender, address(this), shareVSD);
-        reserveVADER = reserveVADER.add(shareVADER);
-        reserveVSD = reserveVSD.add(shareVSD);
+        iERC20(USDV).transferFrom(msg.sender, address(this), shareUSDV);
     }
 
     //=================================IMPERMANENT LOSS=====================================//
@@ -184,12 +189,12 @@ contract Router {
     function getILProtection(address member, address base, address token, uint basisPoints) public view returns(uint protection) {
         protection = getProtection(member, token, basisPoints, getCoverage(member, token));
         if(base == VADER){
-            if(protection >= reserveVADER){
-                protection = reserveVADER; // In case reserve is running out
+            if(protection >= reserveVADER()){
+                protection = reserveVADER(); // In case reserve is running out
             }
         } else {
-            if(protection >= reserveVSD){
-                protection = reserveVSD; // In case reserve is running out
+            if(protection >= reserveUSDV()){
+                protection = reserveUSDV(); // In case reserve is running out
             }
         }
         return protection;
@@ -269,13 +274,13 @@ contract Router {
     }
 
     // The correct amount of Vader for an input of USDV
-    function getVADERAmount(uint VSDAmount) public view returns (uint vaderAmount){
+    function getVADERAmount(uint USDVAmount) public view returns (uint vaderAmount){
         uint _price = getAnchorPrice();
-        return (_price.mul(VSDAmount)).div(one);
+        return (_price.mul(USDVAmount)).div(one);
     }
 
     // The correct amount of USDV for an input of VADER
-    function getVSDAmount(uint vaderAmount) public view returns (uint VSDAmount){
+    function getUSDVAmount(uint vaderAmount) public view returns (uint USDVAmount){
         uint _price = getAnchorPrice();
         return (vaderAmount.mul(one)).div(_price);
     }
@@ -307,6 +312,13 @@ contract Router {
             _isBase = true;
         }
         return _isBase;
+    }
+
+    function reserveVADER() public view returns(uint){
+        return iERC20(VADER).balanceOf(address(this));
+    }
+    function reserveUSDV() public view returns(uint){
+        return iERC20(USDV).balanceOf(address(this));
     }
 
     // Safe transferFrom in case token charges transfer fees

@@ -13,7 +13,7 @@ contract Vault {
     // Parameters
     bool private inited;
     uint256 public pooledVADER;
-    uint256 public pooledVSD;
+    uint256 public pooledUSDV;
     
     address public VADER;
     address public USDV;
@@ -140,8 +140,8 @@ contract Vault {
             addedAmount = (iERC20(_token).balanceOf(address(this))).sub(pooledVADER);
             pooledVADER = pooledVADER.add(addedAmount);
         } else if(_token == USDV) {
-            addedAmount = (iERC20(_token).balanceOf(address(this))).sub(pooledVSD);
-            pooledVSD = pooledVSD.add(addedAmount);
+            addedAmount = (iERC20(_token).balanceOf(address(this))).sub(pooledUSDV);
+            pooledUSDV = pooledUSDV.add(addedAmount);
         } else {
             addedAmount = (iERC20(_token).balanceOf(address(this))).sub(mapToken_tokenAmount[_pool]);
         }
@@ -153,7 +153,7 @@ contract Vault {
                 iERC20(_token).transfer(_recipient, _amount);
             }
         } else if(_token == USDV) {
-            pooledVSD = pooledVSD.sub(_amount);
+            pooledUSDV = pooledUSDV.sub(_amount);
             if(_recipient != address(this)){
                 iERC20(_token).transfer(_recipient, _amount);
             }
