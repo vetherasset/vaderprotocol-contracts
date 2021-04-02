@@ -33,7 +33,7 @@ contract Router {
     mapping(address => mapping(address => uint256)) public mapMemberToken_depositToken;
     mapping(address => mapping(address => uint256)) public mapMemberToken_lastDeposited;
 
-    event PoolReward(address indexed token, uint256 amount);
+    event PoolReward(address indexed base, address indexed token, uint256 amount);
     event Protection(address indexed member, uint256 amount);
 
     // Only DAO can execute
@@ -134,15 +134,15 @@ contract Router {
         return outputAmount;
     }
 
-    function _handlePoolReward(address _base, address _pool) internal{
-        uint _reward = getRewardShare(_pool);
+    function _handlePoolReward(address _base, address _token) internal{
+        uint _reward = getRewardShare(_token);
         iERC20(_base).transfer(VAULT, _reward);
-        iVAULT(VAULT).sync(_base, _pool);
-        emit PoolReward(_pool, _reward);
+        iVAULT(VAULT).sync(_base, _token);
+        emit PoolReward(_base, _token, _reward);
     }
-    function _handleAnchorPriceUpdate(address _pool) internal{
-        if(iVAULT(VAULT).isAnchor(_pool)){
-            updateAnchorPrice(_pool);
+    function _handleAnchorPriceUpdate(address _token) internal{
+        if(iVAULT(VAULT).isAnchor(_token)){
+            updateAnchorPrice(_token);
         }
     }
 

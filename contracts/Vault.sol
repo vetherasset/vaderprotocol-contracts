@@ -98,9 +98,9 @@ contract Vault {
     function sync(address token, address pool) public {
         uint _actualInput = getAddedAmount(token, pool);
         if (token == VADER || token == USDV){
-            mapToken_baseAmount[token] = mapToken_baseAmount[token].add(_actualInput);
+            mapToken_baseAmount[pool] = mapToken_baseAmount[pool].add(_actualInput);
         } else {
-            mapToken_tokenAmount[token] = mapToken_tokenAmount[token].add(_actualInput);
+            mapToken_tokenAmount[pool] = mapToken_tokenAmount[pool].add(_actualInput);
         }
         emit Sync(token, pool, _actualInput);
     }
