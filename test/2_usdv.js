@@ -50,7 +50,7 @@ before(async function() {
 // acc0 |   0 |    0 |    0 |
 // acc1 |   0 |  2000 |    0 |
 
-describe("Deploy", function() {
+describe("Deploy USDV", function() {
   it("Should deploy", async function() {
     expect(await usdv.name()).to.equal("VADER STABLE DOLLAR");
     expect(await usdv.symbol()).to.equal("USDV");

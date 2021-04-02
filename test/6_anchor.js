@@ -37,47 +37,49 @@ before(async function() {
   router = await Router.new();
   vault = await Vault.new();
 
-  await utils.init(vault.address)
-  await vader.init(vether.address, usdv.address)
-  await usdv.init(vader.address, utils.address, router.address)
-  await router.init(vader.address, usdv.address, utils.address, vault.address);
-  await vault.init(vader.address, usdv.address, utils.address, router.address);
-
-  await vether.transfer(acc1, BN2Str(6006)) 
-  await vether.approve(vader.address, '6000', {from:acc1})
-  await vader.upgrade('6000', {from:acc1}) 
-
   asset = await Asset.new();
   anchor0 = await Anchor.new();
   anchor1 = await Anchor.new();
   anchor2 = await Anchor.new();
   anchor3 = await Anchor.new();
   anchor4 = await Anchor.new();
-  anchor5 = await Anchor.new();
-
-  await anchor0.transfer(acc1, BN2Str(2000))
-  await anchor0.approve(router.address, BN2Str(one), {from:acc1})
-  await anchor1.transfer(acc1, BN2Str(2000))
-  await anchor1.approve(router.address, BN2Str(one), {from:acc1})
-  await anchor2.transfer(acc1, BN2Str(2000))
-  await anchor2.approve(router.address, BN2Str(one), {from:acc1})
-  await anchor3.transfer(acc1, BN2Str(2000))
-  await anchor3.approve(router.address, BN2Str(one), {from:acc1})
-  await anchor4.transfer(acc1, BN2Str(2000))
-  await anchor4.approve(router.address, BN2Str(one), {from:acc1})
-  await anchor5.transfer(acc1, BN2Str(2000))
-  await anchor5.approve(router.address, BN2Str(one), {from:acc1})
-
-  await router.addLiquidity(vader.address, '100', anchor0.address, '99', {from:acc1})
-  await router.addLiquidity(vader.address, '100', anchor1.address, '100', {from:acc1})
-  await router.addLiquidity(vader.address, '100', anchor2.address, '101', {from:acc1})
-  await router.addLiquidity(vader.address, '100', anchor3.address, '102', {from:acc1})
-  await router.addLiquidity(vader.address, '100', anchor4.address, '103', {from:acc1})
+  anchor5 = await Anchor.new()
 
 })
 
-describe("Deploy right", function() {
+describe("Deploy Anchor", function() {
   it("Should have right prices", async function() {
+    await utils.init(vault.address)
+    await vader.init(vether.address, usdv.address)
+    await usdv.init(vader.address, utils.address, router.address)
+    await router.init(vader.address, usdv.address, utils.address, vault.address);
+    await vault.init(vader.address, usdv.address, utils.address, router.address);
+    
+    await vether.transfer(acc1, BN2Str(6006)) 
+    await vether.approve(vader.address, '6000', {from:acc1})
+    await vader.upgrade('6000', {from:acc1}) 
+
+    await anchor0.transfer(acc1, BN2Str(2000))
+    await anchor0.approve(router.address, BN2Str(one), {from:acc1})
+    await anchor1.transfer(acc1, BN2Str(2000))
+    await anchor1.approve(router.address, BN2Str(one), {from:acc1})
+    await anchor2.transfer(acc1, BN2Str(2000))
+    await anchor2.approve(router.address, BN2Str(one), {from:acc1})
+    await anchor3.transfer(acc1, BN2Str(2000))
+    await anchor3.approve(router.address, BN2Str(one), {from:acc1})
+    await anchor4.transfer(acc1, BN2Str(2000))
+    await anchor4.approve(router.address, BN2Str(one), {from:acc1})
+    await anchor5.transfer(acc1, BN2Str(2000))
+    await anchor5.approve(router.address, BN2Str(one), {from:acc1})
+
+    await sleep(1000)
+  
+    await router.addLiquidity(vader.address, '100', anchor0.address, '99', {from:acc1})
+    await router.addLiquidity(vader.address, '100', anchor1.address, '100', {from:acc1})
+    await router.addLiquidity(vader.address, '100', anchor2.address, '101', {from:acc1})
+    await router.addLiquidity(vader.address, '100', anchor3.address, '102', {from:acc1})
+    await router.addLiquidity(vader.address, '100', anchor4.address, '103', {from:acc1})
+
     expect(BN2Str(await utils.calcValueInBase(anchor0.address, '100'))).to.equal('101');
     expect(BN2Str(await utils.calcValueInBase(anchor1.address, '100'))).to.equal('100');
     expect(BN2Str(await utils.calcValueInBase(anchor2.address, '100'))).to.equal('99');

@@ -65,7 +65,7 @@ before(async function() {
 // vault|   0 | 2000 | 2000 | 1000 | 1000 |
 // acc1 |   0 | 1000 | 1000 | 1000 | 1000 |
 
-describe("Deploy right", function() {
+describe("Deploy Protection", function() {
   it("Should have right reserves", async function() {
     expect(BN2Str(await vader.getDailyEmission())).to.equal('7');
     expect(BN2Str(await usdv.reserveUSDV())).to.equal('3');
@@ -97,8 +97,8 @@ describe("Should do IL Protection", function() {
     // console.log("membe units", BN2Str(await vault.mapTokenMember_Units(vader.address, acc1)));
     // console.log("units", BN2Str(await vault.mapToken_Units(vader.address)));
     let coverage = await router.getCoverage(acc1, anchor.address)
-    expect(BN2Str(coverage)).to.equal('183');
-    expect(BN2Str(await router.getProtection(acc1, anchor.address, "10000", coverage))).to.equal('16');
+    expect(BN2Str(coverage)).to.equal('179');
+    expect(BN2Str(await router.getProtection(acc1, anchor.address, "10000", coverage))).to.equal('179');
     let reserveVADER = BN2Str(await router.reserveVADER())
     expect(BN2Str(await router.getILProtection(acc1, vader.address, anchor.address, '10000'))).to.equal(reserveVADER);
 

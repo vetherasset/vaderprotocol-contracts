@@ -41,7 +41,7 @@ before(async function() {
 
 })
 
-describe("Deploy", function() {
+describe("Deploy Vader", function() {
   it("Should deploy", async function() {
     expect(await vader.name()).to.equal("VADER PROTOCOL TOKEN");
     expect(await vader.symbol()).to.equal("VADER");

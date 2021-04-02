@@ -69,7 +69,7 @@ before(async function() {
 // vault|   0 | 2000 | 2000 | 1000 | 1000 |
 // acc1 |   0 | 1000 | 1000 | 1000 | 1000 |
 
-describe("Deploy right", function() {
+describe("Deploy Rewards", function() {
   it("Should have right reserves", async function() {
     expect(BN2Str(await vader.getDailyEmission())).to.equal('7');
     expect(BN2Str(await usdv.reserveUSDV())).to.equal('8');

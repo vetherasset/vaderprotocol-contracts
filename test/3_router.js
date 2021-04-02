@@ -37,38 +37,47 @@ before(async function() {
   router = await Router.new();
   vault = await Vault.new();
 
-  await vader.init(vether.address, usdv.address)
-  await usdv.init(vader.address, utils.address, router.address)
-  await router.init(vader.address, usdv.address, utils.address, vault.address);
-  await vault.init(vader.address, usdv.address, utils.address, router.address);
-
-  asset = await Asset.new();
-  asset2 = await Asset.new();
-  anchor = await Anchor.new();
-  anchor2 = await Anchor.new();
-
-  await vether.transfer(acc1, BN2Str(7407)) 
-  await anchor.transfer(acc1, BN2Str(2000))
-  await anchor.approve(router.address, BN2Str(one), {from:acc1})
-  await anchor2.transfer(acc1, BN2Str(2000))
-  await anchor2.approve(router.address, BN2Str(one), {from:acc1})
-
-  await vether.approve(vader.address, '7400', {from:acc1})
-  await vader.upgrade(BN2Str(7400), {from:acc1}) 
-
-  await asset.transfer(acc1, BN2Str(2000))
-  await asset.approve(router.address, BN2Str(one), {from:acc1})
-  await asset2.transfer(acc1, BN2Str(2000))
-  await asset2.approve(router.address, BN2Str(one), {from:acc1})
-
-  await usdv.convert(BN2Str(3000), {from:acc1})
-  await usdv.withdrawToUSDV('10000', {from:acc1})
+  // console.log('acc0:', acc0)
+  // console.log('acc1:', acc1)
+  // console.log('acc2:', acc2)
+  // console.log('utils:', utils.address)
+  // console.log('vether:', vether.address)
+  // console.log('vader:', vader.address)
+  // console.log('vsd:', usdv.address)
+  // console.log('vault:', vault.address)
 
 })
 
 
-describe("Deploy", function() {
+describe("Deploy Router", function() {
   it("Should deploy", async function() {
+    await vader.init(vether.address, usdv.address)
+    await usdv.init(vader.address, utils.address, router.address)
+    await router.init(vader.address, usdv.address, utils.address, vault.address);
+    await vault.init(vader.address, usdv.address, utils.address, router.address);
+
+    asset = await Asset.new();
+    asset2 = await Asset.new();
+    anchor = await Anchor.new();
+    anchor2 = await Anchor.new();
+
+    await vether.transfer(acc1, BN2Str(7407)) 
+    await anchor.transfer(acc1, BN2Str(2000))
+    await anchor.approve(router.address, BN2Str(one), {from:acc1})
+    await anchor2.transfer(acc1, BN2Str(2000))
+    await anchor2.approve(router.address, BN2Str(one), {from:acc1})
+
+    await vether.approve(vader.address, '7400', {from:acc1})
+    await vader.upgrade(BN2Str(7400), {from:acc1}) 
+
+    await asset.transfer(acc1, BN2Str(2000))
+    await asset.approve(router.address, BN2Str(one), {from:acc1})
+    await asset2.transfer(acc1, BN2Str(2000))
+    await asset2.approve(router.address, BN2Str(one), {from:acc1})
+
+    await usdv.convert(BN2Str(3000), {from:acc1})
+    await usdv.withdrawToUSDV('10000', {from:acc1})
+
     expect(await router.DAO()).to.equal(acc0);
     expect(await router.UTILS()).to.equal(utils.address);
     expect(await router.VADER()).to.equal(vader.address);
