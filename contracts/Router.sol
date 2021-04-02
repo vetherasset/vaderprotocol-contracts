@@ -134,18 +134,6 @@ contract Router {
         return outputAmount;
     }
 
-    function _handlePoolReward(address _base, address _token) internal{
-        uint _reward = getRewardShare(_token);
-        iERC20(_base).transfer(VAULT, _reward);
-        iVAULT(VAULT).sync(_base, _token);
-        emit PoolReward(_base, _token, _reward);
-    }
-    function _handleAnchorPriceUpdate(address _token) internal{
-        if(iVAULT(VAULT).isAnchor(_token)){
-            updateAnchorPrice(_token);
-        }
-    }
-
         //====================================INCENTIVES========================================//
     
     function getRewardShare(address token) public view returns (uint rewardShare){
@@ -166,6 +154,12 @@ contract Router {
         return iUTILS(UTILS).calcShare(1, rewardReductionFactor, amount);
     }
 
+    function _handlePoolReward(address _base, address _token) internal{
+        uint _reward = getRewardShare(_token);
+        iERC20(_base).transfer(VAULT, _reward);
+        iVAULT(VAULT).sync(_base, _token);
+        emit PoolReward(_base, _token, _reward);
+    }
     function pullIncentives(uint256 shareVADER, uint256 shareUSDV) public {
         iERC20(VADER).transferFrom(msg.sender, address(this), shareVADER);
         iERC20(USDV).transferFrom(msg.sender, address(this), shareUSDV);
@@ -259,6 +253,12 @@ contract Router {
             if(arrayAnchors[i] == token){
                 arrayPrices[i] = iUTILS(UTILS).calcValueInBase(arrayAnchors[i], one);
             }
+        }
+    }
+
+    function _handleAnchorPriceUpdate(address _token) internal{
+        if(iVAULT(VAULT).isAnchor(_token)){
+            updateAnchorPrice(_token);
         }
     }
 
