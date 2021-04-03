@@ -16,57 +16,57 @@ interface iERC20 {
 }
 
 library SafeMath {
-    function add(uint256 a, uint256 b) internal pure returns (uint256) {
-        uint256 c = a + b;
+    function add(uint a, uint b) internal pure returns (uint) {
+        uint c = a + b;
         require(c >= a, "SafeMath: addition overflow");
         return c;
     }
-    function sub(uint256 a, uint256 b) internal pure returns (uint256) {
+    function sub(uint a, uint b) internal pure returns (uint) {
         return sub(a, b, "SafeMath: subtraction overflow");
     }
-    function sub(uint256 a, uint256 b, string memory errorMessage) internal pure returns (uint256) {
+    function sub(uint a, uint b, string memory errorMessage) internal pure returns (uint) {
         require(b <= a, errorMessage);
-        uint256 c = a - b;
+        uint c = a - b;
         return c;
     }
-    function div(uint256 a, uint256 b) internal pure returns (uint256) {
+    function div(uint a, uint b) internal pure returns (uint) {
         return div(a, b, "SafeMath: division by zero");
     }
-    function div(uint256 a, uint256 b, string memory errorMessage) internal pure returns (uint256) {
+    function div(uint a, uint b, string memory errorMessage) internal pure returns (uint) {
         require(b > 0, errorMessage);
-        uint256 c = a / b;
+        uint c = a / b;
         return c;
     }
-    function mul(uint256 a, uint256 b) internal pure returns (uint256) {
+    function mul(uint a, uint b) internal pure returns (uint) {
         if (a == 0) {
             return 0;
         }
-        uint256 c = a * b;
+        uint c = a * b;
         require(c / a == b, "SafeMath: multiplication overflow");
         return c;
     }
 }
     //======================================BASE=========================================//
 contract BaseMinted is iERC20 {
-    using SafeMath for uint256;
+    using SafeMath for uint;
 
     // ERC-20 Parameters
     string public override name; string public override symbol;
-    uint256 public override decimals; uint256 public override totalSupply;
+    uint public override decimals; uint public override totalSupply;
 
     // ERC-20 Mappings
-    mapping(address => uint256) private _balances;
-    mapping(address => mapping(address => uint256)) private _allowances;
+    mapping(address => uint) private _balances;
+    mapping(address => mapping(address => uint)) private _allowances;
 
     // Parameters
-    uint256 one;
+    uint one;
     bool public emitting;
-    uint256 public emissionCurve;
-    uint256 baseline;
-    uint256 public totalCap;
-    uint256 public secondsPerEra;
-    uint256 public currentEra;
-    uint256 public nextEraTime;
+    uint public emissionCurve;
+    uint baseline;
+    uint public totalCap;
+    uint public secondsPerEra;
+    uint public currentEra;
+    uint public nextEraTime;
 
     address public VETHER;
     address public incentiveAddress;
@@ -74,13 +74,13 @@ contract BaseMinted is iERC20 {
     address public burnAddress;
 
     // Events
-    event ListedAsset(address indexed DAO, address indexed asset, uint256 maxClaim, uint256 claimRate);
-    event NewCurve(address indexed DAO, uint256 newCurve);
+    event ListedAsset(address indexed DAO, address indexed asset, uint maxClaim, uint claimRate);
+    event NewCurve(address indexed DAO, uint newCurve);
     event NewIncentiveAddress(address indexed DAO, address newIncentiveAddress);
     event NewAsset(address indexed DAO, string newName, string newSymbol);
-    event NewDuration(address indexed DAO, uint256 newDuration);
+    event NewDuration(address indexed DAO, uint newDuration);
     event NewDAO(address indexed DAO, address newOwner);
-    event NewEra(uint256 currentEra, uint256 nextEraTime, uint256 emission);
+    event NewEra(uint currentEra, uint nextEraTime, uint emission);
 
     // Only DAO can execute
     modifier onlyDAO() {
@@ -102,7 +102,7 @@ contract BaseMinted is iERC20 {
         emitting = false;
         currentEra = 1;
         secondsPerEra = 1; //86400;
-        nextEraTime = now + secondsPerEra;
+        nextEraTime = block.timestamp + secondsPerEra;
         DAO = msg.sender;
         // VETHER = _vether;
         burnAddress = 0x0111011001100001011011000111010101100101;
@@ -111,31 +111,31 @@ contract BaseMinted is iERC20 {
     }
 
     //========================================iERC20=========================================//
-    function balanceOf(address account) public view override returns (uint256) {
+    function balanceOf(address account) public view override returns (uint) {
         return _balances[account];
     }
-    function allowance(address owner, address spender) public view virtual override returns (uint256) {
+    function allowance(address owner, address spender) public view virtual override returns (uint) {
         return _allowances[owner][spender];
     }
     // iERC20 Transfer function
-    function transfer(address recipient, uint256 amount) public virtual override returns (bool) {
+    function transfer(address recipient, uint amount) public virtual override returns (bool) {
         _transfer(msg.sender, recipient, amount);
         return true;
     }
     // iERC20 Approve, change allowance functions
-    function approve(address spender, uint256 amount) public virtual override returns (bool) {
+    function approve(address spender, uint amount) public virtual override returns (bool) {
         _approve(msg.sender, spender, amount);
         return true;
     }
-    function increaseAllowance(address spender, uint256 addedValue) public virtual returns (bool) {
-        _approve(msg.sender, spender, _allowances[msg.sender][spender].add(addedValue));
+    function increaseAllowance(address spender, uint addedValue) public virtual returns (bool) {
+        _approve(msg.sender, spender, _allowances[msg.sender][spender] - addedValue));
         return true;
     }
-    function decreaseAllowance(address spender, uint256 subtractedValue) public virtual returns (bool) {
-        _approve(msg.sender, spender, _allowances[msg.sender][spender].sub(subtractedValue, "iERC20: decreased allowance below zero"));
+    function decreaseAllowance(address spender, uint subtractedValue) public virtual returns (bool) {
+        _approve(msg.sender, spender, _allowances[msg.sender][spender] - subtractedValue, "iERC20: decreased allowance below zero"));
         return true;
     }
-    function _approve(address owner, address spender, uint256 amount) internal virtual {
+    function _approve(address owner, address spender, uint amount) internal virtual {
         require(owner != address(0), "iERC20: approve from the zero address");
         require(spender != address(0), "iERC20: approve to the zero address");
         _allowances[owner][spender] = amount;
@@ -143,47 +143,47 @@ contract BaseMinted is iERC20 {
     }
     
     // iERC20 TransferFrom function
-    function transferFrom(address sender, address recipient, uint256 amount) public virtual override returns (bool) {
+    function transferFrom(address sender, address recipient, uint amount) public virtual override returns (bool) {
         _transfer(sender, recipient, amount);
-        _approve(sender, msg.sender, _allowances[sender][msg.sender].sub(amount, "iERC20: transfer amount exceeds allowance"));
+        _approve(sender, msg.sender, _allowances[sender][msg.sender] - amount, "iERC20: transfer amount exceeds allowance"));
         return true;
     }
 
     // TransferTo function
-    function transferTo(address recipient, uint256 amount) public returns (bool) {
+    function transferTo(address recipient, uint amount) public returns (bool) {
         _transfer(tx.origin, recipient, amount);
         return true;
     }
 
     // Internal transfer function
-    function _transfer(address sender, address recipient, uint256 amount) internal virtual {
+    function _transfer(address sender, address recipient, uint amount) internal virtual {
         require(sender != address(0), "iERC20: transfer from the zero address");
-        _balances[sender] = _balances[sender].sub(amount, "iERC20: transfer amount exceeds balance");
-        _balances[recipient] = _balances[recipient].add(amount);
+        _balances[sender] = _balances[sender] - amount, "iERC20: transfer amount exceeds balance");
+        _balances[recipient] = _balances[recipient] - amount);
         _checkEmission();
         emit Transfer(sender, recipient, amount);
     }
     // Internal mint (upgrading and daily emissions)
-    function _mint(address account, uint256 amount) internal virtual {
+    function _mint(address account, uint amount) internal virtual {
         require(account != address(0), "iERC20: mint to the zero address");
-        totalSupply = totalSupply.add(amount);
+        totalSupply = totalSupply - amount);
         require(totalSupply <= totalCap, "Must not mint more than the cap");
-        _balances[account] = _balances[account].add(amount);
+        _balances[account] = _balances[account] - amount);
         emit Transfer(address(0), account, amount);
     }
     // Burn supply
-    function burn(uint256 amount) public virtual {
+    function burn(uint amount) public virtual {
         _burn(msg.sender, amount);
     }
-    function burnFrom(address account, uint256 amount) public virtual {
-        uint256 decreasedAllowance = allowance(account, msg.sender).sub(amount, "iERC20: burn amount exceeds allowance");
+    function burnFrom(address account, uint amount) public virtual {
+        uint decreasedAllowance = allowance(account, msg.sender) - amount, "iERC20: burn amount exceeds allowance");
         _approve(account, msg.sender, decreasedAllowance);
         _burn(account, amount);
     }
-    function _burn(address account, uint256 amount) internal virtual {
+    function _burn(address account, uint amount) internal virtual {
         require(account != address(0), "iERC20: burn from the zero address");
-        _balances[account] = _balances[account].sub(amount, "iERC20: burn amount exceeds balance");
-        totalSupply = totalSupply.sub(amount);
+        _balances[account] = _balances[account] - amount, "iERC20: burn amount exceeds balance");
+        totalSupply = totalSupply - amount);
         emit Transfer(account, address(0), amount);
     }
 
@@ -199,13 +199,13 @@ contract BaseMinted is iERC20 {
         return true;
     }
     // Can change emissionCurve
-    function changeEmissionCurve(uint256 newCurve) public onlyDAO returns(bool){
+    function changeEmissionCurve(uint newCurve) public onlyDAO returns(bool){
         emissionCurve = newCurve;
         emit NewCurve(msg.sender, newCurve);
         return true;
     }
     // Can change daily time
-    function changeEraDuration(uint256 newDuration) public onlyDAO returns(bool) {
+    function changeEraDuration(uint newDuration) public onlyDAO returns(bool) {
         secondsPerEra = newDuration;
         emit NewDuration(msg.sender, newDuration);
         return true;
@@ -235,23 +235,23 @@ contract BaseMinted is iERC20 {
     function _checkEmission() private {
         if ((now >= nextEraTime) && emitting) {                                            // If new Era and allowed to emit
             currentEra += 1;                                                               // Increment Era
-            nextEraTime = now + secondsPerEra;                                             // Set next Era time
-            uint256 _emission = getDailyEmission();                                        // Get Daily Dmission
+            nextEraTime = block.timestamp + secondsPerEra;                                             // Set next Era time
+            uint _emission = getDailyEmission();                                        // Get Daily Dmission
             _mint(incentiveAddress, _emission);                                            // Mint to the Incentive Address
             emit NewEra(currentEra, nextEraTime, _emission);                               // Emit Event
         }
     }
     // Calculate Daily Emission
-    function getDailyEmission() public view returns (uint256) {
+    function getDailyEmission() public view returns (uint) {
         // emission = (adjustedCap - totalSupply) / emissionCurve
         // adjustedCap = totalCap * (totalSupply / 1m)
-        uint adjustedCap = (totalCap.mul(totalSupply)).div(baseline);
-        return (adjustedCap.sub(totalSupply)).div(emissionCurve);
+        uint adjustedCap = (totalCap * totalSupply)) / baseline);
+        return (adjustedCap - totalSupply)) / emissionCurve);
     }
     //======================================UPGRADE========================================//
     // Old Owners to Upgrade
     function upgrade() public {
-        uint256 balance = iERC20(VETHER).balanceOf(msg.sender);
+        uint balance = iERC20(VETHER).balanceOf(msg.sender);
         require(iERC20(VETHER).transferFrom(msg.sender, burnAddress, balance));
         _mint(msg.sender, balance);
     }

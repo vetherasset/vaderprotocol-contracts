@@ -1,49 +1,45 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.6.8;
+pragma solidity ^0.8.3;
 
 // Interfaces
 import "./iERC20.sol";
-import "./SafeMath.sol";
 import "./iUTILS.sol";
 import "./iVADER.sol";
 import "./iROUTER.sol";
 
-import "@nomiclabs/buidler/console.sol";
-
     //======================================VADER=========================================//
 contract USDV is iERC20 {
-    using SafeMath for uint256;
 
     // ERC-20 Parameters
     string public override name; string public override symbol;
-    uint256 public override decimals; uint256 public override totalSupply;
+    uint public override decimals; uint public override totalSupply;
 
     // ERC-20 Mappings
-    mapping(address => uint256) private _balances;
-    mapping(address => mapping(address => uint256)) private _allowances;
+    mapping(address => uint) private _balances;
+    mapping(address => mapping(address => uint)) private _allowances;
 
     // Parameters
     bool private inited;
-    uint256 public totalFunds;
-    uint256 public currentEra;
-    uint256 public nextEraTime;
-    uint256 public erasToEarn;
-    uint256 public minimumDepositTime;
-    uint256 public minGrantTime;
-    uint256 public lastGranted;
+    uint public totalFunds;
+    uint public currentEra;
+    uint public nextEraTime;
+    uint public erasToEarn;
+    uint public minimumDepositTime;
+    uint public minGrantTime;
+    uint public lastGranted;
 
     address public VADER;
     address public ROUTER;
 
     mapping(address => bool) private _isMember; // Is Member
-    mapping(address => uint256) private mapMember_deposit;
-    mapping(address => uint256) private mapMember_lastTime;
-    mapping(address => uint256) public lastBlock;
+    mapping(address => uint) private mapMember_deposit;
+    mapping(address => uint) private mapMember_lastTime;
+    mapping(address => uint) public lastBlock;
 
     // Events
-    event MemberDeposits(address indexed member, uint256 newDeposit, uint256 totalDeposit, uint256 totalFunds);
-    event MemberWithdraws(address indexed member, uint256 amount, uint256 totalFunds);
-    event MemberHarvests(address indexed member, uint256 amount);
+    event MemberDeposits(address indexed member, uint newDeposit, uint totalDeposit, uint totalFunds);
+    event MemberWithdraws(address indexed member, uint amount, uint totalFunds);
+    event MemberHarvests(address indexed member, uint amount);
 
     // Only DAO can execute
     modifier onlyDAO() {
@@ -58,7 +54,7 @@ contract USDV is iERC20 {
 
     //=====================================CREATION=========================================//
     // Constructor
-    constructor() public {
+    constructor() {
         name = 'VADER STABLE DOLLAR';
         symbol = 'USDV';
         decimals = 18;
@@ -68,33 +64,33 @@ contract USDV is iERC20 {
         require(inited == false);
         VADER = _vader;
         ROUTER = _router;
-        iERC20(VADER).approve(ROUTER, uint(-1));
-        _approve(address(this), ROUTER, uint(-1));
+        iERC20(VADER).approve(ROUTER, type(uint).max);
+        _approve(address(this), ROUTER, type(uint).max);
         currentEra = 1;
-        nextEraTime = now + iVADER(VADER).secondsPerEra();
+        nextEraTime = block.timestamp + iVADER(VADER).secondsPerEra();
         erasToEarn = 100;
         minimumDepositTime = 1;
         minGrantTime = 2592000;     // 30 days
     }
 
     //========================================iERC20=========================================//
-    function balanceOf(address account) public view override returns (uint256) {
+    function balanceOf(address account) public view override returns (uint) {
         return _balances[account];
     }
-    function allowance(address owner, address spender) public view virtual override returns (uint256) {
+    function allowance(address owner, address spender) public view virtual override returns (uint) {
         return _allowances[owner][spender];
     }
     // iERC20 Transfer function
-    function transfer(address recipient, uint256 amount) public virtual override returns (bool) {
+    function transfer(address recipient, uint amount) public virtual override returns (bool) {
         _transfer(msg.sender, recipient, amount);
         return true;
     }
     // iERC20 Approve, change allowance functions
-    function approve(address spender, uint256 amount) public virtual override returns (bool) {
+    function approve(address spender, uint amount) public virtual override returns (bool) {
         _approve(msg.sender, spender, amount);
         return true;
     }
-    function _approve(address owner, address spender, uint256 amount) internal virtual {
+    function _approve(address owner, address spender, uint amount) internal virtual {
         require(owner != address(0), "sender");
         require(spender != address(0), "spender");
         _allowances[owner][spender] = amount;
@@ -102,46 +98,46 @@ contract USDV is iERC20 {
     }
     
     // iERC20 TransferFrom function
-    function transferFrom(address sender, address recipient, uint256 amount) public virtual override returns (bool) {
+    function transferFrom(address sender, address recipient, uint amount) public virtual override returns (bool) {
         _transfer(sender, recipient, amount);
-        _approve(sender, msg.sender, _allowances[sender][msg.sender].sub(amount, "allowance"));
+        _approve(sender, msg.sender, _allowances[sender][msg.sender] - amount);
         return true;
     }
 
     // TransferTo function
-    function transferTo(address recipient, uint256 amount) public virtual override returns (bool) {
+    function transferTo(address recipient, uint amount) public virtual override returns (bool) {
         _transfer(tx.origin, recipient, amount);
         return true;
     }
 
     // Internal transfer function
-    function _transfer(address sender, address recipient, uint256 amount) internal virtual {
+    function _transfer(address sender, address recipient, uint amount) internal virtual {
         require(sender != address(0), "sender");
-        _balances[sender] = _balances[sender].sub(amount, "balance");
-        _balances[recipient] = _balances[recipient].add(amount);
+        _balances[sender] -= amount;
+        _balances[recipient] += amount;
         emit Transfer(sender, recipient, amount);
         _checkIncentives();
     }
     // Internal mint (upgrading and daily emissions)
-    function _mint(address account, uint256 amount) internal virtual {
+    function _mint(address account, uint amount) internal virtual {
         require(account != address(0), "recipient");
-        totalSupply = totalSupply.add(amount);
-        _balances[account] = _balances[account].add(amount);
+        totalSupply += amount;
+        _balances[account] += amount;
         emit Transfer(address(0), account, amount);
     }
     // Burn supply
-    function burn(uint256 amount) public virtual override {
+    function burn(uint amount) public virtual override {
         _burn(msg.sender, amount);
     }
-    function burnFrom(address account, uint256 amount) public virtual override {
-        uint256 decreasedAllowance = allowance(account, msg.sender).sub(amount, "allowance");
+    function burnFrom(address account, uint amount) public virtual override {
+        uint decreasedAllowance = allowance(account, msg.sender)- amount;
         _approve(account, msg.sender, decreasedAllowance);
         _burn(account, amount);
     }
-    function _burn(address account, uint256 amount) internal virtual {
+    function _burn(address account, uint amount) internal virtual {
         require(account != address(0), "address err");
-        _balances[account] = _balances[account].sub(amount, "balance");
-        totalSupply = totalSupply.sub(amount);
+        _balances[account] -= amount;
+        totalSupply -= amount;
         emit Transfer(account, address(0), amount);
     }
 
@@ -153,21 +149,21 @@ contract USDV is iERC20 {
     }
     // Can set params
     function grant(address recipient, uint amount) public onlyDAO {
-        require(amount <= reserveUSDV().div(10), "not more than 10%"); // 
-        require(now.sub(lastGranted) >= minGrantTime, "not too fast");
+        require(amount <= (reserveUSDV() / 10), "not more than 10%");
+        require((block.timestamp - lastGranted) >= minGrantTime, "not too fast");
         _transfer(address(this), recipient, amount); 
     }
 
    //======================================INCENTIVES========================================//
     // Internal - Update incentives function
     function _checkIncentives() private {
-        if (now >= nextEraTime && emitting()) {                  // If new Era
+        if (block.timestamp >= nextEraTime && emitting()) {                  // If new Era
             currentEra += 1;                                        // Increment Era
-            nextEraTime = now + iVADER(VADER).secondsPerEra(); 
+            nextEraTime = block.timestamp + iVADER(VADER).secondsPerEra(); 
             uint _balance = iERC20(VADER).balanceOf(address(this)); // Get spare VADER
             uint _USDVShare = _twothirds(_balance);                 // Get 2/3rds
             _convert(address(this), _USDVShare);                    // Convert it
-            iROUTER(ROUTER).pullIncentives(iERC20(VADER).balanceOf(address(this)), _USDVShare.div(2));                         // Pull incentives over
+            iROUTER(ROUTER).pullIncentives(iERC20(VADER).balanceOf(address(this)), _USDVShare / 2);                         // Pull incentives over
         }
     }
     
@@ -233,9 +229,9 @@ contract USDV is iERC20 {
         if (!isMember(_member)) {
             _isMember[_member] = true;
         }
-        mapMember_lastTime[_member] = now;
-        mapMember_deposit[_member] = mapMember_deposit[_member].add(_amount); // Record balance for member
-        totalFunds = totalFunds.add(_amount);
+        mapMember_lastTime[_member] = block.timestamp;
+        mapMember_deposit[_member] += _amount; // Record balance for member
+        totalFunds += _amount;
         emit MemberDeposits(_member, _amount, mapMember_deposit[_member], totalFunds);
     }
 
@@ -243,26 +239,26 @@ contract USDV is iERC20 {
     function harvest() public {
         address member = msg.sender;
         uint _payment = calcCurrentPayment(member);
-        mapMember_lastTime[member] = now;
+        mapMember_lastTime[member] = block.timestamp;
         _transfer(address(this), member, _payment);
         emit MemberHarvests(member, _payment);
     }
 
     // Get the payment owed for a member
     function calcCurrentPayment(address member) public view returns(uint){
-        uint _secondsSinceClaim = now.sub(mapMember_lastTime[member]);      // Get time since last claim
-        uint _share = calcPayment(member);                                  // Get share of rewards for member
-        uint _reward = _share.mul(_secondsSinceClaim).div(iVADER(VADER).secondsPerEra());   // Get owed amount, based on per-day rates
+        uint _secondsSinceClaim = block.timestamp - mapMember_lastTime[member];        // Get time since last claim
+        uint _share = calcPayment(member);                                              // Get share of rewards for member
+        uint _reward = (_share * _secondsSinceClaim) / iVADER(VADER).secondsPerEra();   // Get owed amount, based on per-day rates
         uint _reserve = reserveUSDV();
         if(_reward >= _reserve) {
-            _reward = _reserve;                                             // Send full reserve if the last
+            _reward = _reserve;                                                         // Send full reserve if the last
         }
         return _reward;
     }
 
     function calcPayment(address member) public view returns(uint){
         uint _balance = mapMember_deposit[member];
-        uint _reserve = reserveUSDV().div(erasToEarn);                          // Deplete reserve over a number of days
+        uint _reserve = (reserveUSDV() / erasToEarn);                          // Deplete reserve over a number of days
         return iUTILS(UTILS()).calcShare(_balance, totalFunds, _reserve);         // Get member's share of that
     }
 
@@ -274,11 +270,11 @@ contract USDV is iERC20 {
         return redeemedAmount;
     }
     function _processWithdraw(address _member, uint basisPoints) internal returns(uint _amount) {
-        require(now.sub(mapMember_lastTime[_member]) >= minimumDepositTime, "DepositTime");    // stops attacks
+        require((block.timestamp - mapMember_lastTime[_member]) >= minimumDepositTime, "DepositTime");    // stops attacks
         harvestAndDeposit();                                                    // harvest first
-        _amount = (mapMember_deposit[_member].mul(basisPoints)).div(10000);     // In Basis Points
-        mapMember_deposit[_member] = mapMember_deposit[_member].sub(_amount);   // reduce for member
-        totalFunds = totalFunds.sub(_amount);                                   // reduce for total
+        _amount = ((mapMember_deposit[_member] * basisPoints)) / 10000;         // In Basis Points
+        mapMember_deposit[_member] -= _amount;                                  // reduce for member
+        totalFunds -= _amount;                                                  // reduce for total
         emit MemberWithdraws(_member, _amount, totalFunds);
         return _amount;
     }
@@ -287,11 +283,11 @@ contract USDV is iERC20 {
     //============================== HELPERS ================================//
 
     function reserveUSDV() public view returns(uint){
-        return balanceOf(address(this)).sub(totalFunds);
+        return balanceOf(address(this)) - totalFunds;
     }
 
     function _twothirds(uint _amount) internal pure returns(uint){
-        return (_amount.mul(2)).div(3);
+        return (_amount * 2) / 3;
     }
     function getMemberDeposit(address member) public view returns(uint){
         return mapMember_deposit[member];

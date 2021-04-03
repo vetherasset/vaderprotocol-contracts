@@ -244,13 +244,13 @@ async function unstakeETH(bp, acc) {
 
         let totalUnits = _.getBN((await poolETH.totalSupply()))
         let stakerUnits = _.getBN(await poolETH.balanceOf(acc))
-        let share = (stakerUnits.times(bp)).div(10000)
-        let b = _.floorBN((B.times(share)).div(totalUnits))
-        let t = _.floorBN((T.times(share)).div(totalUnits))
+        let share = (stakerUnits.times(bp)) / 10000)
+        let b = _.floorBN((B.times(share)) / totalUnits))
+        let t = _.floorBN((T.times(share)) / totalUnits))
         // let vs = poolData.baseStaked
         // let as = poolData.tokenStaked
-        // let vsShare = _.floorBN((B.times(share)).div(totalUnits))
-        // let asShare = _.floorBN((T.times(share)).div(totalUnits))
+        // let vsShare = _.floorBN((B.times(share)) / totalUnits))
+        // let asShare = _.floorBN((T.times(share)) / totalUnits))
         console.log(_.BN2Str(totalUnits), _.BN2Str(stakerUnits), _.BN2Str(share), _.BN2Str(b), _.BN2Str(t))
         
         let tx = await router.unstake(bp, _.ETH, { from: acc})

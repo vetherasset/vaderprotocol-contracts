@@ -1,38 +1,35 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.6.8;
+pragma solidity ^0.8.3;
 
 // Interfaces
 import "./iERC20.sol";
-import "./SafeMath.sol";
 import "./iUTILS.sol";
 import "./iVADER.sol";
 import "./iVAULT.sol";
 
-import "@nomiclabs/buidler/console.sol";
     //======================================VADER=========================================//
 contract Router {
-    using SafeMath for uint256;
 
     // Parameters
     bool private inited;
-    uint256 one = 10**18;
-    uint256 _10k = 10000;
-    uint256 public rewardReductionFactor;
-    uint256 public timeForFullProtection;
+    uint one = 10**18;
+    uint _10k = 10000;
+    uint public rewardReductionFactor;
+    uint public timeForFullProtection;
     
     address public VADER;
     address public USDV;
     address public VAULT;
 
     address[] public arrayAnchors;
-    uint256[] public arrayPrices;
+    uint[] public arrayPrices;
 
-    mapping(address => mapping(address => uint256)) public mapMemberToken_depositBase;
-    mapping(address => mapping(address => uint256)) public mapMemberToken_depositToken;
-    mapping(address => mapping(address => uint256)) public mapMemberToken_lastDeposited;
+    mapping(address => mapping(address => uint)) public mapMemberToken_depositBase;
+    mapping(address => mapping(address => uint)) public mapMemberToken_depositToken;
+    mapping(address => mapping(address => uint)) public mapMemberToken_lastDeposited;
 
-    event PoolReward(address indexed base, address indexed token, uint256 amount);
-    event Protection(address indexed member, uint256 amount);
+    event PoolReward(address indexed base, address indexed token, uint amount);
+    event Protection(address indexed member, uint amount);
 
     // Only DAO can execute
     modifier onlyDAO() {
@@ -42,15 +39,15 @@ contract Router {
 
     //=====================================CREATION=========================================//
     // Constructor
-    constructor() public {}
+    constructor() {}
     // Init
     function init(address _vader, address _usdv, address _vault) public {
         require(inited == false);
         VADER = _vader;
         USDV = _usdv;
         VAULT = _vault;
-        iERC20(VADER).approve(VAULT, uint(-1));
-        iERC20(USDV).approve(VAULT, uint(-1));
+        iERC20(VADER).approve(VAULT, type(uint).max);
+        iERC20(USDV).approve(VAULT, type(uint).max);
         rewardReductionFactor = 1;
         timeForFullProtection = 1;//8640000; //100 days
     }
@@ -64,7 +61,7 @@ contract Router {
 
     //====================================LIQUIDITY=========================================//
 
-    function addLiquidity(address base, uint256 inputBase, address token, uint256 inputToken) public returns(uint){
+    function addLiquidity(address base, uint inputBase, address token, uint inputToken) public returns(uint){
         uint _actualInputBase = moveTokenToVault(base, inputBase);
         uint _actualInputToken = moveTokenToVault(token, inputToken);
         addDepositData(msg.sender, token, _actualInputBase, _actualInputToken); 
@@ -138,24 +135,24 @@ contract Router {
         iVAULT(VAULT).sync(_base, _token);
         emit PoolReward(_base, _token, _reward);
     }
-    function pullIncentives(uint256 shareVADER, uint256 shareUSDV) public {
+    function pullIncentives(uint shareVADER, uint shareUSDV) public {
         iERC20(VADER).transferFrom(msg.sender, address(this), shareVADER);
         iERC20(USDV).transferFrom(msg.sender, address(this), shareUSDV);
     }
 
     //=================================IMPERMANENT LOSS=====================================//
     
-    function addDepositData(address member, address token, uint256 amountBase, uint256 amountToken) internal {
-        mapMemberToken_depositBase[member][token] = mapMemberToken_depositBase[member][token].add(amountBase);
-        mapMemberToken_depositToken[member][token] = mapMemberToken_depositToken[member][token].add(amountToken);
-        mapMemberToken_lastDeposited[member][token] = now;
+    function addDepositData(address member, address token, uint amountBase, uint amountToken) internal {
+        mapMemberToken_depositBase[member][token] += amountBase;
+        mapMemberToken_depositToken[member][token] += amountToken;
+        mapMemberToken_lastDeposited[member][token] = block.timestamp;
     }
-    function removeDepositData(address member, address token, uint256 basisPoints, uint256 protection) internal {
-        mapMemberToken_depositBase[member][token] = mapMemberToken_depositBase[member][token].add(protection);
+    function removeDepositData(address member, address token, uint basisPoints, uint protection) internal {
+        mapMemberToken_depositBase[member][token] += protection;
         uint _baseToRemove = iUTILS(UTILS()).calcPart(basisPoints, mapMemberToken_depositBase[member][token]);
         uint _tokenToRemove = iUTILS(UTILS()).calcPart(basisPoints, mapMemberToken_depositToken[member][token]);
-        mapMemberToken_depositBase[member][token] = mapMemberToken_depositBase[member][token].sub(_baseToRemove);
-        mapMemberToken_depositToken[member][token] = mapMemberToken_depositToken[member][token].sub(_tokenToRemove);
+        mapMemberToken_depositBase[member][token] -= _baseToRemove;
+        mapMemberToken_depositToken[member][token] -= _tokenToRemove;
     }
 
     function getILProtection(address member, address base, address token, uint basisPoints) public view returns(uint protection) {
@@ -173,7 +170,7 @@ contract Router {
     }
 
     function getProtection(address member, address token, uint basisPoints, uint coverage) public view returns(uint protection){
-        uint _duration = now.sub(mapMemberToken_lastDeposited[member][token]);
+        uint _duration = block.timestamp - mapMemberToken_lastDeposited[member][token];
         if(_duration <= timeForFullProtection) {
             protection = iUTILS(UTILS()).calcShare(_duration, timeForFullProtection, coverage);
         } else {
@@ -181,7 +178,7 @@ contract Router {
         }
         return iUTILS(UTILS()).calcPart(basisPoints, protection);
     }
-    function getCoverage(address member, address token) public view returns (uint256){
+    function getCoverage(address member, address token) public view returns (uint){
         uint _B0 = mapMemberToken_depositBase[member][token]; uint _T0 = mapMemberToken_depositToken[member][token];
         uint _units = iVAULT(VAULT).getMemberUnits(token, member);
         uint _B1 = iUTILS(UTILS()).calcShare(_units, iVAULT(VAULT).getUnits(token), iVAULT(VAULT).getBaseAmount(token));
@@ -216,8 +213,8 @@ contract Router {
     function _requirePriceBounds(address token, uint bound, bool inside) internal view {
         uint _targetPrice = getAnchorPrice();
         uint _testingPrice = iUTILS(UTILS()).calcValueInBase(token, one);
-        uint _lower = iUTILS(UTILS()).calcPart(_10k.sub(bound), _targetPrice);
-        uint _upper = (_targetPrice.mul(_10k.add(bound))).div(_10k);
+        uint _lower = iUTILS(UTILS()).calcPart((_10k - bound), _targetPrice);
+        uint _upper = (_targetPrice * (_10k + bound)) / _10k;
         if(inside){
             require((_testingPrice >= _lower && _testingPrice <= _upper), "Not inside");
         } else {
@@ -254,13 +251,13 @@ contract Router {
     // The correct amount of Vader for an input of USDV
     function getVADERAmount(uint USDVAmount) public view returns (uint vaderAmount){
         uint _price = getAnchorPrice();
-        return (_price.mul(USDVAmount)).div(one);
+        return (_price * USDVAmount) / one;
     }
 
     // The correct amount of USDV for an input of VADER
     function getUSDVAmount(uint vaderAmount) public view returns (uint USDVAmount){
         uint _price = getAnchorPrice();
-        return (vaderAmount.mul(one)).div(_price);
+        return (vaderAmount * one) / _price;
     }
     
     
@@ -307,7 +304,7 @@ contract Router {
         } else {
             uint _startBal = iERC20(_token).balanceOf(VAULT);
             iERC20(_token).transferFrom(msg.sender, VAULT, _amount);
-            safeAmount = iERC20(_token).balanceOf(VAULT).sub(_startBal);
+            safeAmount = iERC20(_token).balanceOf(VAULT) - _startBal;
         }
         return safeAmount;
     }

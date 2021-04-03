@@ -1,17 +1,13 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.6.8;
-pragma experimental ABIEncoderV2;
+pragma solidity ^0.8.3;
 
 // Interfaces
 import "./iERC20.sol";
-import "./SafeMath.sol";
 import "./iVAULT.sol";
 
 contract Utils {
 
-    using SafeMath for uint;
-
-    uint256 private one = 10**18;
+    uint private one = 10**18;
     address public VAULT;
 
     // struct GlobalDetails {
@@ -37,8 +33,7 @@ contract Utils {
     //     uint poolUnits;
     // }
 
-    constructor () public payable {
-    }
+    constructor () {}
         // Can set vault
     function init(address _vault) public {
         if(VAULT == address(0)){
@@ -47,7 +42,7 @@ contract Utils {
     }
     //====================================SYSTEM FUNCTIONS====================================//
     // VADER FeeOnTransfer
-    function getFeeOnTransfer(uint256 totalSupply, uint256 maxSupply) public pure returns(uint256){
+    function getFeeOnTransfer(uint totalSupply, uint maxSupply) public pure returns(uint){
         return calcShare(totalSupply, maxSupply, 100); // 0->100BP
     }
 
@@ -92,28 +87,28 @@ contract Utils {
 //     function getPoolAge(address token) public view returns (uint daysSinceGenesis){
 //         address payable pool = getPool(token);
 //         uint genesis = iVAULT(pool).genesis();
-//         if(now < genesis.add(86400)){
+//         if(now < genesis + 86400)){
 //             return 1;
 //         } else {
-//             return (now.sub(genesis)).div(86400);
+//             return (now - genesis)) / 86400);
 //         }
 //     }
 
 //     function getPoolROI(address token) public view returns (uint roi){
 //         address payable pool = getPool(token);
-//         uint _baseStart = iVAULT(pool).baseAmtStaked().mul(2);
-//         uint _baseEnd = iVAULT(pool).baseAmt().mul(2);
-//         uint _ROIS = (_baseEnd.mul(10000)).div(_baseStart);
-//         uint _tokenStart = iVAULT(pool).tokenAmtStaked().mul(2);
-//         uint _tokenEnd = iVAULT(pool).tokenAmt().mul(2);
-//         uint _ROIA = (_tokenEnd.mul(10000)).div(_tokenStart);
-//         return (_ROIS + _ROIA).div(2);
+//         uint _baseStart = iVAULT(pool).baseAmtStaked() * 2);
+//         uint _baseEnd = iVAULT(pool).baseAmt() * 2);
+//         uint _ROIS = (_baseEnd * 10000)) / _baseStart);
+//         uint _tokenStart = iVAULT(pool).tokenAmtStaked() * 2);
+//         uint _tokenEnd = iVAULT(pool).tokenAmt() * 2);
+//         uint _ROIA = (_tokenEnd * 10000)) / _tokenStart);
+//         return (_ROIS + _ROIA) / 2);
 //    }
 
 //    function getPoolAPY(address token) public view returns (uint apy){
 //         uint avgROI = getPoolROI(token);
 //         uint poolAge = getPoolAge(token);
-//         return (avgROI.mul(365)).div(poolAge);
+//         return (avgROI * 365)) / poolAge);
 //    }
 
 //     function isMember(address token, address member) public view returns(bool){
@@ -129,12 +124,12 @@ contract Utils {
 
     function calcValueInBase(address token, uint amount) public view returns (uint){
        (uint _baseAmt, uint _tokenAmt) = iVAULT(VAULT).getPoolAmounts(token);
-       return (amount.mul(_baseAmt)).div(_tokenAmt);
+       return (amount * _baseAmt) / _tokenAmt;
     }
 
     function calcValueInToken(address token, uint amount) public view returns (uint){
         (uint _baseAmt, uint _tokenAmt) = iVAULT(VAULT).getPoolAmounts(token);
-        return (amount.mul(_tokenAmt)).div(_baseAmt);
+        return (amount * _tokenAmt) / _baseAmt;
     }
 
 //     function calcTokenPPinBase(address token, uint amount) public view returns (uint _output){
@@ -170,23 +165,23 @@ contract Utils {
     function calcShare(uint part, uint total, uint amount) public pure returns (uint share){
         // share = amount * part/total
         if(total > 0){
-            share = (amount.mul(part)).div(total);
+            share = (amount * part) / total;
         }
         return share;
     }
 
     function calcSwapOutput(uint x, uint X, uint Y) public pure returns (uint output){
         // y = (x * X * Y )/(x + X)^2
-        uint numerator = x.mul(X.mul(Y));
-        uint denominator = (x.add(X)).mul(x.add(X));
-        return numerator.div(denominator);
+        uint numerator = (x * X * Y);
+        uint denominator = (x + X) * (x + X);
+        return (numerator / denominator);
     }
 
     function calcSwapFee(uint x, uint X, uint Y) public pure returns (uint output){
         // y = (x * x * Y) / (x + X)^2
-        uint numerator = x.mul(x.mul(Y));
-        uint denominator = (x.add(X)).mul(x.add(X));
-        return numerator.div(denominator);
+        uint numerator = (x * x * Y);
+        uint denominator = (x + X) * (x + X);
+        return (numerator / denominator);
     }
 
     function calcLiquidityUnits(uint b, uint B, uint t, uint T, uint P) public view returns (uint units){
@@ -196,48 +191,48 @@ contract Utils {
             // units = ((P (t B + T b))/(2 T B)) * slipAdjustment
             // P * (part1 + part2) / (part3) * slipAdjustment
             uint slipAdjustment = getSlipAdustment(b, B, t, T);
-            uint part1 = t.mul(B);
-            uint part2 = T.mul(b);
-            uint part3 = T.mul(B).mul(2);
-            uint _units = (P.mul(part1.add(part2))).div(part3);
-            return _units.mul(slipAdjustment).div(one);  // Divide by 10**18
+            uint part1 = (t * B);
+            uint part2 = (T * b);
+            uint part3 = (T * B) * 2;
+            uint _units = (((P * part1) + part2) / part3);
+            return (_units * slipAdjustment) / one;  // Divide by 10**18
         }
     }
 
     function getSlipAdustment(uint b, uint B, uint t, uint T) public view returns (uint slipAdjustment){
         // slipAdjustment = (1 - ABS((B t - b T)/((2 b + B) (t + T))))
         // 1 - ABS(part1 - part2)/(part3 * part4))
-        uint part1 = B.mul(t);
-        uint part2 = b.mul(T);
-        uint part3 = b.mul(2).add(B);
-        uint part4 = t.add(T);
+        uint part1 = B * t;
+        uint part2 = b * T;
+        uint part3 = (b * 2) + B;
+        uint part4 = t + T;
         uint numerator;
         if(part1 > part2){
-            numerator = part1.sub(part2);
+            numerator = (part1 - part2);
         } else {
-            numerator = part2.sub(part1);
+            numerator = (part2 - part1);
         }
-        uint denominator = part3.mul(part4);
-        return one.sub((numerator.mul(one)).div(denominator)); // Multiply by 10**18
+        uint denominator = (part3 * part4);
+        return one - (numerator * one) / denominator; // Multiply by 10**18
     }
 
     function calcAsymmetricShare(uint u, uint U, uint A) public pure returns (uint share){
         // share = (u * U * (2 * A^2 - 2 * U * u + U^2))/U^3
         // (part1 * (part2 - part3 + part4)) / part5
-        uint part1 = u.mul(A);
-        uint part2 = U.mul(U).mul(2);
-        uint part3 = U.mul(u).mul(2);
-        uint part4 = u.mul(u);
-        uint numerator = part1.mul(part2.sub(part3).add(part4));
-        uint part5 = U.mul(U).mul(U);
-        return numerator.div(part5);
+        uint part1 = (u * A);
+        uint part2 = ((U * U) * 2);
+        uint part3 = ((U * u) * 2);
+        uint part4 = (u * u);
+        uint numerator = ((part1 * part2) - part3) + part4;
+        uint part5 = ((U * U) * U);
+        return (numerator / part5);
     }
     function calcCoverage(uint _B0, uint _T0, uint _B1, uint _T1) public pure returns(uint coverage){
         if(_B1 > 0 && _T1 > 0){
-            uint _depositValue = _B0.add((_T0.mul(_B1)).div(_T1)); // B0+(T0*B1/T1)
-            uint _redemptionValue = _B1.add((_T1.mul(_B1)).div(_T1)); // B1+(T1*B1/T1)
+            uint _depositValue = _B0 + (_T0 * _B1) / _T1; // B0+(T0*B1/T1)
+            uint _redemptionValue = _B1 + (_T1 * _B1) / _T1; // B1+(T1*B1/T1)
             if(_redemptionValue <= _depositValue){
-                coverage = _depositValue.sub(_redemptionValue);
+                coverage = (_depositValue - _redemptionValue);
             }
         }
         return coverage;

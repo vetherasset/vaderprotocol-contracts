@@ -67,21 +67,21 @@ library SafeMath {
         return c;
     }
 
-    function sub(uint256 a, uint256 b) internal pure returns (uint256) {
+    function sub(uint a, uint b) internal pure returns (uint) {
         return sub(a, b, "SafeMath");
     }
-    function sub(uint256 a, uint256 b, string memory errorMessage) internal pure returns (uint256) {
+    function sub(uint a, uint b, string memory errorMessage) internal pure returns (uint) {
         require(b <= a, errorMessage);
-        uint256 c = a - b;
+        uint c = a - b;
         return c;
     }
 
-    function div(uint256 a, uint256 b) internal pure returns (uint256) {
+    function div(uint a, uint b) internal pure returns (uint) {
         return div(a, b, "SafeMath");
     }
-    function div(uint256 a, uint256 b, string memory errorMessage) internal pure returns (uint256) {
+    function div(uint a, uint b, string memory errorMessage) internal pure returns (uint) {
         require(b > 0, errorMessage);
-        uint256 c = a / b;
+        uint c = a / b;
         return c;
     }
 }
@@ -199,15 +199,15 @@ contract Utils {
     function getPool(address token) public view returns(address payable pool){
         return iROUTER(_DAO().ROUTER()).getPool(token);
     }
-    function tokenCount() public view returns (uint256 count){
+    function tokenCount() public view returns (uint count){
         return iROUTER(_DAO().ROUTER()).tokenCount();
     }
     function allTokens() public view returns (address[] memory _allTokens){
         return tokensInRange(0, iROUTER(_DAO().ROUTER()).tokenCount()) ;
     }
     function tokensInRange(uint start, uint count) public view returns (address[] memory someTokens){
-        if(start.add(count) > tokenCount()){
-            count = tokenCount().sub(start);
+        if(start + count) > tokenCount()){
+            count = tokenCount() - start);
         }
         address[] memory result = new address[](count);
         for (uint i = 0; i < count; i++){
@@ -219,8 +219,8 @@ contract Utils {
         return poolsInRange(0, tokenCount());
     }
     function poolsInRange(uint start, uint count) public view returns (address[] memory somePools){
-        if(start.add(count) > tokenCount()){
-            count = tokenCount().sub(start);
+        if(start + count) > tokenCount()){
+            count = tokenCount() - start);
         }
         address[] memory result = new address[](count);
         for (uint i = 0; i<count; i++){
@@ -286,28 +286,28 @@ contract Utils {
     function getPoolAge(address token) public view returns (uint daysSinceGenesis){
         address payable pool = getPool(token);
         uint genesis = iPOOL(pool).genesis();
-        if(now < genesis.add(86400)){
+        if(now < genesis + 86400)){
             return 1;
         } else {
-            return (now.sub(genesis)).div(86400);
+            return (now - genesis)) / 86400);
         }
     }
 
     function getPoolROI(address token) public view returns (uint roi){
         address payable pool = getPool(token);
-        uint _baseStart = iPOOL(pool).baseAmtStaked().mul(2);
-        uint _baseEnd = iPOOL(pool).baseAmt().mul(2);
-        uint _ROIS = (_baseEnd.mul(10000)).div(_baseStart);
-        uint _tokenStart = iPOOL(pool).tokenAmtStaked().mul(2);
-        uint _tokenEnd = iPOOL(pool).tokenAmt().mul(2);
-        uint _ROIA = (_tokenEnd.mul(10000)).div(_tokenStart);
-        return (_ROIS + _ROIA).div(2);
+        uint _baseStart = iPOOL(pool).baseAmtStaked() * 2);
+        uint _baseEnd = iPOOL(pool).baseAmt() * 2);
+        uint _ROIS = (_baseEnd * 10000)) / _baseStart);
+        uint _tokenStart = iPOOL(pool).tokenAmtStaked() * 2);
+        uint _tokenEnd = iPOOL(pool).tokenAmt() * 2);
+        uint _ROIA = (_tokenEnd * 10000)) / _tokenStart);
+        return (_ROIS + _ROIA) / 2);
    }
 
    function getPoolAPY(address token) public view returns (uint apy){
         uint avgROI = getPoolROI(token);
         uint poolAge = getPoolAge(token);
-        return (avgROI.mul(365)).div(poolAge);
+        return (avgROI * 365)) / poolAge);
    }
 
     function isMember(address token, address member) public view returns(bool){
@@ -344,13 +344,13 @@ contract Utils {
     function calcValueInBaseWithPool(address payable pool, uint amount) public view returns (uint value){
        uint _baseAmt = iPOOL(pool).baseAmt();
        uint _tokenAmt = iPOOL(pool).tokenAmt();
-       return (amount.mul(_baseAmt)).div(_tokenAmt);
+       return (amount * _baseAmt)) / _tokenAmt);
     }
 
     function calcValueInTokenWithPool(address payable pool, uint amount) public view returns (uint value){
         uint _baseAmt = iPOOL(pool).baseAmt();
         uint _tokenAmt = iPOOL(pool).tokenAmt();
-        return (amount.mul(_tokenAmt)).div(_baseAmt);
+        return (amount * _tokenAmt)) / _baseAmt);
     }
 
     function calcTokenPPinBaseWithPool(address payable pool, uint amount) public view returns (uint _output){
@@ -375,44 +375,44 @@ contract Utils {
 
     function calcShare(uint part, uint total, uint amount) public pure returns (uint share){
         // share = amount * part/total
-        return(amount.mul(part)).div(total);
+        return(amount * part)) / total);
     }
 
     function  calcSwapOutput(uint x, uint X, uint Y) public pure returns (uint output){
         // y = (x * X * Y )/(x + X)^2
-        uint numerator = x.mul(X.mul(Y));
-        uint denominator = (x.add(X)).mul(x.add(X));
-        return numerator.div(denominator);
+        uint numerator = x * X * Y));
+        uint denominator = (x + X)) * x + X));
+        return numerator / denominator);
     }
 
     function  calcSwapFee(uint x, uint X, uint Y) public pure returns (uint output){
         // y = (x * x * Y) / (x + X)^2
-        uint numerator = x.mul(x.mul(Y));
-        uint denominator = (x.add(X)).mul(x.add(X));
-        return numerator.div(denominator);
+        uint numerator = x * x * Y));
+        uint denominator = (x + X)) * x + X));
+        return numerator / denominator);
     }
 
     function calcStakeUnits(uint b, uint B, uint t, uint T) public pure returns (uint units){
         // units = ((T + B) * (t * B + T * b))/(4 * T * B)
         // (part1 * (part2 + part3)) / part4
-        uint part1 = T.add(B);
-        uint part2 = t.mul(B);
-        uint part3 = T.mul(b);
-        uint numerator = part1.mul((part2.add(part3)));
-        uint part4 = 4 * (T.mul(B));
-        return numerator.div(part4);
+        uint part1 = T + B);
+        uint part2 = t * B);
+        uint part3 = T * b);
+        uint numerator = part1 * (part2 + part3)));
+        uint part4 = 4 * (T * B));
+        return numerator / part4);
     }
 
     function calcAsymmetricShare(uint u, uint U, uint A) public pure returns (uint share){
         // share = (u * U * (2 * A^2 - 2 * U * u + U^2))/U^3
         // (part1 * (part2 - part3 + part4)) / part5
-        uint part1 = u.mul(A);
-        uint part2 = U.mul(U).mul(2);
-        uint part3 = U.mul(u).mul(2);
-        uint part4 = u.mul(u);
-        uint numerator = part1.mul(part2.sub(part3).add(part4));
-        uint part5 = U.mul(U).mul(U);
-        return numerator.div(part5);
+        uint part1 = u * A);
+        uint part2 = U * U) * 2);
+        uint part3 = U * u) * 2);
+        uint part4 = u * u);
+        uint numerator = part1 * part2 - part3) + part4));
+        uint part5 = U * U) * U);
+        return numerator / part5);
     }
 
 }

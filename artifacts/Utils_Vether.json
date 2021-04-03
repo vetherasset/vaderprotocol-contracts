@@ -9,27 +9,27 @@
     {
       "inputs": [
         {
-          "internalType": "uint256",
+          "internalType": "uint",
           "name": "u",
-          "type": "uint256"
+          "type": "uint"
         },
         {
-          "internalType": "uint256",
+          "internalType": "uint",
           "name": "U",
-          "type": "uint256"
+          "type": "uint"
         },
         {
-          "internalType": "uint256",
+          "internalType": "uint",
           "name": "A",
-          "type": "uint256"
+          "type": "uint"
         }
       ],
       "name": "calcAsymmetricShare",
       "outputs": [
         {
-          "internalType": "uint256",
+          "internalType": "uint",
           "name": "share",
-          "type": "uint256"
+          "type": "uint"
         }
       ],
       "stateMutability": "pure",
@@ -38,37 +38,37 @@
     {
       "inputs": [
         {
-          "internalType": "uint256",
+          "internalType": "uint",
           "name": "b",
-          "type": "uint256"
+          "type": "uint"
         },
         {
-          "internalType": "uint256",
+          "internalType": "uint",
           "name": "B",
-          "type": "uint256"
+          "type": "uint"
         },
         {
-          "internalType": "uint256",
+          "internalType": "uint",
           "name": "t",
-          "type": "uint256"
+          "type": "uint"
         },
         {
-          "internalType": "uint256",
+          "internalType": "uint",
           "name": "T",
-          "type": "uint256"
+          "type": "uint"
         },
         {
-          "internalType": "uint256",
+          "internalType": "uint",
           "name": "P",
-          "type": "uint256"
+          "type": "uint"
         }
       ],
       "name": "calcLiquidityUnits",
       "outputs": [
         {
-          "internalType": "uint256",
+          "internalType": "uint",
           "name": "units",
-          "type": "uint256"
+          "type": "uint"
         }
       ],
       "stateMutability": "view",
@@ -77,22 +77,22 @@
     {
       "inputs": [
         {
-          "internalType": "uint256",
+          "internalType": "uint",
           "name": "bp",
-          "type": "uint256"
+          "type": "uint"
         },
         {
-          "internalType": "uint256",
+          "internalType": "uint",
           "name": "total",
-          "type": "uint256"
+          "type": "uint"
         }
       ],
       "name": "calcPart",
       "outputs": [
         {
-          "internalType": "uint256",
+          "internalType": "uint",
           "name": "part",
-          "type": "uint256"
+          "type": "uint"
         }
       ],
       "stateMutability": "pure",
@@ -101,27 +101,27 @@
     {
       "inputs": [
         {
-          "internalType": "uint256",
+          "internalType": "uint",
           "name": "part",
-          "type": "uint256"
+          "type": "uint"
         },
         {
-          "internalType": "uint256",
+          "internalType": "uint",
           "name": "total",
-          "type": "uint256"
+          "type": "uint"
         },
         {
-          "internalType": "uint256",
+          "internalType": "uint",
           "name": "amount",
-          "type": "uint256"
+          "type": "uint"
         }
       ],
       "name": "calcShare",
       "outputs": [
         {
-          "internalType": "uint256",
+          "internalType": "uint",
           "name": "share",
-          "type": "uint256"
+          "type": "uint"
         }
       ],
       "stateMutability": "pure",
@@ -130,27 +130,27 @@
     {
       "inputs": [
         {
-          "internalType": "uint256",
+          "internalType": "uint",
           "name": "x",
-          "type": "uint256"
+          "type": "uint"
         },
         {
-          "internalType": "uint256",
+          "internalType": "uint",
           "name": "X",
-          "type": "uint256"
+          "type": "uint"
         },
         {
-          "internalType": "uint256",
+          "internalType": "uint",
           "name": "Y",
-          "type": "uint256"
+          "type": "uint"
         }
       ],
       "name": "calcSwapFee",
       "outputs": [
         {
-          "internalType": "uint256",
+          "internalType": "uint",
           "name": "output",
-          "type": "uint256"
+          "type": "uint"
         }
       ],
       "stateMutability": "pure",
@@ -159,27 +159,27 @@
     {
       "inputs": [
         {
-          "internalType": "uint256",
+          "internalType": "uint",
           "name": "x",
-          "type": "uint256"
+          "type": "uint"
         },
         {
-          "internalType": "uint256",
+          "internalType": "uint",
           "name": "X",
-          "type": "uint256"
+          "type": "uint"
         },
         {
-          "internalType": "uint256",
+          "internalType": "uint",
           "name": "Y",
-          "type": "uint256"
+          "type": "uint"
         }
       ],
       "name": "calcSwapOutput",
       "outputs": [
         {
-          "internalType": "uint256",
+          "internalType": "uint",
           "name": "output",
-          "type": "uint256"
+          "type": "uint"
         }
       ],
       "stateMutability": "pure",
@@ -188,32 +188,32 @@
     {
       "inputs": [
         {
-          "internalType": "uint256",
+          "internalType": "uint",
           "name": "b",
-          "type": "uint256"
+          "type": "uint"
         },
         {
-          "internalType": "uint256",
+          "internalType": "uint",
           "name": "B",
-          "type": "uint256"
+          "type": "uint"
         },
         {
-          "internalType": "uint256",
+          "internalType": "uint",
           "name": "t",
-          "type": "uint256"
+          "type": "uint"
         },
         {
-          "internalType": "uint256",
+          "internalType": "uint",
           "name": "T",
-          "type": "uint256"
+          "type": "uint"
         }
       ],
       "name": "getSlipAdustment",
       "outputs": [
         {
-          "internalType": "uint256",
+          "internalType": "uint",
           "name": "slipAdjustment",
-          "type": "uint256"
+          "type": "uint"
         }
       ],
       "stateMutability": "view",

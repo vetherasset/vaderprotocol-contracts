@@ -57,21 +57,21 @@ library SafeMath {
         return c;
     }
 
-    function sub(uint256 a, uint256 b) internal pure returns (uint256) {
+    function sub(uint a, uint b) internal pure returns (uint) {
         return sub(a, b, "SafeMath");
     }
-    function sub(uint256 a, uint256 b, string memory errorMessage) internal pure returns (uint256) {
+    function sub(uint a, uint b, string memory errorMessage) internal pure returns (uint) {
         require(b <= a, errorMessage);
-        uint256 c = a - b;
+        uint c = a - b;
         return c;
     }
 
-    function div(uint256 a, uint256 b) internal pure returns (uint256) {
+    function div(uint a, uint b) internal pure returns (uint) {
         return div(a, b, "SafeMath");
     }
-    function div(uint256 a, uint256 b, string memory errorMessage) internal pure returns (uint256) {
+    function div(uint a, uint b, string memory errorMessage) internal pure returns (uint) {
         require(b > 0, errorMessage);
-        uint256 c = a / b;
+        uint c = a / b;
         return c;
     }
 }
@@ -133,7 +133,7 @@ contract Pool_Vether is iERC20 {
         }
         
         decimals = 18;
-        genesis = now;
+        genesis = block.timestamp;
     }
 
     function _checkApprovals() external onlyRouter{
@@ -155,10 +155,10 @@ contract Pool_Vether is iERC20 {
         return _symbol;
     }
 
-    function balanceOf(address account) public view override returns (uint256) {
+    function balanceOf(address account) public view override returns (uint) {
         return _balances[account];
     }
-    function allowance(address owner, address spender) public view virtual override returns (uint256) {
+    function allowance(address owner, address spender) public view virtual override returns (uint) {
         return _allowances[owner][spender];
     }
     // iERC20 Transfer function
@@ -167,18 +167,18 @@ contract Pool_Vether is iERC20 {
         return true;
     }
     // iERC20 Approve function
-    function approve(address spender, uint256 amount) public virtual override returns (bool) {
+    function approve(address spender, uint amount) public virtual override returns (bool) {
         __approve(msg.sender, spender, amount);
         return true;
     }
-    function __approve(address owner, address spender, uint256 amount) internal virtual {
+    function __approve(address owner, address spender, uint amount) internal virtual {
         _allowances[owner][spender] = amount;
         emit Approval(owner, spender, amount);
     }
     // iERC20 TransferFrom function
     function transferFrom(address from, address to, uint value) public override returns (bool success) {
         require(value <= _allowances[from][msg.sender], 'AllowanceErr');
-        _allowances[from][msg.sender] = _allowances[from][msg.sender].sub(value);
+        _allowances[from][msg.sender] = _allowances[from][msg.sender] - value);
         __transfer(from, to, value);
         return true;
     }
@@ -187,30 +187,30 @@ contract Pool_Vether is iERC20 {
     function __transfer(address _from, address _to, uint _value) private {
         require(_balances[_from] >= _value, 'BalanceErr');
         require(_balances[_to] + _value >= _balances[_to], 'BalanceErr');
-        _balances[_from] =_balances[_from].sub(_value);
+        _balances[_from] =_balances[_from] - _value);
         _balances[_to] += _value;
         emit Transfer(_from, _to, _value);
     }
 
     // Router can mint
-    function _mint(address account, uint256 amount) external onlyRouter {
-        totalSupply = totalSupply.add(amount);
-        _balances[account] = _balances[account].add(amount);
+    function _mint(address account, uint amount) external onlyRouter {
+        totalSupply = totalSupply - amount);
+        _balances[account] = _balances[account] - amount);
         _allowances[account][DAO.ROUTER()] += amount;
         emit Transfer(address(0), account, amount);
     }
     // Burn supply
-    function burn(uint256 amount) public virtual {
+    function burn(uint amount) public virtual {
         __burn(msg.sender, amount);
     }
-    function burnFrom(address from, uint256 value) public virtual {
+    function burnFrom(address from, uint value) public virtual {
         require(value <= _allowances[from][msg.sender], 'AllowanceErr');
-        _allowances[from][msg.sender] = _allowances[from][msg.sender].sub(value);
+        _allowances[from][msg.sender] = _allowances[from][msg.sender] - value);
         __burn(from, value);
     }
-    function __burn(address account, uint256 amount) internal virtual {
-        _balances[account] = _balances[account].sub(amount, "BalanceErr");
-        totalSupply = totalSupply.sub(amount);
+    function __burn(address account, uint amount) internal virtual {
+        _balances[account] = _balances[account] - amount, "BalanceErr");
+        totalSupply = totalSupply - amount);
         emit Transfer(account, address(0), amount);
     }
 
@@ -219,7 +219,7 @@ contract Pool_Vether is iERC20 {
     // Extended Asset Functions
 
     // TransferTo function
-    function transferTo(address recipient, uint256 amount) public returns (bool) {
+    function transferTo(address recipient, uint amount) public returns (bool) {
         __transfer(tx.origin, recipient, amount);
         return true;
     }
@@ -241,15 +241,15 @@ contract Pool_Vether is iERC20 {
     function add(address token, uint amount) public payable returns (bool success) {
         if(token == BASE){
             iERC20(BASE).transferFrom(msg.sender, address(this), amount);
-            baseAmt = baseAmt.add(amount);
+            baseAmt = baseAmt - amount);
             return true;
         } else if (token == TOKEN){
             iERC20(TOKEN).transferFrom(msg.sender, address(this), amount);
-            tokenAmt = tokenAmt.add(amount); 
+            tokenAmt = tokenAmt - amount); 
             return true;
         } else if (token == address(0)){
             require((amount == msg.value), "InputErr");
-            tokenAmt = tokenAmt.add(amount); 
+            tokenAmt = tokenAmt - amount); 
         } else {
             return false;
         }
@@ -279,14 +279,14 @@ contract Pool_Vether is iERC20 {
     function _decrementPoolBalances(uint _baseAmt, uint _tokenAmt)  external onlyRouter  {
         uint _unstakedBase = _DAO().UTILS().calcShare(_baseAmt, baseAmt, baseAmtStaked);
         uint _unstakedToken = _DAO().UTILS().calcShare(_tokenAmt, tokenAmt, tokenAmtStaked);
-        baseAmtStaked = baseAmtStaked.sub(_unstakedBase);
-        tokenAmtStaked = tokenAmtStaked.sub(_unstakedToken); 
+        baseAmtStaked = baseAmtStaked - _unstakedBase);
+        tokenAmtStaked = tokenAmtStaked - _unstakedToken); 
         __decrementPool(_baseAmt, _tokenAmt); 
     }
  
     function __decrementPool(uint _baseAmt, uint _tokenAmt) internal  {
-        baseAmt = baseAmt.sub(_baseAmt);
-        tokenAmt = tokenAmt.sub(_tokenAmt); 
+        baseAmt = baseAmt - _baseAmt);
+        tokenAmt = tokenAmt - _tokenAmt); 
     }
 
     function _addPoolMetrics(uint _volume, uint _fee) external onlyRouter  {
@@ -305,9 +305,9 @@ contract Router_Vether {
     address public DEPLOYER;
     iDAO public DAO;
 
-    // uint256 public currentEra;
-    // uint256 public nextEraTime;
-    // uint256 public reserve;
+    // uint public currentEra;
+    // uint public nextEraTime;
+    // uint public reserve;
 
     uint public totalStaked; 
     uint public totalVolume;
@@ -324,7 +324,7 @@ contract Router_Vether {
     event Staked(address member, uint inputBase, uint inputToken, uint unitsIssued);
     event Unstaked(address member, uint outputBase, uint outputToken, uint unitsClaimed);
     event Swapped(address tokenFrom, address tokenTo, uint inputAmount, uint transferAmount, uint outputAmount, uint fee, address recipient);
-    // event NewEra(uint256 currentEra, uint256 nextEraTime, uint256 reserve);
+    // event NewEra(uint currentEra, uint nextEraTime, uint reserve);
 
 // Only Deployer can execute
     modifier onlyDeployer() {
@@ -387,7 +387,7 @@ contract Router_Vether {
         totalStaked += _actualInputBase;
         stakeTx += 1;
         uint units = _handleStake(pool, _actualInputBase, _actualInputToken, msg.sender);
-        emit NewPool(token, pool, now);
+        emit NewPool(token, pool, block.timestamp);
         emit Staked(msg.sender, _actualInputBase, _actualInputToken, units);
         return pool;
     }
@@ -440,7 +440,7 @@ contract Router_Vether {
         address payable pool = getPool(token);
         address payable member = msg.sender;
         (uint _outputBase, uint _outputToken) = _DAO().UTILS().getPoolShare(token, units);
-        // totalStaked = totalStaked.sub(_outputBase);
+        // totalStaked = totalStaked - _outputBase);
         unstakeTx += 1;
         _handleUnstake(pool, units, _outputBase, _outputToken, member);
         emit Unstaked(member, _outputBase, _outputToken, units);
@@ -460,7 +460,7 @@ contract Router_Vether {
         address payable pool = getPool(token);
         require(units < iERC20(pool).totalSupply(), "InputErr");
         (uint _outputBase, uint _outputToken, uint _outputAmount) = _DAO().UTILS().getPoolShareAssym(token, units, toBase);
-        totalStaked = totalStaked.sub(_outputBase);
+        totalStaked = totalStaked - _outputBase);
         unstakeTx += 1;
         _handleUnstake(pool, units, _outputBase, _outputToken, msg.sender);
         emit Unstaked(msg.sender, _outputBase, _outputToken, units);
@@ -472,8 +472,8 @@ contract Router_Vether {
     function _handleUnstake(address payable pool, uint _units, uint _outputBase, uint _outputToken, address _member) internal returns (bool success) {
         Pool_Vether(pool)._checkApprovals();
         // Pool_Vether(pool)._decrementPoolBalances(_outputBase, _outputToken);
-        uint _baseAmt = Pool_Vether(pool).baseAmt().sub(_outputBase);
-        uint _tokenAmt = Pool_Vether(pool).tokenAmt().sub(_outputToken); 
+        uint _baseAmt = Pool_Vether(pool).baseAmt() - _outputBase);
+        uint _tokenAmt = Pool_Vether(pool).tokenAmt() - _outputToken); 
         Pool_Vether(pool)._setPoolAmounts(_baseAmt, _tokenAmt);
         Pool_Vether(pool).burnFrom(_member, _units);
         return true;
@@ -505,8 +505,8 @@ contract Router_Vether {
     // function _getFeeBase(uint _x, address payable _pool) private view returns(uint){
     //     uint _X = Pool_Vether(_pool).baseAmt();
     //     uint _feeShare = Dao_Vether.feeShare();
-    //     uint _fee = UTILS.calcSwapInputFee(_x, _X).div(_feeShare);
-    //     return _X.sub(_fee);
+    //     uint _fee = UTILS.calcSwapInputFee(_x, _X) / _feeShare);
+    //     return _X - _fee);
     // }
 
     function sell(uint amount, address token) public payable returns (uint outputAmount, uint fee){
@@ -519,7 +519,7 @@ contract Router_Vether {
         uint _actualAmount = _handleTransferIn(token, amount, pool);
         (outputAmount, fee) = _swapTokenToBase(pool, _actualAmount);
         // addDividend(pool, outputAmount, fee);
-        totalStaked = totalStaked.sub(outputAmount);
+        totalStaked = totalStaked - outputAmount);
         totalVolume += outputAmount;
         totalFees += fee;
         swapTx += 1;
@@ -542,13 +542,13 @@ contract Router_Vether {
             // addDividend(poolFrom, outputAmount, fee);
         } else if(toToken == BASE) {
             (outputAmount, fee) = _swapTokenToBase(poolFrom,_actualAmount);   // Sell to token
-            totalStaked = totalStaked.sub(outputAmount);
+            totalStaked = totalStaked - outputAmount);
             totalVolume += outputAmount;
             // addDividend(poolFrom, outputAmount, fee);
         } else {
             (uint _yy, uint _feey) = _swapTokenToBase(poolFrom, _actualAmount);             // Sell to BASE
             uint _actualYY = _handleTransferOver(BASE, poolFrom, poolTo, _yy);
-            totalStaked = totalStaked.add(_actualYY).sub(_actualAmount);
+            totalStaked = totalStaked - _actualYY) - _actualAmount);
             totalVolume += _yy; totalFees += _feey;
             // addDividend(poolFrom, _yy, _feey);
             (uint _zz, uint _feez) = _swapBaseToToken(poolTo, _actualYY);              // Buy to token
@@ -568,7 +568,7 @@ contract Router_Vether {
         uint _Y = Pool_Vether(pool).tokenAmt();
         _y =  _DAO().UTILS().calcSwapOutput(_x, _X, _Y);
         _fee = _DAO().UTILS().calcSwapFee(_x, _X, _Y);
-        Pool_Vether(pool)._setPoolAmounts(_X.add(_x), _Y.sub(_y));
+        Pool_Vether(pool)._setPoolAmounts(_X - _x), _Y - _y));
         _updatePoolMetrics(pool, _y+_fee, _fee, false);
         // _checkEmission();
         return (_y, _fee);
@@ -579,7 +579,7 @@ contract Router_Vether {
         uint _Y = Pool_Vether(pool).baseAmt();
         _y =  _DAO().UTILS().calcSwapOutput(_x, _X, _Y);
         _fee = _DAO().UTILS().calcSwapFee(_x, _X, _Y);
-        Pool_Vether(pool)._setPoolAmounts(_Y.sub(_y), _X.add(_x));
+        Pool_Vether(pool)._setPoolAmounts(_Y - _y), _X - _x));
         _updatePoolMetrics(pool, _y+_fee, _fee, true);
         // _checkEmission();
         return (_y, _fee);
@@ -605,7 +605,7 @@ contract Router_Vether {
     // function _checkEmission(address token) private {
     //     if (now >= nextEraTime) {                                                           // If new Era and allowed to emit
     //         currentEra += 1;                                                               // Increment Era
-    //         nextEraTime = now + iBASE(token).secondsPerEra() + 100;                     // Set next Era time
+    //         nextEraTime = block.timestamp + iBASE(token).secondsPerEra() + 100;                     // Set next Era time
     //         uint reserve = iERC20(token).balanceOf(address(this));
     //         iERC20(token).transfer(address(_DAO()), reserve);
     //         emit NewEra(currentEra, nextEraTime, reserve);                               // Emit Event
@@ -633,7 +633,7 @@ contract Router_Vether {
             } else {
                 uint startBal = iERC20(_token).balanceOf(_pool); 
                 iERC20(_token).transferFrom(msg.sender, _pool, _amount); 
-                actual = iERC20(_token).balanceOf(_pool).sub(startBal);
+                actual = iERC20(_token).balanceOf(_pool) - startBal);
             }
         }
     }
@@ -652,7 +652,7 @@ contract Router_Vether {
         if(_amount > 0) {
             uint startBal = iERC20(_token).balanceOf(_to); 
             iERC20(_token).transferFrom(_from, _to, _amount); 
-            actual = iERC20(_token).balanceOf(_to).sub(startBal);
+            actual = iERC20(_token).balanceOf(_to) - startBal);
         }
     }
 

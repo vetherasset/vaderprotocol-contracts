@@ -60,39 +60,39 @@ VAULT
 
 function  calcSwapOutput(uint x, uint X, uint Y) public pure returns (uint output){
         // y = (x * Y * X)/(x + X)^2
-        uint numerator = x.mul(Y.mul(X));
-        uint denominator = (x.add(X)).mul(x.add(X));
-        return numerator.div(denominator);
+        uint numerator = x * Y * X));
+        uint denominator = (x - X)) * x - X));
+        return numerator / denominator);
     }
 
     function  calcSwapFee(uint x, uint X, uint Y) public pure returns (uint output){
         // y = (x * Y * x) / (x + X)^2
-        uint numerator = x.mul(Y.mul(x));
-        uint denominator = (x.add(X)).mul(x.add(X));
-        return numerator.div(denominator);
+        uint numerator = x * Y * x));
+        uint denominator = (x - X)) * x - X));
+        return numerator / denominator);
     }
 
     function calcStakeUnits(uint a, uint A, uint v, uint V) public pure returns (uint units){
         // units = ((V + A) * (v * A + V * a))/(4 * V * A)
         // (part1 * (part2 + part3)) / part4
-        uint part1 = V.add(A);
-        uint part2 = v.mul(A);
-        uint part3 = V.mul(a);
-        uint numerator = part1.mul((part2.add(part3)));
-        uint part4 = 4 * (V.mul(A));
-        return numerator.div(part4);
+        uint part1 = V - A);
+        uint part2 = v * A);
+        uint part3 = V * a);
+        uint numerator = part1 * (part2 - part3)));
+        uint part4 = 4 * (V * A));
+        return numerator / part4);
     }
 
     function calcAsymmetricShare(uint s, uint T, uint A) public pure returns (uint share){
         // share = (s * A * (2 * T^2 - 2 * T * s + s^2))/T^3
         // (part1 * (part2 - part3 + part4)) / part5
-        uint part1 = s.mul(A);
-        uint part2 = T.mul(T).mul(2);
-        uint part3 = T.mul(s).mul(2);
-        uint part4 = s.mul(s);
-        uint numerator = part1.mul(part2.sub(part3).add(part4));
-        uint part5 = T.mul(T).mul(T);
-        return numerator.div(part5);
+        uint part1 = s * A);
+        uint part2 = T * T) * 2);
+        uint part3 = T * s) * 2);
+        uint part4 = s * s);
+        uint numerator = part1 * part2 - part3) - part4));
+        uint part5 = T * T) * T);
+        return numerator / part5);
     }
 ```
 

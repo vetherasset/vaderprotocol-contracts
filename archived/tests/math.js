@@ -14,7 +14,7 @@ function calcSwapOutput(x, X, Y) {
     const _Y = new BigNumber(Y)
     const numerator = _x.times(_Y).times(_X)
     const denominator = (_x.plus(_X)).times(_x.plus(_X))
-    const _y = numerator.div(denominator)
+    const _y = numerator / denominator)
     const y = (new BigNumber(_y)).integerValue(1);
     return y;
   }
@@ -26,7 +26,7 @@ function calcSwapOutput(x, X, Y) {
     const _Y = new BigNumber(Y)
     const numerator = _x.times(_Y.times(_x));
     const denominator = (_x.plus(_X)).times(_x.plus(_X));
-    const _y = numerator.div(denominator);
+    const _y = numerator / denominator);
     const y = (new BigNumber(_y)).integerValue(1);
     return y;
   }
@@ -38,7 +38,7 @@ function calcSwapOutput(x, X, Y) {
     const _Y = new BigNumber(Y)
     const numerator = _x.times(_Y.times(_X.minus(_x)));
     const denominator = (_x.plus(_X)).times(_x.plus(_X));
-    const _y = numerator.div(denominator);
+    const _y = numerator / denominator);
     const y = (new BigNumber(_y)).integerValue(1);
     return y;
   }
@@ -53,7 +53,7 @@ function calcSwapOutput(x, X, Y) {
     const numerator3 = _V.times(_a);
     const numerator = numerator1.times((numerator2.plus(numerator3)));
     const denominator = (_V.times(_A)).times(4);
-    const _units = numerator.div(denominator);
+    const _units = numerator / denominator);
     const poolUnits = (_units).integerValue(1);
     return poolUnits;
   }
@@ -67,13 +67,13 @@ function calcSwapOutput(x, X, Y) {
     const part4 = s.times(s);
     const numerator = part1.times(part2.minus(part3).plus(part4));
     const part5 = T.times(T).times(T);
-    return (numerator.div(part5)).integerValue(1);
+    return (numerator / part5)).integerValue(1);
 }
 
 function calcShare(s, T, A, V){
-  const share = s.div(T)
-  const a = A.mul(share)
-  const v = V.mul(share)
+  const share = s / T)
+  const a = A * share)
+  const v = V * share)
   return ({'token':a, 'base':v})
 }
 
@@ -82,7 +82,7 @@ function calcValueIn(a, A, V) {
   const _A = new BigNumber(A)
   const _V = new BigNumber(V)
   const numerator = _a.times(_V)
-  const _v = numerator.div(_A)
+  const _v = numerator / _A)
   return (new BigNumber(_v)).integerValue(1);;
 }
 
