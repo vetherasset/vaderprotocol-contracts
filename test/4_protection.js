@@ -56,8 +56,8 @@ before(async function() {
   await vether.approve(vader.address, '7400', {from:acc1})
   await vader.upgrade(BN2Str(7400), {from:acc1}) 
 
-  await usdv.convert(BN2Str(1000), {from:acc1})
-  await usdv.withdrawToUSDV('10000', {from:acc1})
+  await usdv.convertToUSDVDirectly(BN2Str(1000), {from:acc1})
+  // await usdv.withdrawToUSDV('10000', {from:acc1})
 
   await router.addLiquidity(vader.address, '1000', anchor.address, '1000', {from:acc1})
 })
@@ -67,10 +67,12 @@ before(async function() {
 
 describe("Deploy Protection", function() {
   it("Should have right reserves", async function() {
+    await vader.transfer(acc0, '100', {from:acc1})
+    await usdv.transfer(acc0, '100', {from:acc1})
     expect(BN2Str(await vader.getDailyEmission())).to.equal('7');
-    expect(BN2Str(await usdv.reserveUSDV())).to.equal('3');
-    expect(BN2Str(await router.reserveUSDV())).to.equal('2');
-    expect(BN2Str(await router.reserveVADER())).to.equal('3');
+    expect(BN2Str(await usdv.reserveUSDV())).to.equal('7');
+    expect(BN2Str(await router.reserveUSDV())).to.equal('7');
+    expect(BN2Str(await router.reserveVADER())).to.equal('8');
     
   });
 });
@@ -84,7 +86,7 @@ describe("Should do IL Protection", function() {
     expect(BN2Str(await utils.calcCoverage('100', '1000', '20', '2000'))).to.equal('70');
   });
   it("Small swap, need protection", async function() {
-    expect(BN2Str(await usdv.balanceOf(acc1))).to.equal('1000');
+    expect(BN2Str(await usdv.balanceOf(acc1))).to.equal('900');
     for(let i = 0; i<9; i++){
       await router.swap('100', anchor.address, vader.address, {from:acc1})
     }
@@ -97,8 +99,8 @@ describe("Should do IL Protection", function() {
     // console.log("membe units", BN2Str(await vault.mapTokenMember_Units(vader.address, acc1)));
     // console.log("units", BN2Str(await vault.mapToken_Units(vader.address)));
     let coverage = await router.getCoverage(acc1, anchor.address)
-    expect(BN2Str(coverage)).to.equal('179');
-    expect(BN2Str(await router.getProtection(acc1, anchor.address, "10000", coverage))).to.equal('179');
+    expect(BN2Str(coverage)).to.equal('173');
+    expect(BN2Str(await router.getProtection(acc1, anchor.address, "10000", coverage))).to.equal('173');
     let reserveVADER = BN2Str(await router.reserveVADER())
     expect(BN2Str(await router.getILProtection(acc1, vader.address, anchor.address, '10000'))).to.equal(reserveVADER);
 

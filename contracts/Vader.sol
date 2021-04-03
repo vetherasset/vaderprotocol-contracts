@@ -43,6 +43,11 @@ contract Vader is iERC20 {
         require(msg.sender == DAO, "Not DAO");
         _;
     }
+    // Stop flash attacks
+    modifier flashProof() {
+        require(iUSDV(USDV).lastBlock(tx.origin) != block.number, "No flash");
+        _;
+    }
 
     //=====================================CREATION=========================================//
     // Constructor
@@ -193,11 +198,17 @@ contract Vader is iERC20 {
         require(iERC20(VETHER).transferFrom(msg.sender, burnAddress, amount));
         _mint(msg.sender, amount);
     }
-    // USDV Owners to redeem back to VADER (must have sent it first via another contract)
+    // Directly redeem back to VADER (must have sent USDV first)
     function redeem() public returns (uint redeemAmount){
+        return redeemToMember(tx.origin);
+    }
+    // Redeem on behalf of member (must have sent USDV first)
+    function redeemToMember(address _member) public flashProof returns (uint redeemAmount){
         uint _amount = iERC20(USDV).balanceOf(address(this)); 
         iERC20(USDV).burn(_amount);
         redeemAmount = iROUTER(iUSDV(USDV).ROUTER()).getVADERAmount(_amount);
-        _mint(msg.sender, redeemAmount);
+        _mint(_member, redeemAmount);
+        return redeemAmount;
     }
+
 }
