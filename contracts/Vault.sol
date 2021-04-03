@@ -5,6 +5,7 @@ pragma solidity ^0.6.8;
 import "./iERC20.sol";
 import "./SafeMath.sol";
 import "./iUTILS.sol";
+import "./iVADER.sol";
 import "@nomiclabs/buidler/console.sol";
     //======================================VADER=========================================//
 contract Vault {
@@ -17,7 +18,6 @@ contract Vault {
     
     address public VADER;
     address public USDV;
-    address public UTILS;
     address public ROUTER;
 
     mapping(address => bool) _isMember;
@@ -39,11 +39,10 @@ contract Vault {
     // Constructor
     constructor() public {}
     // Init
-    function init(address _vader, address _usdv, address _utils, address _router) public {
+    function init(address _vader, address _usdv, address _router) public {
         require(inited == false);
         VADER = _vader;
         USDV = _usdv;
-        UTILS = _utils;
         ROUTER = _router;
     }
 
@@ -64,7 +63,7 @@ contract Vault {
             _actualInputBase = getAddedAmount(USDV, token);
         }
         uint _actualInputToken = getAddedAmount(token, token);
-        liquidityUnits = iUTILS(UTILS).calcLiquidityUnits(_actualInputBase, mapToken_baseAmount[token], _actualInputToken, mapToken_tokenAmount[token], mapToken_Units[token]);
+        liquidityUnits = iUTILS(UTILS()).calcLiquidityUnits(_actualInputBase, mapToken_baseAmount[token], _actualInputToken, mapToken_tokenAmount[token], mapToken_Units[token]);
         mapTokenMember_Units[token][member] = mapTokenMember_Units[token][member].add(liquidityUnits);
         mapToken_Units[token] = mapToken_Units[token].add(liquidityUnits);
         mapToken_baseAmount[token] = mapToken_baseAmount[token].add(_actualInputBase);
@@ -81,9 +80,9 @@ contract Vault {
     }
     function _removeLiquidity(address base, address token, uint basisPoints, address member) internal returns (uint outputBase, uint outputToken) {
         require(base == USDV || base == VADER);
-        uint _units = iUTILS(UTILS).calcPart(basisPoints, mapTokenMember_Units[token][member]);
-        outputBase = iUTILS(UTILS).calcShare(_units, mapToken_Units[token], mapToken_baseAmount[token]);
-        outputToken = iUTILS(UTILS).calcShare(_units, mapToken_Units[token], mapToken_tokenAmount[token]);
+        uint _units = iUTILS(UTILS()).calcPart(basisPoints, mapTokenMember_Units[token][member]);
+        outputBase = iUTILS(UTILS()).calcShare(_units, mapToken_Units[token], mapToken_baseAmount[token]);
+        outputToken = iUTILS(UTILS()).calcShare(_units, mapToken_Units[token], mapToken_tokenAmount[token]);
         mapToken_Units[token] = mapToken_Units[token].sub(_units);
         mapTokenMember_Units[token][member] = mapTokenMember_Units[token][member].sub(_units);
         mapToken_baseAmount[token] = mapToken_baseAmount[token].sub(outputBase);
@@ -108,16 +107,16 @@ contract Vault {
     function swap(address base, address token, address member, bool toBase) public returns (uint outputAmount){
         if(toBase){
             uint _actualInput = getAddedAmount(token, token);
-            outputAmount = iUTILS(UTILS).calcSwapOutput(_actualInput, mapToken_tokenAmount[token], mapToken_baseAmount[token]);
-            uint _swapFee = iUTILS(UTILS).calcSwapFee(_actualInput, mapToken_tokenAmount[token], mapToken_baseAmount[token]);
+            outputAmount = iUTILS(UTILS()).calcSwapOutput(_actualInput, mapToken_tokenAmount[token], mapToken_baseAmount[token]);
+            uint _swapFee = iUTILS(UTILS()).calcSwapFee(_actualInput, mapToken_tokenAmount[token], mapToken_baseAmount[token]);
             mapToken_tokenAmount[token] = mapToken_tokenAmount[token].add(_actualInput);
             mapToken_baseAmount[token] = mapToken_baseAmount[token].sub(outputAmount);
             emit Swap(member, token, _actualInput, base, outputAmount, _swapFee);
             transferOut(base, outputAmount, member);
         } else {
             uint _actualInput = getAddedAmount(base, token);
-            outputAmount = iUTILS(UTILS).calcSwapOutput(_actualInput, mapToken_baseAmount[token], mapToken_tokenAmount[token]);
-            uint _swapFee = iUTILS(UTILS).calcSwapFee(_actualInput, mapToken_baseAmount[token], mapToken_tokenAmount[token]);
+            outputAmount = iUTILS(UTILS()).calcSwapOutput(_actualInput, mapToken_baseAmount[token], mapToken_tokenAmount[token]);
+            uint _swapFee = iUTILS(UTILS()).calcSwapFee(_actualInput, mapToken_baseAmount[token], mapToken_tokenAmount[token]);
             mapToken_baseAmount[token] = mapToken_baseAmount[token].add(_actualInput);
             mapToken_tokenAmount[token] = mapToken_tokenAmount[token].sub(outputAmount);
             emit Swap(member, base, _actualInput, token, outputAmount, _swapFee);
@@ -188,5 +187,8 @@ contract Vault {
     }
     function getMemberUnits(address token, address member) public view returns(uint) {
         return mapTokenMember_Units[token][member];
+    }
+    function UTILS() public view returns(address){
+        return iVADER(VADER).UTILS();
     }
 }

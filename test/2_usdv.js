@@ -38,9 +38,9 @@ before(async function() {
   attack = await Attack.new();
 
   await vader.init(vether.address, usdv.address, utils.address)
-  await usdv.init(vader.address, utils.address, router.address)
-  await router.init(vader.address, usdv.address, utils.address, vault.address);
-  await vault.init(vader.address, usdv.address, utils.address, router.address);
+  await usdv.init(vader.address, router.address)
+  await router.init(vader.address, usdv.address, vault.address);
+  await vault.init(vader.address, usdv.address, router.address);
   await attack.init(vader.address, usdv.address)
 
   await vether.transfer(acc1, '3403') 

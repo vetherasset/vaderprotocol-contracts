@@ -172,6 +172,11 @@ contract Vader is iERC20 {
         require(newDAO != address(0), "address err");
         DAO = newDAO;
     }
+    // Can change UTILS
+    function changeUTILS(address newUTILS) public onlyDAO{
+        require(newUTILS != address(0), "address err");
+        UTILS = newUTILS;
+    }
     // Can purge DAO
     function purgeDAO() public onlyDAO{
         DAO = address(0);
@@ -185,7 +190,7 @@ contract Vader is iERC20 {
             nextEraTime = now + secondsPerEra;                                             // Set next Era time
             uint256 _emission = getDailyEmission();                                        // Get Daily Dmission
             _mint(rewardAddress, _emission);                                                // Mint to the Incentive Address
-            feeOnTransfer = getFeeOnTransfer();                                             // UpdateFeeOnTransfer
+            feeOnTransfer = iUTILS(UTILS).getFeeOnTransfer(totalSupply, maxSupply);         // UpdateFeeOnTransfer
             emit NewEra(currentEra, nextEraTime, _emission);                               // Emit Event
         }
     }
@@ -198,10 +203,6 @@ contract Vader is iERC20 {
             _adjustedMax = maxSupply;  // 2m
         }
         return (_adjustedMax.sub(totalSupply)).div(emissionCurve); // outstanding / 2048 
-    }
-
-    function getFeeOnTransfer() public returns(uint256){
-        return iUTILS(UTILS).calcShare(totalSupply, maxSupply, 100); // 0->100BP
     }
 
     //======================================ASSET MINTING========================================//

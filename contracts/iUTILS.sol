@@ -1,14 +1,15 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.6.8;
 interface iUTILS {
-    function calcPart(uint bp, uint total) external pure returns (uint part);
-    function calcShare(uint part, uint total, uint amount) external pure returns (uint share);
-    function calcSwapOutput(uint x, uint X, uint Y) external pure returns (uint output);
-    function calcSwapFee(uint x, uint X, uint Y) external pure returns (uint output);
-    function calcLiquidityUnits(uint b, uint B, uint t, uint T, uint P) external view returns (uint units);
-    function getSlipAdustment(uint b, uint B, uint t, uint T) external view returns (uint slipAdjustment);
-    function calcAsymmetricShare(uint u, uint U, uint A) external pure returns (uint share);
-    function calcCoverage(uint _B0, uint _T0, uint _B1, uint _T1) external pure returns(uint coverage);
-    function calcValueInBase(address token, uint amount) external view returns (uint);
-    function calcValueInToken(address token, uint amount) external view returns (uint);
+    function getFeeOnTransfer(uint, uint) external pure returns (uint);
+    function calcPart(uint, uint) external pure returns (uint);
+    function calcShare(uint, uint, uint) external pure returns (uint);
+    function calcSwapOutput(uint, uint, uint) external pure returns (uint);
+    function calcSwapFee(uint, uint, uint) external pure returns (uint);
+    function calcLiquidityUnits(uint, uint, uint, uint, uint) external view returns (uint);
+    function getSlipAdustment(uint, uint, uint, uint) external view returns (uint);
+    function calcAsymmetricShare(uint, uint, uint) external pure returns (uint);
+    function calcCoverage(uint, uint, uint, uint) external pure returns(uint);
+    function calcValueInBase(address, uint) external view returns (uint);
+    function calcValueInToken(address, uint) external view returns (uint);
 }
