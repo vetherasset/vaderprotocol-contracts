@@ -15,7 +15,6 @@ contract Router {
 
     // Parameters
     bool private inited;
-    bool public emitting;
     uint256 one = 10**18;
     uint256 _10k = 10000;
     uint256 public rewardReductionFactor;
@@ -23,7 +22,6 @@ contract Router {
     
     address public VADER;
     address public USDV;
-    address public DAO;
     address public VAULT;
 
     address[] public arrayAnchors;
@@ -38,17 +36,15 @@ contract Router {
 
     // Only DAO can execute
     modifier onlyDAO() {
-        require(msg.sender == DAO, "Not DAO");
+        require(msg.sender == DAO(), "Not DAO");
         _;
     }
 
     //=====================================CREATION=========================================//
     // Constructor
-    constructor() public {
-        DAO = msg.sender;
-    }
+    constructor() public {}
     // Init
-    function init(address _vader, address _usdv, address _vault) public onlyDAO {
+    function init(address _vader, address _usdv, address _vault) public {
         require(inited == false);
         VADER = _vader;
         USDV = _usdv;
@@ -60,27 +56,10 @@ contract Router {
     }
 
     //=========================================DAO=========================================//
-    // Can start
-    function startEmissions() public onlyDAO{
-        emitting = true;
-    }
-    // Can stop
-    function stopEmissions() public onlyDAO{
-        emitting = false;
-    }
     // Can set params
     function setParams(uint _one, uint _two) public onlyDAO {
         rewardReductionFactor = _one;
         timeForFullProtection = _two;
-    }
-    // Can change DAO
-    function changeDAO(address newDAO) public onlyDAO{
-        require(newDAO != address(0), "address err");
-        DAO = newDAO;
-    }
-    // Can purge DAO
-    function purgeDAO() public onlyDAO{
-        DAO = address(0);
     }
 
     //====================================LIQUIDITY=========================================//
@@ -136,7 +115,7 @@ contract Router {
         //====================================INCENTIVES========================================//
     
     function getRewardShare(address token) public view returns (uint rewardShare){
-        if(emitting){
+        if((emitting())){
             uint _baseAmount = iVAULT(VAULT).getBaseAmount(token);
             if (iVAULT(VAULT).isAsset(token)) {
                 uint _share = iUTILS(UTILS()).calcShare(_baseAmount, iVAULT(VAULT).pooledUSDV(), reserveUSDV());
@@ -349,5 +328,11 @@ contract Router {
 
     function UTILS() public view returns(address){
         return iVADER(VADER).UTILS();
+    }
+    function DAO() public view returns(address){
+        return iVADER(VADER).DAO();
+    }
+    function emitting() public view returns(bool){
+        return iVADER(VADER).emitting();
     }
 }

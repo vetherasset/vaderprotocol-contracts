@@ -44,8 +44,6 @@ before(async function() {
   await vault.init(vader.address, usdv.address, router.address);
 
   await vader.startEmissions()
-  await usdv.startEmissions()
-  await router.startEmissions()
 
   anchor = await Anchor.new();
   asset = await Asset.new();
