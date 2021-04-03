@@ -46,7 +46,8 @@ contract Utils {
         }
     }
     //====================================SYSTEM FUNCTIONS====================================//
-    function getFeeOnTransfer(uint256 totalSupply, uint256 maxSupply) public returns(uint256){
+    // VADER FeeOnTransfer
+    function getFeeOnTransfer(uint256 totalSupply, uint256 maxSupply) public pure returns(uint256){
         return calcShare(totalSupply, maxSupply, 100); // 0->100BP
     }
 

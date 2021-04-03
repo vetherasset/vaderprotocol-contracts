@@ -24,15 +24,15 @@ contract USDV is iERC20 {
 
     // Parameters
     bool private inited;
-    bool public emitting;
     uint256 public totalFunds;
     uint256 public currentEra;
     uint256 public nextEraTime;
     uint256 public erasToEarn;
     uint256 public minimumDepositTime;
+    uint256 public minGrantTime;
+    uint256 public lastGranted;
 
     address public VADER;
-    address public DAO;
     address public ROUTER;
 
     mapping(address => bool) private _isMember; // Is Member
@@ -47,7 +47,7 @@ contract USDV is iERC20 {
 
     // Only DAO can execute
     modifier onlyDAO() {
-        require(msg.sender == DAO, "Not DAO");
+        require(msg.sender == DAO(), "Not DAO");
         _;
     }
     // Stop flash attacks
@@ -63,9 +63,8 @@ contract USDV is iERC20 {
         symbol = 'USDV';
         decimals = 18;
         totalSupply = 0;
-        DAO = msg.sender;
     }
-    function init(address _vader, address _router) public onlyDAO {
+    function init(address _vader, address _router) public {
         require(inited == false);
         VADER = _vader;
         ROUTER = _router;
@@ -75,9 +74,7 @@ contract USDV is iERC20 {
         nextEraTime = now + iVADER(VADER).secondsPerEra();
         erasToEarn = 100;
         minimumDepositTime = 1;
-    }
-    function UTILS() public view returns(address){
-        return iVADER(VADER).UTILS();
+        minGrantTime = 2592000;     // 30 days
     }
 
     //========================================iERC20=========================================//
@@ -149,33 +146,22 @@ contract USDV is iERC20 {
     }
 
     //=========================================DAO=========================================//
-    // Can start
-    function startEmissions() public onlyDAO{
-        emitting = true;
-    }
-    // Can stop
-    function stopEmissions() public onlyDAO{
-        emitting = false;
-    }
     // Can set params
     function setParams(uint _one, uint _two) public onlyDAO {
         erasToEarn = _one;
         minimumDepositTime = _two;//8640000; //100 days
     }
-    // Can change DAO
-    function changeDAO(address newDAO) public onlyDAO{
-        require(newDAO != address(0), "address err");
-        DAO = newDAO;
-    }
-    // Can purge DAO
-    function purgeDAO() public onlyDAO{
-        DAO = address(0);
+    // Can set params
+    function grant(address recipient, uint amount) public onlyDAO {
+        require(amount <= reserveUSDV().div(10), "not more than 10%"); // 
+        require(now.sub(lastGranted) >= minGrantTime, "not too fast");
+        _transfer(address(this), recipient, amount); 
     }
 
    //======================================INCENTIVES========================================//
     // Internal - Update incentives function
     function _checkIncentives() private {
-        if (now >= nextEraTime && emitting) {                  // If new Era
+        if (now >= nextEraTime && emitting()) {                  // If new Era
             currentEra += 1;                                        // Increment Era
             nextEraTime = now + iVADER(VADER).secondsPerEra(); 
             uint _balance = iERC20(VADER).balanceOf(address(this)); // Get spare VADER
@@ -315,6 +301,15 @@ contract USDV is iERC20 {
     }
     function isMember(address member) public view returns(bool){
         return _isMember[member];
+    }
+    function UTILS() public view returns(address){
+        return iVADER(VADER).UTILS();
+    }
+    function DAO() public view returns(address){
+        return iVADER(VADER).DAO();
+    }
+    function emitting() public view returns(bool){
+        return iVADER(VADER).emitting();
     }
 
 }
