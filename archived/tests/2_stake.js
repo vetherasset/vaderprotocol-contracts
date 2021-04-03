@@ -178,14 +178,14 @@ async function unstakeETH(bp, acc) {
 
         let totalUnits = _.getBN((await basePools.totalSupply()))
         let stakerUnits = _.getBN(await basePools.balanceOf(acc))
-        let share = (stakerUnits.times(bp)).div(10000)
-        let v = _.floorBN((S.times(share)).div(totalUnits))
-        let a = _.floorBN((A.times(share)).div(totalUnits))
+        let share = (stakerUnits.times(bp)) / 10000)
+        let v = _.floorBN((S.times(share)) / totalUnits))
+        let a = _.floorBN((A.times(share)) / totalUnits))
         // let memberData = (await utils.getMemberData(token, acc))
         // let baseAmt = _.getBN(memberData.baseAmtStaked)
         // let tokenAmt = _.getBN(memberData.tokenAmtStaked)
-        // let vs = _.floorBN((baseAmt.times(bp)).div(10000))
-        // let aa = _.floorBN((tokenAmt.times(bp)).div(10000))
+        // let vs = _.floorBN((baseAmt.times(bp)) / 10000))
+        // let aa = _.floorBN((tokenAmt.times(bp)) / 10000))
         console.log(_.BN2Str(totalUnits), _.BN2Str(stakerUnits), _.BN2Str(share), _.BN2Str(v), _.BN2Str(a))
         
         let tx = await router.unstake(bp, token, { from: acc})
@@ -221,7 +221,7 @@ async function unstakeAsym(bp, acc, toBase) {
         // console.log(poolData)
         let totalUnits = _.getBN((await basePools.totalSupply()))
         let stakerUnits = _.getBN(await basePools.balanceOf(acc))
-        let share = (stakerUnits.times(bp)).div(10000)
+        let share = (stakerUnits.times(bp)) / 10000)
 
         // console.log(_.BN2Str(share), _.BN2Str(totalUnits), _.BN2Str(S), bp, toBase)
 
@@ -266,7 +266,7 @@ async function unstakeExactAsym(bp, acc, toBase) {
 
         let totalUnits = _.getBN((await basePools.totalSupply()))
         let stakerUnits = _.getBN(await basePools.balanceOf(acc))
-        let share = (stakerUnits.times(bp)).div(10000)
+        let share = (stakerUnits.times(bp)) / 10000)
 
         let a; let v;
         if(toBase){
@@ -302,7 +302,7 @@ async function unstakeFailExactAsym(bp, acc, toBase) {
 
     it(`It should assym unstake from ${acc}`, async () => {
         let stakerUnits = _.getBN(await basePools.balanceOf(acc))
-        let share = (stakerUnits.times(bp)).div(10000)
+        let share = (stakerUnits.times(bp)) / 10000)
 
         await truffleAssert.reverts(router.unstakeExactAsymmetric(share, toBase, _.ETH, { from: acc}))
     })

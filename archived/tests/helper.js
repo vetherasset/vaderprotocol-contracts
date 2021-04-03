@@ -17,11 +17,11 @@ async function calcValueInVeth(instance, token) {
   if (token == _.addressETH) {
     tokenBal = new BigNumber((await instance.mapToken_ExchangeData(token)).tokenAmt);
     maiBal = new BigNumber((await instance.mapToken_ExchangeData(token)).baseAmt);
-    result = (_.oneBN.times(maiBal)).div(tokenBal)
+    result = (_.oneBN.times(maiBal)) / tokenBal)
   } else {
     tokenBal = new BigNumber((await instance.mapToken_ExchangeData(token)).tokenAmt);
     maiBal = new BigNumber((await instance.mapToken_ExchangeData(token)).baseAmt);
-    result = (_.oneBN.times(maiBal)).div(tokenBal)
+    result = (_.oneBN.times(maiBal)) / tokenBal)
   }
   return result.toFixed()
 }
@@ -29,14 +29,14 @@ async function calcValueInVeth(instance, token) {
 async function calcValueInToken() {
   var usdBal = new BigNumber(usdPool.tokenAmt)
   var maiBal = new BigNumber(usdPool.mai)
-  return ((_.oneBN.times(usdBal)).div(maiBal)).toFixed()
+  return ((_.oneBN.times(usdBal)) / maiBal)).toFixed()
 }
 async function calcEtherPriceInUSD(instance, amount) {
   const _amount = new BigNumber(amount)
   const etherPriceInVeth = new BigNumber(await calcValueInVeth(instance, _.addressETH))
   const maiPriceInUSD = new BigNumber(await calcValueInToken())
-  const ethPriceInUSD = (maiPriceInUSD.times(etherPriceInVeth)).div(_.oneBN)
-  return ((_amount.times(ethPriceInUSD)).div(_.oneBN)).toFixed()
+  const ethPriceInUSD = (maiPriceInUSD.times(etherPriceInVeth)) / _.oneBN)
+  return ((_amount.times(ethPriceInUSD)) / _.oneBN)).toFixed()
 }
 async function calcEtherPPinBASE(instance, amount) {
   var tokenBal = new BigNumber((await instance.mapToken_ExchangeData(_.addressETH)).tokenAmt);

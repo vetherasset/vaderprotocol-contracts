@@ -38,26 +38,7 @@ before(async function() {
   router = await Router.new();
   vault = await Vault.new();
 
-  await vader.startEmissions()
-
-  await vader.init(vether.address, usdv.address, utils.address)
-  await usdv.init(vader.address, router.address)
-  await router.init(vader.address, usdv.address, vault.address);
-  await vault.init(vader.address, usdv.address, router.address);
-
-  anchor = await Anchor.new();
-
-  await vether.transfer(acc1, BN2Str(7407)) 
-  await anchor.transfer(acc1, BN2Str(2000))
-  await anchor.approve(router.address, BN2Str(one), {from:acc1})
-
-  await vether.approve(vader.address, '7400', {from:acc1})
-  await vader.upgrade(BN2Str(7400), {from:acc1}) 
-
-  await usdv.convertToUSDVDirectly(BN2Str(1000), {from:acc1})
-  // await usdv.withdrawToUSDV('10000', {from:acc1})
-
-  await router.addLiquidity(vader.address, '1000', anchor.address, '1000', {from:acc1})
+  
 })
 // acc  | VTH | VADER  | USDV | Anr  |  Ass |
 // vault|   0 | 2000 | 2000 | 1000 | 1000 |
@@ -65,6 +46,27 @@ before(async function() {
 
 describe("Deploy Protection", function() {
   it("Should have right reserves", async function() {
+    await vader.startEmissions()
+
+    await vader.init(vether.address, usdv.address, utils.address)
+    await usdv.init(vader.address, router.address)
+    await router.init(vader.address, usdv.address, vault.address);
+    await vault.init(vader.address, usdv.address, router.address);
+
+    anchor = await Anchor.new();
+
+    await vether.transfer(acc1, BN2Str(7407)) 
+    await anchor.transfer(acc1, BN2Str(2000))
+    await anchor.approve(router.address, BN2Str(one), {from:acc1})
+
+    await vether.approve(vader.address, '7400', {from:acc1})
+    await vader.upgrade(BN2Str(7400), {from:acc1}) 
+
+    await usdv.convertToUSDVDirectly(BN2Str(1000), {from:acc1})
+    // await usdv.withdrawToUSDV('10000', {from:acc1})
+
+    await router.addLiquidity(vader.address, '1000', anchor.address, '1000', {from:acc1})
+
     await vader.transfer(acc0, '100', {from:acc1})
     await usdv.transfer(acc0, '100', {from:acc1})
     expect(BN2Str(await vader.getDailyEmission())).to.equal('7');

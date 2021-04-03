@@ -1,19 +1,15 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.6.8;
+pragma solidity ^0.8.3;
 
 // Interfaces
 import "./iERC20.sol";
-import "./SafeMath.sol";
 import "./iUTILS.sol";
 import "./iVADER.sol";
 import "./iUSDV.sol";
 import "./iROUTER.sol";
 
-import "@nomiclabs/buidler/console.sol";
-
     //======================================VADER=========================================//
 contract DAO {
-    using SafeMath for uint256;
 
     struct GrantDetails{
         address recipient;
@@ -26,15 +22,15 @@ contract DAO {
     address public USDV;
     uint public coolOffPeriod;
 
-    mapping(uint256 => GrantDetails) public mapPID_grant;
-    mapping(uint256 => address) public mapPID_address;
+    mapping(uint => GrantDetails) public mapPID_grant;
+    mapping(uint => address) public mapPID_address;
 
-    mapping(uint256 => string) public mapPID_type;
-    mapping(uint256 => uint256) public mapPID_votes;
-    mapping(uint256 => uint256) public mapPID_timeStart;
-    mapping(uint256 => bool) public mapPID_finalising;
-    mapping(uint256 => bool) public mapPID_finalised;
-    mapping(uint256 => mapping(address => uint256)) public mapPIDMember_votes;
+    mapping(uint => string) public mapPID_type;
+    mapping(uint => uint) public mapPID_votes;
+    mapping(uint => uint) public mapPID_timeStart;
+    mapping(uint => bool) public mapPID_finalising;
+    mapping(uint => bool) public mapPID_finalised;
+    mapping(uint => mapping(address => uint)) public mapPIDMember_votes;
 
     event NewProposal(address indexed member, uint indexed proposalID, string proposalType);
     event NewVote(address indexed member, uint indexed proposalID, uint voteWeight, uint totalVotes, string proposalType);
@@ -44,7 +40,7 @@ contract DAO {
 
     //=====================================CREATION=========================================//
     // Constructor
-    constructor() public {
+    constructor() {
     }
     function init(address _vader, address _usdv) public {
         require(inited == false);
@@ -97,8 +93,8 @@ contract DAO {
     function _finalise(uint _proposalID) internal {
         bytes memory _type = bytes(mapPID_type[_proposalID]);
         mapPID_finalising[_proposalID] = true;
-        mapPID_timeStart[_proposalID] = now;
-        emit ProposalFinalising(msg.sender, _proposalID, now+coolOffPeriod, string(_type));
+        mapPID_timeStart[_proposalID] = block.timestamp;
+        emit ProposalFinalising(msg.sender, _proposalID, block.timestamp+coolOffPeriod, string(_type));
     }
 
     // If an existing proposal, allow a minority to cancel
@@ -112,7 +108,7 @@ contract DAO {
 
     // Proposal with quorum can finalise after cool off period
     function finaliseProposal(uint proposalID) public  {
-        require((now - mapPID_timeStart[proposalID]) > coolOffPeriod, "Must be after cool off");
+        require((block.timestamp - mapPID_timeStart[proposalID]) > coolOffPeriod, "Must be after cool off");
         require(mapPID_finalising[proposalID] == true, "Must be finalising");
         if(!hasQuorum(proposalID)){
             _finalise(proposalID);
@@ -158,16 +154,16 @@ contract DAO {
 //============================== CONSENSUS ================================//
 
     function countMemberVotes(uint _proposalID) internal returns (uint voteWeight){
-        mapPID_votes[_proposalID] = mapPID_votes[_proposalID].sub(mapPIDMember_votes[_proposalID][msg.sender]);
+        mapPID_votes[_proposalID] -= mapPIDMember_votes[_proposalID][msg.sender];
         voteWeight = iUSDV(USDV).getMemberDeposit(msg.sender);
-        mapPID_votes[_proposalID] = mapPID_votes[_proposalID].add(voteWeight);
+        mapPID_votes[_proposalID] += voteWeight;
         mapPIDMember_votes[_proposalID][msg.sender] = voteWeight;
         return voteWeight;
     }
 
     function hasMajority(uint _proposalID) public view returns(bool){
         uint votes = mapPID_votes[_proposalID];
-        uint consensus = iUSDV(USDV).totalFunds().div(2); // >50%
+        uint consensus = iUSDV(USDV).totalFunds() / 2; // >50%
         if(votes > consensus){
             return true;
         } else {
@@ -176,7 +172,7 @@ contract DAO {
     }
     function hasQuorum(uint _proposalID) public view returns(bool){
         uint votes = mapPID_votes[_proposalID];
-        uint consensus = iUSDV(USDV).totalFunds().div(3); // >33%
+        uint consensus = iUSDV(USDV).totalFunds() / 3; // >33%
         if(votes > consensus){
             return true;
         } else {
@@ -185,7 +181,7 @@ contract DAO {
     }
     function hasMinority(uint _proposalID) public view returns(bool){
         uint votes = mapPID_votes[_proposalID];
-        uint consensus = iUSDV(USDV).totalFunds().div(6); // >16%
+        uint consensus = iUSDV(USDV).totalFunds() / 6; // >16%
         if(votes > consensus){
             return true;
         } else {

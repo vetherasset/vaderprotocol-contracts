@@ -1,20 +1,18 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.6.8;
+pragma solidity ^0.8.3;
 
 // Interfaces
 import "./iERC20.sol";
-import "./SafeMath.sol";
 import "./iUTILS.sol";
 import "./iVADER.sol";
-import "@nomiclabs/buidler/console.sol";
+
     //======================================VADER=========================================//
 contract Vault {
-    using SafeMath for uint256;
 
     // Parameters
     bool private inited;
-    uint256 public pooledVADER;
-    uint256 public pooledUSDV;
+    uint public pooledVADER;
+    uint public pooledUSDV;
     
     address public VADER;
     address public USDV;
@@ -24,20 +22,20 @@ contract Vault {
     mapping(address => bool) _isAsset;
     mapping(address => bool) _isAnchor;
 
-    mapping(address => uint256) public mapToken_Units;
-    mapping(address => mapping(address => uint256)) public mapTokenMember_Units;
-    mapping(address => uint256) public mapToken_baseAmount;
-    mapping(address => uint256) public mapToken_tokenAmount;
+    mapping(address => uint) public mapToken_Units;
+    mapping(address => mapping(address => uint)) public mapTokenMember_Units;
+    mapping(address => uint) public mapToken_baseAmount;
+    mapping(address => uint) public mapToken_tokenAmount;
 
     // Events
-    event AddLiquidity(address indexed member, address indexed base, uint256 baseAmount, address indexed token, uint256 tokenAmount, uint256 liquidityUnits);
-    event RemoveLiquidity(address indexed member, address indexed base, uint256 baseAmount, address indexed token, uint256 tokenAmount, uint256 liquidityUnits, uint256 totalUnits);
-    event Swap(address indexed member, address indexed inputToken, uint256 inputAmount, address indexed outputToken, uint256 outputAmount, uint256 swapFee);
-    event Sync(address indexed token, address indexed pool, uint256 addedAmount);
+    event AddLiquidity(address indexed member, address indexed base, uint baseAmount, address indexed token, uint tokenAmount, uint liquidityUnits);
+    event RemoveLiquidity(address indexed member, address indexed base, uint baseAmount, address indexed token, uint tokenAmount, uint liquidityUnits, uint totalUnits);
+    event Swap(address indexed member, address indexed inputToken, uint inputAmount, address indexed outputToken, uint outputAmount, uint swapFee);
+    event Sync(address indexed token, address indexed pool, uint addedAmount);
 
     //=====================================CREATION=========================================//
     // Constructor
-    constructor() public {}
+    constructor() {}
     // Init
     function init(address _vader, address _usdv, address _router) public {
         require(inited == false);
@@ -64,10 +62,10 @@ contract Vault {
         }
         uint _actualInputToken = getAddedAmount(token, token);
         liquidityUnits = iUTILS(UTILS()).calcLiquidityUnits(_actualInputBase, mapToken_baseAmount[token], _actualInputToken, mapToken_tokenAmount[token], mapToken_Units[token]);
-        mapTokenMember_Units[token][member] = mapTokenMember_Units[token][member].add(liquidityUnits);
-        mapToken_Units[token] = mapToken_Units[token].add(liquidityUnits);
-        mapToken_baseAmount[token] = mapToken_baseAmount[token].add(_actualInputBase);
-        mapToken_tokenAmount[token] = mapToken_tokenAmount[token].add(_actualInputToken);      
+        mapTokenMember_Units[token][member] += liquidityUnits;
+        mapToken_Units[token] += liquidityUnits;
+        mapToken_baseAmount[token] += _actualInputBase;
+        mapToken_tokenAmount[token] += _actualInputToken;      
         emit AddLiquidity(member, base, _actualInputBase, token, _actualInputToken, liquidityUnits);
         return liquidityUnits;
     }
@@ -83,10 +81,10 @@ contract Vault {
         uint _units = iUTILS(UTILS()).calcPart(basisPoints, mapTokenMember_Units[token][member]);
         outputBase = iUTILS(UTILS()).calcShare(_units, mapToken_Units[token], mapToken_baseAmount[token]);
         outputToken = iUTILS(UTILS()).calcShare(_units, mapToken_Units[token], mapToken_tokenAmount[token]);
-        mapToken_Units[token] = mapToken_Units[token].sub(_units);
-        mapTokenMember_Units[token][member] = mapTokenMember_Units[token][member].sub(_units);
-        mapToken_baseAmount[token] = mapToken_baseAmount[token].sub(outputBase);
-        mapToken_tokenAmount[token] = mapToken_tokenAmount[token].sub(outputToken);
+        mapToken_Units[token] -=_units;
+        mapTokenMember_Units[token][member] -= _units;
+        mapToken_baseAmount[token] -= outputBase;
+        mapToken_tokenAmount[token] -= outputToken;
         emit RemoveLiquidity(member, base, outputBase, token, outputToken, _units, mapToken_Units[token]);
         transferOut(base, outputBase, member);
         transferOut(token, outputToken, member);
@@ -97,9 +95,9 @@ contract Vault {
     function sync(address token, address pool) public {
         uint _actualInput = getAddedAmount(token, pool);
         if (token == VADER || token == USDV){
-            mapToken_baseAmount[pool] = mapToken_baseAmount[pool].add(_actualInput);
+            mapToken_baseAmount[pool] += _actualInput;
         } else {
-            mapToken_tokenAmount[pool] = mapToken_tokenAmount[pool].add(_actualInput);
+            mapToken_tokenAmount[pool] += _actualInput;
         }
         emit Sync(token, pool, _actualInput);
     }
@@ -109,16 +107,16 @@ contract Vault {
             uint _actualInput = getAddedAmount(token, token);
             outputAmount = iUTILS(UTILS()).calcSwapOutput(_actualInput, mapToken_tokenAmount[token], mapToken_baseAmount[token]);
             uint _swapFee = iUTILS(UTILS()).calcSwapFee(_actualInput, mapToken_tokenAmount[token], mapToken_baseAmount[token]);
-            mapToken_tokenAmount[token] = mapToken_tokenAmount[token].add(_actualInput);
-            mapToken_baseAmount[token] = mapToken_baseAmount[token].sub(outputAmount);
+            mapToken_tokenAmount[token] += _actualInput;
+            mapToken_baseAmount[token] -= outputAmount;
             emit Swap(member, token, _actualInput, base, outputAmount, _swapFee);
             transferOut(base, outputAmount, member);
         } else {
             uint _actualInput = getAddedAmount(base, token);
             outputAmount = iUTILS(UTILS()).calcSwapOutput(_actualInput, mapToken_baseAmount[token], mapToken_tokenAmount[token]);
             uint _swapFee = iUTILS(UTILS()).calcSwapFee(_actualInput, mapToken_baseAmount[token], mapToken_tokenAmount[token]);
-            mapToken_baseAmount[token] = mapToken_baseAmount[token].add(_actualInput);
-            mapToken_tokenAmount[token] = mapToken_tokenAmount[token].sub(outputAmount);
+            mapToken_baseAmount[token] += _actualInput;
+            mapToken_tokenAmount[token] -= outputAmount;
             emit Swap(member, base, _actualInput, token, outputAmount, _swapFee);
             transferOut(token, outputAmount, member);
         }
@@ -133,26 +131,26 @@ contract Vault {
     // Safe
     function getAddedAmount(address _token, address _pool) internal returns(uint addedAmount) {
         if(_token == VADER && _pool == VADER){
-            addedAmount = (iERC20(_token).balanceOf(address(this))).sub(pooledVADER);
-            pooledVADER = pooledVADER.add(addedAmount);
+            addedAmount = (iERC20(_token).balanceOf(address(this))) - pooledVADER;
+            pooledVADER = pooledVADER + addedAmount;
         } else if(_token == VADER && _pool != VADER){
-            addedAmount = (iERC20(_token).balanceOf(address(this))).sub(pooledVADER);
-            pooledVADER = pooledVADER.add(addedAmount);
+            addedAmount = (iERC20(_token).balanceOf(address(this))) - pooledVADER;
+            pooledVADER = pooledVADER + addedAmount;
         } else if(_token == USDV) {
-            addedAmount = (iERC20(_token).balanceOf(address(this))).sub(pooledUSDV);
-            pooledUSDV = pooledUSDV.add(addedAmount);
+            addedAmount = (iERC20(_token).balanceOf(address(this))) - pooledUSDV;
+            pooledUSDV = pooledUSDV + addedAmount;
         } else {
-            addedAmount = (iERC20(_token).balanceOf(address(this))).sub(mapToken_tokenAmount[_pool]);
+            addedAmount = (iERC20(_token).balanceOf(address(this))) - mapToken_tokenAmount[_pool];
         }
     }
     function transferOut(address _token, uint _amount, address _recipient) internal {
         if(_token == VADER){
-            pooledVADER = pooledVADER.sub(_amount);
+            pooledVADER = pooledVADER - _amount;
             if(_recipient != address(this)){
                 iERC20(_token).transfer(_recipient, _amount);
             }
         } else if(_token == USDV) {
-            pooledUSDV = pooledUSDV.sub(_amount);
+            pooledUSDV = pooledUSDV - _amount;
             if(_recipient != address(this)){
                 iERC20(_token).transfer(_recipient, _amount);
             }

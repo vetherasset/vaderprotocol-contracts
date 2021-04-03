@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.6.8;
+pragma solidity ^0.8.3;
+
 interface iUSDV {
     function lastBlock(address) external view returns (uint);
     function ROUTER() external view returns (address);

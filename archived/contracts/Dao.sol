@@ -41,21 +41,21 @@ library SafeMath {
         return c;
     }
 
-    function sub(uint256 a, uint256 b) internal pure returns (uint256) {
+    function sub(uint a, uint b) internal pure returns (uint) {
         return sub(a, b, "SafeMath");
     }
-    function sub(uint256 a, uint256 b, string memory errorMessage) internal pure returns (uint256) {
+    function sub(uint a, uint b, string memory errorMessage) internal pure returns (uint) {
         require(b <= a, errorMessage);
-        uint256 c = a - b;
+        uint c = a - b;
         return c;
     }
 
-    function div(uint256 a, uint256 b) internal pure returns (uint256) {
+    function div(uint a, uint b) internal pure returns (uint) {
         return div(a, b, "SafeMath");
     }
-    function div(uint256 a, uint256 b, string memory errorMessage) internal pure returns (uint256) {
+    function div(uint a, uint b, string memory errorMessage) internal pure returns (uint) {
         require(b > 0, errorMessage);
-        uint256 c = a / b;
+        uint c = a / b;
         return c;
     }
 }
@@ -64,14 +64,14 @@ library SafeMath {
 contract Dao {
 
     using SafeMath for uint;
-    uint256 private constant _NOT_ENTERED = 1;
-    uint256 private constant _ENTERED = 2;
-    uint256 private _status;
+    uint private constant _NOT_ENTERED = 1;
+    uint private constant _ENTERED = 2;
+    uint private _status;
     address public DEPLOYER;
 
     address public BASE;
 
-    uint256 public totalWeight;
+    uint public totalWeight;
     uint public one = 10**18;
     uint public coolOffPeriod = 1 * 2;
     uint public blocksPerDay = 5760;
@@ -97,17 +97,17 @@ contract Dao {
 
     address[] public arrayMembers;
     mapping(address => bool) public isMember; // Is Member
-    mapping(address => mapping(address => uint256)) public mapMemberPool_Balance; // Member's balance in pool
-    mapping(address => uint256) public mapMember_Weight; // Value of weight
-    mapping(address => mapping(address => uint256)) public mapMemberPool_Weight; // Value of weight for pool
-    mapping(address => uint256) public mapMember_Block;
+    mapping(address => mapping(address => uint)) public mapMemberPool_Balance; // Member's balance in pool
+    mapping(address => uint) public mapMember_Weight; // Value of weight
+    mapping(address => mapping(address => uint)) public mapMemberPool_Weight; // Value of weight for pool
+    mapping(address => uint) public mapMember_Block;
 
-    mapping(address => uint256) public mapAddress_Votes; // Value of weight
-    mapping(address => mapping(address => uint256)) public mapAddressMember_Votes; // Value of weight
+    mapping(address => uint) public mapAddress_Votes; // Value of weight
+    mapping(address => mapping(address => uint)) public mapAddressMember_Votes; // Value of weight
 
-    event MemberLocks(address indexed member,address indexed pool,uint256 amount);
-    event MemberUnlocks(address indexed member,address indexed pool,uint256 balance);
-    event MemberRegisters(address indexed member,address indexed pool,uint256 amount);
+    event MemberLocks(address indexed member,address indexed pool,uint amount);
+    event MemberUnlocks(address indexed member,address indexed pool,uint balance);
+    event MemberRegisters(address indexed member,address indexed pool,uint amount);
     event NewVote(address indexed member,address indexed proposedAddress, uint voteWeight, uint totalVotes, string proposalType);
     event ProposalFinalising(address indexed member,address indexed proposedAddress, uint timeFinalised, string proposalType);
     event NewAddress(address indexed member,address indexed newAddress, uint votesCast, uint totalWeight, string proposalType);
@@ -145,7 +145,7 @@ contract Dao {
 
     //============================== USER - LOCK/UNLOCK ================================//
     // Member locks some LP tokens
-    function lock(address pool, uint256 amount) public nonReentrant {
+    function lock(address pool, uint amount) public nonReentrant {
         require(_ROUTER.isPool(pool) == true, "Must be listed");
         require(amount > 0, "Must get some");
         if (!isMember[msg.sender]) {
@@ -154,14 +154,14 @@ contract Dao {
             isMember[msg.sender] = true;
         }
         require(iPOOL(pool).transferTo(address(this), amount),"Must transfer"); // Uni/Bal LP tokens return bool
-        mapMemberPool_Balance[msg.sender][pool] = mapMemberPool_Balance[msg.sender][pool].add(amount); // Record total pool balance for member
+        mapMemberPool_Balance[msg.sender][pool] = mapMemberPool_Balance[msg.sender][pool] + amount); // Record total pool balance for member
         registerWeight(msg.sender, pool); // Register weight
         emit MemberLocks(msg.sender, pool, amount);
     }
 
     // Member unlocks all from a pool
     function unlock(address pool) public nonReentrant {
-        uint256 balance = mapMemberPool_Balance[msg.sender][pool];
+        uint balance = mapMemberPool_Balance[msg.sender][pool];
         require(balance > 0, "Must have a balance to weight");
         reduceWeight(pool, msg.sender);
         if(mapMember_Weight[msg.sender] == 0 && iERC20(BASE).balanceOf(address(this)) > 0){
@@ -179,8 +179,8 @@ contract Dao {
 
     function updateWeight(address pool, address member) public returns(uint){
         if(mapMemberPool_Weight[member][pool] > 0){
-            totalWeight = totalWeight.sub(mapMemberPool_Weight[member][pool]); // Remove previous weights
-            mapMember_Weight[member] = mapMember_Weight[member].sub(mapMemberPool_Weight[member][pool]);
+            totalWeight = totalWeight - mapMemberPool_Weight[member][pool]); // Remove previous weights
+            mapMember_Weight[member] = mapMember_Weight[member] - mapMemberPool_Weight[member][pool]);
             mapMemberPool_Weight[member][pool] = 0;
         }
         uint weight = _UTILS.getPoolShare(iPOOL(pool).TOKEN(), mapMemberPool_Balance[msg.sender][pool] );
@@ -193,8 +193,8 @@ contract Dao {
         uint weight = mapMemberPool_Weight[member][pool];
         mapMemberPool_Balance[member][pool] = 0; // Zero out balance
         mapMemberPool_Weight[member][pool] = 0; // Zero out weight
-        totalWeight = totalWeight.sub(weight); // Remove that weight
-        mapMember_Weight[member] = mapMember_Weight[member].sub(weight); // Reduce weight
+        totalWeight = totalWeight - weight); // Remove that weight
+        mapMember_Weight[member] = mapMember_Weight[member] - weight); // Reduce weight
     }
 
     //============================== GOVERNANCE ================================//
@@ -218,7 +218,7 @@ contract Dao {
             } else if (sha256(_type) == sha256('UTILS')){
                 updateUtils(_newAddress);
             }
-            emit ProposalFinalising(msg.sender, _newAddress, now+coolOffPeriod, string(_type));
+            emit ProposalFinalising(msg.sender, _newAddress, block.timestamp+coolOffPeriod, string(_type));
         }
     }
 
@@ -236,7 +236,7 @@ contract Dao {
     function updateDao(address _address) internal {
         proposedDao = _address;
         proposedDaoChange = true;
-        daoChangeStart = now;
+        daoChangeStart = block.timestamp;
     }
     function moveDao() internal {
         require(proposedDao != address(0), "No DAO proposed");
@@ -261,7 +261,7 @@ contract Dao {
     function updateRouter(address _address) internal {
         proposedRouter = _address;
         proposedRouterChange = true;
-        routerChangeStart = now;
+        routerChangeStart = block.timestamp;
         routerHasMoved = false;
     }
     function moveRouter() internal {
@@ -283,7 +283,7 @@ contract Dao {
     function updateUtils(address _address) internal {
         proposedUtils = _address;
         proposedUtilsChange = true;
-        utilsChangeStart = now;
+        utilsChangeStart = block.timestamp;
         utilsHasMoved = false;
     }
     function moveUtils() internal {
@@ -305,7 +305,7 @@ contract Dao {
     //============================== CONSENSUS ================================//
 
     function countVotes(address _address) internal returns (uint voteWeight){
-        mapAddress_Votes[_address] = mapAddress_Votes[_address].sub(mapAddressMember_Votes[_address][msg.sender]);
+        mapAddress_Votes[_address] = mapAddress_Votes[_address] - mapAddressMember_Votes[_address][msg.sender]);
         voteWeight = mapMember_Weight[msg.sender];
         mapAddress_Votes[_address] += voteWeight;
         mapAddressMember_Votes[_address][msg.sender] = voteWeight;
@@ -314,7 +314,7 @@ contract Dao {
 
     function hasQuorum(address _address) public view returns(bool){
         uint votes = mapAddress_Votes[_address];
-        uint consensus = totalWeight.div(2);
+        uint consensus = totalWeight / 2);
         if(votes > consensus){
             return true;
         } else {
@@ -349,9 +349,9 @@ contract Dao {
     }
 
     function calcCurrentReward(address member) public view returns(uint){
-        uint blocksSinceClaim = block.number.sub(mapMember_Block[member]);
+        uint blocksSinceClaim = block.number - mapMember_Block[member]);
         uint share = calcReward(member);
-        uint reward = share.mul(blocksSinceClaim).div(blocksPerDay);
+        uint reward = share * blocksSinceClaim) / blocksPerDay);
         uint reserve = iERC20(BASE).balanceOf(address(this));
         if(reward >= reserve) {
             reward = reserve;
@@ -361,7 +361,7 @@ contract Dao {
 
     function calcReward(address member) public view returns(uint){
         uint weight = mapMember_Weight[member];
-        uint reserve = iERC20(BASE).balanceOf(address(this)).div(daysToEarnFactor);
+        uint reserve = iERC20(BASE).balanceOf(address(this)) / daysToEarnFactor);
         return _UTILS.calcShare(weight, totalWeight, reserve);
     }
 
