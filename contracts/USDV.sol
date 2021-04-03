@@ -39,6 +39,7 @@ contract USDV is iERC20 {
     mapping(address => bool) private _isMember; // Is Member
     mapping(address => uint256) private mapMember_deposit;
     mapping(address => uint256) private mapMember_lastTime;
+    mapping(address => uint256) public lastBlock;
 
     // Events
     event MemberDeposits(address indexed member, uint256 newDeposit, uint256 totalDeposit, uint256 totalFunds);
@@ -48,6 +49,11 @@ contract USDV is iERC20 {
     // Only DAO can execute
     modifier onlyDAO() {
         require(msg.sender == DAO, "Not DAO");
+        _;
+    }
+    // Stop flash attacks
+    modifier flashProof() {
+        require(lastBlock[tx.origin] != block.number, "No flash");
         _;
     }
 
@@ -169,30 +175,57 @@ contract USDV is iERC20 {
     // Internal - Update incentives function
     function _checkIncentives() private {
         if (now >= nextEraTime && emitting) {                  // If new Era
-            currentEra += 1;                                                               // Increment Era
+            currentEra += 1;                                        // Increment Era
             nextEraTime = now + iVADER(VADER).secondsPerEra(); 
             uint _balance = iERC20(VADER).balanceOf(address(this)); // Get spare VADER
             uint _USDVShare = _twothirds(_balance);                 // Get 2/3rds
-            _convert(_USDVShare);                                   // Convert it
+            _convert(address(this), _USDVShare);                    // Convert it
             iROUTER(ROUTER).pullIncentives(iERC20(VADER).balanceOf(address(this)), _USDVShare.div(2));                         // Pull incentives over
         }
     }
     
     //======================================ASSET MINTING========================================//
-    // VADER Holders to convert to USDV
-    function convert(uint amount) public returns(uint convertAmount) {
+    // Contracts to convert
+    function convertToUSDV(uint amount) public returns(uint) {
+        return convertToUSDVForMember(msg.sender, amount);
+    }
+    // Contracts to convert for members
+    function convertToUSDVForMember(address member, uint amount) public returns(uint) {
+        require(iERC20(VADER).transferFrom(msg.sender, address(this), amount));   // Get funds
+        return _convert(member, amount);
+    }
+    // EOAs to convert
+    function convertToUSDVDirectly(uint amount) public returns(uint) {
         require(iERC20(VADER).transferTo(address(this), amount));   // Get funds
-        convertAmount = _convert(amount);                           // Get conversion amount, mint here
-        _deposit(msg.sender, convertAmount);                        // Deposit for member in vault
-        return convertAmount;
+        return _convert(tx.origin, amount);
     }
     // Internal convert
-    function _convert(uint amount) internal returns(uint _convertAmount){
+    function _convert(address _member, uint amount) internal flashProof returns(uint _convertAmount){
+        lastBlock[tx.origin] = block.number;
         iERC20(VADER).burn(amount);
         _convertAmount = iROUTER(ROUTER).getUSDVAmount(amount);
-        _mint(address(this), _convertAmount);
+        _mint(_member, _convertAmount);
         return _convertAmount;
     }
+    // Contracts to redeem
+    function redeemToVADER(uint amount) public returns(uint convertAmount) {
+        return redeemToVADERForMember(msg.sender, amount);
+    }
+    // Contracts to redeem for members
+    function redeemToVADERForMember(address member, uint amount) public returns(uint redeemAmount) {
+        require(transferFrom(msg.sender, VADER, amount));           // Move funds
+        redeemAmount = iVADER(VADER).redeemForMember(member);
+        lastBlock[tx.origin] = block.number;
+        return redeemAmount;
+    }
+    // EOAs to redeem
+    function redeemtoVADERDirectly(uint amount) public returns(uint redeemAmount) {
+        require(transferTo(VADER, amount));   // Get funds
+        redeemAmount = iVADER(VADER).redeem();
+        lastBlock[tx.origin] = block.number;
+        return redeemAmount;
+    }
+
     //======================================USDV DEPOSITS========================================//
     // USDV holders to deposit for Interest Payments
     function deposit(uint amount) public {
@@ -246,20 +279,11 @@ contract USDV is iERC20 {
         return iUTILS(UTILS).calcShare(_balance, totalFunds, _reserve);         // Get member's share of that
     }
 
-    // Members to withdraw to USDV
-    function withdrawToUSDV(uint basisPoints) public returns(uint redeemedAmount) {
+    // Members to withdraw
+    function withdraw(uint basisPoints) public returns(uint redeemedAmount) {
         address _member = msg.sender;
         redeemedAmount = _processWithdraw(_member, basisPoints);                         // get USDV to withdraw
         _transfer(address(this), msg.sender, redeemedAmount);                    // Forward to member
-        return redeemedAmount;
-    }
-    // Members to withdraw to VADER
-    function withdrawToVADER(uint basisPoints) public returns(uint redeemedAmount) {
-        address _member = msg.sender;
-        uint _withdrawnAmount = _processWithdraw(_member, basisPoints);              // get USDV to withdraw
-        _transfer(address(this), VADER, _withdrawnAmount);                      // send to VADER
-        redeemedAmount = iVADER(VADER).redeem();                                // Vader burns USDV to VADER, sends back
-        iERC20(VADER).transfer(_member, redeemedAmount);                        // Forward to member
         return redeemedAmount;
     }
     function _processWithdraw(address _member, uint basisPoints) internal returns(uint _amount) {

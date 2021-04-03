@@ -5,6 +5,7 @@ var Vader = artifacts.require('./Vader')
 var USDV = artifacts.require('./USDV')
 var VAULT = artifacts.require('./Vault')
 var Router = artifacts.require('./Router')
+var Attack = artifacts.require('./Attack')
 
 const BigNumber = require('bignumber.js')
 const truffleAssert = require('truffle-assertions')
@@ -16,7 +17,7 @@ function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-var utils; var vader; var vether; var usdv; var router; var vault;
+var utils; var vader; var vether; var usdv; var router; var vault; var attack;
 var acc0; var acc1; var acc2; var acc3; var acc0; var acc5;
 
 // 
@@ -34,11 +35,13 @@ before(async function() {
   usdv = await USDV.new();
   router = await Router.new();
   vault = await VAULT.new();
+  attack = await Attack.new();
 
   await vader.init(vether.address, usdv.address)
   await usdv.init(vader.address, utils.address, router.address)
   await router.init(vader.address, usdv.address, utils.address, vault.address);
   await vault.init(vader.address, usdv.address, utils.address, router.address);
+  await attack.init(vader.address, usdv.address)
 
   await vether.transfer(acc1, '3403') 
   await vether.approve(vader.address, '3400', {from:acc1})
@@ -66,31 +69,26 @@ describe("Deploy USDV", function() {
 describe("Convert to USDV", function() {
 
   it("Should convert acc1", async function() {
-    await usdv.convert('1000', {from:acc1})
+    await usdv.convertToUSDVDirectly('1000', {from:acc1})
     expect(BN2Str(await vader.totalSupply())).to.equal(BN2Str(2400));
-    expect(BN2Str(await usdv.totalSupply())).to.equal(BN2Str(1000));
     expect(BN2Str(await vader.balanceOf(acc1))).to.equal(BN2Str(2400));
-    expect(BN2Str(await usdv.getMemberDeposit(acc1))).to.equal(BN2Str(1000));
-  });
-  it("Should withdraw USDV", async function() {
-    await usdv.withdrawToUSDV('5000',{from:acc1})
     expect(BN2Str(await usdv.totalSupply())).to.equal(BN2Str(1000));
-    expect(BN2Str(await usdv.balanceOf(usdv.address))).to.equal(BN2Str(500));
-    expect(BN2Str(await usdv.balanceOf(acc1))).to.equal(BN2Str(500));
+    expect(BN2Str(await usdv.balanceOf(acc1))).to.equal(BN2Str(1000));
   });
   it("Should withdraw VADER", async function() {
-    await usdv.withdrawToVADER('10000',{from:acc1})
-    expect(BN2Str(await usdv.getMemberDeposit(acc1))).to.equal(BN2Str(0));
+    await usdv.redeemtoVADERDirectly('500',{from:acc1})
+    // expect(BN2Str(await usdv.getMemberDeposit(acc1))).to.equal(BN2Str(0));
     expect(BN2Str(await usdv.totalSupply())).to.equal(BN2Str(500));
+    expect(BN2Str(await usdv.balanceOf(acc1))).to.equal(BN2Str(500));
     expect(BN2Str(await vader.totalSupply())).to.equal(BN2Str(2900));
     expect(BN2Str(await vader.balanceOf(acc1))).to.equal(BN2Str(2900));
   });
   it("Should convert acc1", async function() {
-    await usdv.convert('500', {from:acc1})
-    expect(BN2Str(await usdv.getMemberDeposit(acc1))).to.equal(BN2Str(500));
-    expect(BN2Str(await usdv.totalSupply())).to.equal(BN2Str(1000));
+    await usdv.convertToUSDVDirectly('500', {from:acc1})
     expect(BN2Str(await vader.totalSupply())).to.equal(BN2Str(2400));
-    await usdv.withdrawToUSDV('10000',{from:acc1})
+    expect(BN2Str(await vader.balanceOf(acc1))).to.equal(BN2Str(2400));
+    expect(BN2Str(await usdv.totalSupply())).to.equal(BN2Str(1000));
+    expect(BN2Str(await usdv.balanceOf(acc1))).to.equal(BN2Str(1000));
   });
 
 // acc  | VTH | VADER  | USDV |
@@ -191,10 +189,15 @@ describe("Member should deposit for rewards", function() {
     expect(BN2Str(await usdv.balanceOf(acc1))).to.equal(BN2Str(524));
     expect(BN2Str(await usdv.getMemberDeposit(acc1))).to.equal(BN2Str(200));
     expect(BN2Str(await usdv.balanceOf(usdv.address))).to.equal(BN2Str(1043));
-    let tx = await usdv.withdrawToUSDV("10000",{from:acc1})
+    let tx = await usdv.withdraw("10000",{from:acc1})
     expect(BN2Str(await usdv.balanceOf(acc1))).to.equal(BN2Str(732));
     expect(BN2Str(await usdv.balanceOf(usdv.address))).to.equal(BN2Str(1379));
   });
 });
 
+describe("Should fail attack", function() {
+  it("Same block fails", async function() {
+    await truffleAssert.reverts(attack.attackUSDV('100', {from:acc1}), "No flash")
+  });
+});
 
