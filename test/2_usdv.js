@@ -37,7 +37,7 @@ before(async function() {
   vault = await VAULT.new();
   attack = await Attack.new();
 
-  await vader.init(vether.address, usdv.address)
+  await vader.init(vether.address, usdv.address, utils.address)
   await usdv.init(vader.address, utils.address, router.address)
   await router.init(vader.address, usdv.address, utils.address, vault.address);
   await vault.init(vader.address, usdv.address, utils.address, router.address);
