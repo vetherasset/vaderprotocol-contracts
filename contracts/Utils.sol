@@ -45,6 +45,10 @@ contract Utils {
             VAULT = _vault;
         }
     }
+    //====================================SYSTEM FUNCTIONS====================================//
+    function getFeeOnTransfer(uint256 totalSupply, uint256 maxSupply) public returns(uint256){
+        return calcShare(totalSupply, maxSupply, 100); // 0->100BP
+    }
 
     // function getMemberShare(address token, address member) public view returns(uint baseAmt, uint tokenAmt){
     //     address pool = getPool(token);

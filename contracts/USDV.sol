@@ -33,7 +33,6 @@ contract USDV is iERC20 {
 
     address public VADER;
     address public DAO;
-    address public UTILS;
     address public ROUTER;
 
     mapping(address => bool) private _isMember; // Is Member
@@ -66,10 +65,9 @@ contract USDV is iERC20 {
         totalSupply = 0;
         DAO = msg.sender;
     }
-    function init(address _vader, address _utils, address _router) public onlyDAO {
+    function init(address _vader, address _router) public onlyDAO {
         require(inited == false);
         VADER = _vader;
-        UTILS = _utils;
         ROUTER = _router;
         iERC20(VADER).approve(ROUTER, uint(-1));
         _approve(address(this), ROUTER, uint(-1));
@@ -77,6 +75,9 @@ contract USDV is iERC20 {
         nextEraTime = now + iVADER(VADER).secondsPerEra();
         erasToEarn = 100;
         minimumDepositTime = 1;
+    }
+    function UTILS() public view returns(address){
+        return iVADER(VADER).UTILS();
     }
 
     //========================================iERC20=========================================//
@@ -276,7 +277,7 @@ contract USDV is iERC20 {
     function calcPayment(address member) public view returns(uint){
         uint _balance = mapMember_deposit[member];
         uint _reserve = reserveUSDV().div(erasToEarn);                          // Deplete reserve over a number of days
-        return iUTILS(UTILS).calcShare(_balance, totalFunds, _reserve);         // Get member's share of that
+        return iUTILS(UTILS()).calcShare(_balance, totalFunds, _reserve);         // Get member's share of that
     }
 
     // Members to withdraw

@@ -5,6 +5,7 @@ pragma solidity ^0.6.8;
 import "./iERC20.sol";
 import "./SafeMath.sol";
 import "./iUTILS.sol";
+import "./iVADER.sol";
 import "./iVAULT.sol";
 
 import "@nomiclabs/buidler/console.sol";
@@ -22,7 +23,6 @@ contract Router {
     
     address public VADER;
     address public USDV;
-    address public UTILS;
     address public DAO;
     address public VAULT;
 
@@ -48,11 +48,10 @@ contract Router {
         DAO = msg.sender;
     }
     // Init
-    function init(address _vader, address _usdv, address _utils, address _vault) public onlyDAO {
+    function init(address _vader, address _usdv, address _vault) public onlyDAO {
         require(inited == false);
         VADER = _vader;
         USDV = _usdv;
-        UTILS = _utils;
         VAULT = _vault;
         iERC20(VADER).approve(VAULT, uint(-1));
         iERC20(USDV).approve(VAULT, uint(-1));
@@ -140,10 +139,10 @@ contract Router {
         if(emitting){
             uint _baseAmount = iVAULT(VAULT).getBaseAmount(token);
             if (iVAULT(VAULT).isAsset(token)) {
-                uint _share = iUTILS(UTILS).calcShare(_baseAmount, iVAULT(VAULT).pooledUSDV(), reserveUSDV());
+                uint _share = iUTILS(UTILS()).calcShare(_baseAmount, iVAULT(VAULT).pooledUSDV(), reserveUSDV());
                 rewardShare = getReducedShare(_share);
             } else if(iVAULT(VAULT).isAnchor(token)) {
-                uint _share = iUTILS(UTILS).calcShare(_baseAmount, iVAULT(VAULT).pooledVADER(), reserveVADER());
+                uint _share = iUTILS(UTILS()).calcShare(_baseAmount, iVAULT(VAULT).pooledVADER(), reserveVADER());
                 rewardShare = getReducedShare(_share);
             }
         }
@@ -151,7 +150,7 @@ contract Router {
     }
 
     function getReducedShare(uint amount) public view returns(uint){
-        return iUTILS(UTILS).calcShare(1, rewardReductionFactor, amount);
+        return iUTILS(UTILS()).calcShare(1, rewardReductionFactor, amount);
     }
 
     function _handlePoolReward(address _base, address _token) internal{
@@ -174,8 +173,8 @@ contract Router {
     }
     function removeDepositData(address member, address token, uint256 basisPoints, uint256 protection) internal {
         mapMemberToken_depositBase[member][token] = mapMemberToken_depositBase[member][token].add(protection);
-        uint _baseToRemove = iUTILS(UTILS).calcPart(basisPoints, mapMemberToken_depositBase[member][token]);
-        uint _tokenToRemove = iUTILS(UTILS).calcPart(basisPoints, mapMemberToken_depositToken[member][token]);
+        uint _baseToRemove = iUTILS(UTILS()).calcPart(basisPoints, mapMemberToken_depositBase[member][token]);
+        uint _tokenToRemove = iUTILS(UTILS()).calcPart(basisPoints, mapMemberToken_depositToken[member][token]);
         mapMemberToken_depositBase[member][token] = mapMemberToken_depositBase[member][token].sub(_baseToRemove);
         mapMemberToken_depositToken[member][token] = mapMemberToken_depositToken[member][token].sub(_tokenToRemove);
     }
@@ -197,18 +196,18 @@ contract Router {
     function getProtection(address member, address token, uint basisPoints, uint coverage) public view returns(uint protection){
         uint _duration = now.sub(mapMemberToken_lastDeposited[member][token]);
         if(_duration <= timeForFullProtection) {
-            protection = iUTILS(UTILS).calcShare(_duration, timeForFullProtection, coverage);
+            protection = iUTILS(UTILS()).calcShare(_duration, timeForFullProtection, coverage);
         } else {
             protection = coverage;
         }
-        return iUTILS(UTILS).calcPart(basisPoints, protection);
+        return iUTILS(UTILS()).calcPart(basisPoints, protection);
     }
     function getCoverage(address member, address token) public view returns (uint256){
         uint _B0 = mapMemberToken_depositBase[member][token]; uint _T0 = mapMemberToken_depositToken[member][token];
         uint _units = iVAULT(VAULT).getMemberUnits(token, member);
-        uint _B1 = iUTILS(UTILS).calcShare(_units, iVAULT(VAULT).getUnits(token), iVAULT(VAULT).getBaseAmount(token));
-        uint _T1 = iUTILS(UTILS).calcShare(_units, iVAULT(VAULT).getUnits(token), iVAULT(VAULT).getTokenAmount(token));
-        return iUTILS(UTILS).calcCoverage(_B0, _T0, _B1, _T1);
+        uint _B1 = iUTILS(UTILS()).calcShare(_units, iVAULT(VAULT).getUnits(token), iVAULT(VAULT).getBaseAmount(token));
+        uint _T1 = iUTILS(UTILS()).calcShare(_units, iVAULT(VAULT).getUnits(token), iVAULT(VAULT).getTokenAmount(token));
+        return iUTILS(UTILS()).calcCoverage(_B0, _T0, _B1, _T1);
     }
 
     //=====================================ANCHORS==========================================//
@@ -217,7 +216,7 @@ contract Router {
         require(arrayAnchors.length < 5);
         require(iVAULT(VAULT).isAnchor(token));
         arrayAnchors.push(token);
-        arrayPrices.push(iUTILS(UTILS).calcValueInBase(token, one));
+        arrayPrices.push(iUTILS(UTILS()).calcValueInBase(token, one));
         updateAnchorPrice(token);
     }
 
@@ -237,8 +236,8 @@ contract Router {
 
     function _requirePriceBounds(address token, uint bound, bool inside) internal view {
         uint _targetPrice = getAnchorPrice();
-        uint _testingPrice = iUTILS(UTILS).calcValueInBase(token, one);
-        uint _lower = iUTILS(UTILS).calcPart(_10k.sub(bound), _targetPrice);
+        uint _testingPrice = iUTILS(UTILS()).calcValueInBase(token, one);
+        uint _lower = iUTILS(UTILS()).calcPart(_10k.sub(bound), _targetPrice);
         uint _upper = (_targetPrice.mul(_10k.add(bound))).div(_10k);
         if(inside){
             require((_testingPrice >= _lower && _testingPrice <= _upper), "Not inside");
@@ -251,7 +250,7 @@ contract Router {
     function updateAnchorPrice(address token) public {
         for(uint i = 0; i<arrayAnchors.length; i++){
             if(arrayAnchors[i] == token){
-                arrayPrices[i] = iUTILS(UTILS).calcValueInBase(arrayAnchors[i], one);
+                arrayPrices[i] = iUTILS(UTILS()).calcValueInBase(arrayAnchors[i], one);
             }
         }
     }
@@ -346,5 +345,9 @@ contract Router {
             }
         }
         return array;
+    }
+
+    function UTILS() public view returns(address){
+        return iVADER(VADER).UTILS();
     }
 }

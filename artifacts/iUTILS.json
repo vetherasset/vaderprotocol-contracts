@@ -5,17 +5,17 @@
       "inputs": [
         {
           "internalType": "uint256",
-          "name": "u",
+          "name": "",
           "type": "uint256"
         },
         {
           "internalType": "uint256",
-          "name": "U",
+          "name": "",
           "type": "uint256"
         },
         {
           "internalType": "uint256",
-          "name": "A",
+          "name": "",
           "type": "uint256"
         }
       ],
@@ -23,7 +23,7 @@
       "outputs": [
         {
           "internalType": "uint256",
-          "name": "share",
+          "name": "",
           "type": "uint256"
         }
       ],
@@ -34,22 +34,22 @@
       "inputs": [
         {
           "internalType": "uint256",
-          "name": "_B0",
+          "name": "",
           "type": "uint256"
         },
         {
           "internalType": "uint256",
-          "name": "_T0",
+          "name": "",
           "type": "uint256"
         },
         {
           "internalType": "uint256",
-          "name": "_B1",
+          "name": "",
           "type": "uint256"
         },
         {
           "internalType": "uint256",
-          "name": "_T1",
+          "name": "",
           "type": "uint256"
         }
       ],
@@ -57,7 +57,7 @@
       "outputs": [
         {
           "internalType": "uint256",
-          "name": "coverage",
+          "name": "",
           "type": "uint256"
         }
       ],
@@ -68,27 +68,27 @@
       "inputs": [
         {
           "internalType": "uint256",
-          "name": "b",
+          "name": "",
           "type": "uint256"
         },
         {
           "internalType": "uint256",
-          "name": "B",
+          "name": "",
           "type": "uint256"
         },
         {
           "internalType": "uint256",
-          "name": "t",
+          "name": "",
           "type": "uint256"
         },
         {
           "internalType": "uint256",
-          "name": "T",
+          "name": "",
           "type": "uint256"
         },
         {
           "internalType": "uint256",
-          "name": "P",
+          "name": "",
           "type": "uint256"
         }
       ],
@@ -96,7 +96,7 @@
       "outputs": [
         {
           "internalType": "uint256",
-          "name": "units",
+          "name": "",
           "type": "uint256"
         }
       ],
@@ -107,12 +107,12 @@
       "inputs": [
         {
           "internalType": "uint256",
-          "name": "bp",
+          "name": "",
           "type": "uint256"
         },
         {
           "internalType": "uint256",
-          "name": "total",
+          "name": "",
           "type": "uint256"
         }
       ],
@@ -120,7 +120,7 @@
       "outputs": [
         {
           "internalType": "uint256",
-          "name": "part",
+          "name": "",
           "type": "uint256"
         }
       ],
@@ -131,17 +131,17 @@
       "inputs": [
         {
           "internalType": "uint256",
-          "name": "part",
+          "name": "",
           "type": "uint256"
         },
         {
           "internalType": "uint256",
-          "name": "total",
+          "name": "",
           "type": "uint256"
         },
         {
           "internalType": "uint256",
-          "name": "amount",
+          "name": "",
           "type": "uint256"
         }
       ],
@@ -149,7 +149,7 @@
       "outputs": [
         {
           "internalType": "uint256",
-          "name": "share",
+          "name": "",
           "type": "uint256"
         }
       ],
@@ -160,17 +160,17 @@
       "inputs": [
         {
           "internalType": "uint256",
-          "name": "x",
+          "name": "",
           "type": "uint256"
         },
         {
           "internalType": "uint256",
-          "name": "X",
+          "name": "",
           "type": "uint256"
         },
         {
           "internalType": "uint256",
-          "name": "Y",
+          "name": "",
           "type": "uint256"
         }
       ],
@@ -178,7 +178,7 @@
       "outputs": [
         {
           "internalType": "uint256",
-          "name": "output",
+          "name": "",
           "type": "uint256"
         }
       ],
@@ -189,17 +189,17 @@
       "inputs": [
         {
           "internalType": "uint256",
-          "name": "x",
+          "name": "",
           "type": "uint256"
         },
         {
           "internalType": "uint256",
-          "name": "X",
+          "name": "",
           "type": "uint256"
         },
         {
           "internalType": "uint256",
-          "name": "Y",
+          "name": "",
           "type": "uint256"
         }
       ],
@@ -207,7 +207,7 @@
       "outputs": [
         {
           "internalType": "uint256",
-          "name": "output",
+          "name": "",
           "type": "uint256"
         }
       ],
@@ -218,12 +218,12 @@
       "inputs": [
         {
           "internalType": "address",
-          "name": "token",
+          "name": "",
           "type": "address"
         },
         {
           "internalType": "uint256",
-          "name": "amount",
+          "name": "",
           "type": "uint256"
         }
       ],
@@ -242,12 +242,12 @@
       "inputs": [
         {
           "internalType": "address",
-          "name": "token",
+          "name": "",
           "type": "address"
         },
         {
           "internalType": "uint256",
-          "name": "amount",
+          "name": "",
           "type": "uint256"
         }
       ],
@@ -266,22 +266,46 @@
       "inputs": [
         {
           "internalType": "uint256",
-          "name": "b",
+          "name": "",
           "type": "uint256"
         },
         {
           "internalType": "uint256",
-          "name": "B",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "name": "getFeeOnTransfer",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "pure",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
           "type": "uint256"
         },
         {
           "internalType": "uint256",
-          "name": "t",
+          "name": "",
           "type": "uint256"
         },
         {
           "internalType": "uint256",
-          "name": "T",
+          "name": "",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "",
           "type": "uint256"
         }
       ],
@@ -289,7 +313,7 @@
       "outputs": [
         {
           "internalType": "uint256",
-          "name": "slipAdjustment",
+          "name": "",
           "type": "uint256"
         }
       ],

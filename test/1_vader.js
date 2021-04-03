@@ -32,7 +32,7 @@ before(async function() {
   usdv = await USDV.new();
   router = await Router.new();
   await vader.init(vether.address, usdv.address, utils.address)
-  await usdv.init(vader.address, utils.address, router.address)
+  await usdv.init(vader.address, router.address)
 
   await vether.transfer(acc1, BN2Str(1001))
 // acc  | VTH | VADER  |
