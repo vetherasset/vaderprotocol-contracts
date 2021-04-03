@@ -186,8 +186,6 @@ describe("FeeOnTransfer", function() {
   });
   it("Should charge fees", async function() {
     let tx = await vader.transfer(acc1, BN2Str(10000), {from:acc0})
-    // expect(BN2Str(await vader.totalSupply())).to.equal('1000494071146245059293933');
-    // expect(BN2Str(await vader.feeOnTransfer())).to.equal('50');
     expect(BN2Str(tx.logs[0].args.value)).to.equal('9950');
     expect(BN2Str(tx.logs[1].args.value)).to.equal('50');
   });
