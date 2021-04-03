@@ -42,7 +42,7 @@ before(async function() {
   await usdv.startEmissions()
   await router.startEmissions()
 
-  await vader.init(vether.address, usdv.address)
+  await vader.init(vether.address, usdv.address, utils.address)
   await usdv.init(vader.address, utils.address, router.address)
   await router.init(vader.address, usdv.address, utils.address, vault.address);
   await vault.init(vader.address, usdv.address, utils.address, router.address);

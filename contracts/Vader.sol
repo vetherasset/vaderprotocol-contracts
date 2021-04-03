@@ -4,6 +4,7 @@ pragma solidity ^0.6.8;
 // Interfaces
 import "./iERC20.sol";
 import "./SafeMath.sol";
+import "./iUTILS.sol";
 import "./iUSDV.sol";
 import "./iROUTER.sol";
 
@@ -29,9 +30,11 @@ contract Vader is iERC20 {
     uint256 public secondsPerEra;
     uint256 public currentEra;
     uint256 public nextEraTime;
+    uint256 public feeOnTransfer;
 
     address public VETHER;
     address public USDV;
+    address public UTILS;
     address public burnAddress;
     address public rewardAddress;
     address public DAO;
@@ -66,10 +69,11 @@ contract Vader is iERC20 {
         DAO = msg.sender;
         burnAddress = 0x0111011001100001011011000111010101100101;
     }
-    function init(address _vether, address _USDV) public onlyDAO {
+    function init(address _vether, address _USDV, address _utils) public onlyDAO {
         require(inited == false);
         VETHER = _vether;
         USDV = _USDV;
+        UTILS = _utils;
         rewardAddress = _USDV;
     }
 
@@ -115,8 +119,10 @@ contract Vader is iERC20 {
         require(sender != address(0), "sender");
         require(recipient != address(this), "recipient");
         _balances[sender] = _balances[sender].sub(amount, "balance");
-        _balances[recipient] = _balances[recipient].add(amount);
-        emit Transfer(sender, recipient, amount);
+        uint _fee = iUTILS(UTILS).calcPart(feeOnTransfer, amount);
+        _balances[recipient] = _balances[recipient].add(amount.sub(_fee));
+        emit Transfer(sender, recipient, amount.sub(_fee));
+        _burn(msg.sender, _fee);
         _checkEmission();
     }
     // Internal mint (upgrading and daily emissions)
@@ -178,7 +184,8 @@ contract Vader is iERC20 {
             currentEra += 1;                                                               // Increment Era
             nextEraTime = now + secondsPerEra;                                             // Set next Era time
             uint256 _emission = getDailyEmission();                                        // Get Daily Dmission
-            _mint(rewardAddress, _emission);                                            // Mint to the Incentive Address
+            _mint(rewardAddress, _emission);                                                // Mint to the Incentive Address
+            feeOnTransfer = getFeeOnTransfer();                                             // UpdateFeeOnTransfer
             emit NewEra(currentEra, nextEraTime, _emission);                               // Emit Event
         }
     }
@@ -192,6 +199,11 @@ contract Vader is iERC20 {
         }
         return (_adjustedMax.sub(totalSupply)).div(emissionCurve); // outstanding / 2048 
     }
+
+    function getFeeOnTransfer() public returns(uint256){
+        return iUTILS(UTILS).calcShare(totalSupply, maxSupply, 100); // 0->100BP
+    }
+
     //======================================ASSET MINTING========================================//
     // VETHER Owners to Upgrade
     function upgrade(uint amount) public {
