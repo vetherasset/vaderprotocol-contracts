@@ -27,6 +27,7 @@ contract USDV is iERC20 {
     uint public minimumDepositTime;
     uint public minGrantTime;
     uint public lastGranted;
+    uint public blockDelay;
 
     address public VADER;
     address public ROUTER;
@@ -48,8 +49,13 @@ contract USDV is iERC20 {
     }
     // Stop flash attacks
     modifier flashProof() {
-        require(lastBlock[tx.origin] != block.number, "No flash");
+        require(isMature(), "No flash");
         _;
+    }
+    function isMature() public view returns(bool matured){
+        if(lastBlock[tx.origin] + blockDelay <= block.number){
+            return true;
+        }
     }
 
     //=====================================CREATION=========================================//
@@ -70,6 +76,7 @@ contract USDV is iERC20 {
         nextEraTime = block.timestamp + iVADER(VADER).secondsPerEra();
         erasToEarn = 100;
         minimumDepositTime = 1;
+        blockDelay = 0;
         minGrantTime = 2592000;     // 30 days
     }
 
@@ -143,9 +150,11 @@ contract USDV is iERC20 {
 
     //=========================================DAO=========================================//
     // Can set params
-    function setParams(uint _one, uint _two) public onlyDAO {
+    function setParams(uint _one, uint _two, uint _three, uint _four) public onlyDAO {
         erasToEarn = _one;
-        minimumDepositTime = _two;//8640000; //100 days
+        minimumDepositTime = _two;
+        blockDelay = _three;
+        minGrantTime = _four;
     }
     // Can set params
     function grant(address recipient, uint amount) public onlyDAO {
@@ -196,15 +205,8 @@ contract USDV is iERC20 {
     }
     // Contracts to redeem for members
     function redeemToVADERForMember(address member, uint amount) public returns(uint redeemAmount) {
-        require(transferFrom(msg.sender, VADER, amount));           // Move funds
-        redeemAmount = iVADER(VADER).redeemForMember(member);
-        lastBlock[tx.origin] = block.number;
-        return redeemAmount;
-    }
-    // EOAs to redeem
-    function redeemtoVADERDirectly(uint amount) public returns(uint redeemAmount) {
-        require(transferTo(VADER, amount));   // Get funds
-        redeemAmount = iVADER(VADER).redeem();
+        _transfer(msg.sender, VADER, amount);                   // Move funds
+        redeemAmount = iVADER(VADER).redeemToMember(member);
         lastBlock[tx.origin] = block.number;
         return redeemAmount;
     }

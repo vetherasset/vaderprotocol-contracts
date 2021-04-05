@@ -74,7 +74,7 @@
           "type": "address"
         }
       ],
-      "name": "redeemForMember",
+      "name": "redeemToMember",
       "outputs": [
         {
           "internalType": "uint256",
