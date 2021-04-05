@@ -2,7 +2,7 @@
 pragma solidity ^0.8.3;
 
 interface iUSDV {
-    function lastBlock(address) external view returns (uint);
+    function isMature() external view returns (bool);
     function ROUTER() external view returns (address);
     function convertToUSDV(uint) external returns(uint);
     function convertToUSDVForMember(address, uint) external returns(uint);

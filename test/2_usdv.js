@@ -66,23 +66,49 @@ describe("Deploy USDV", function() {
   });
 });
 
-describe("Convert to USDV", function() {
+describe("Convert and redeem", function() {
 
   it("Should convert acc1", async function() {
-    await usdv.convertToUSDVDirectly('1000', {from:acc1})
+    await vader.approve(usdv.address, '1000', {from:acc1}) 
+    await usdv.convertToUSDV('250', {from:acc1})
+    expect(BN2Str(await vader.totalSupply())).to.equal('3150');
+    expect(BN2Str(await vader.balanceOf(acc1))).to.equal('3150');
+    expect(BN2Str(await usdv.totalSupply())).to.equal('250');
+    expect(BN2Str(await usdv.balanceOf(acc1))).to.equal('250');
+  });
+  it("Should convert for member", async function() {
+    await usdv.convertToUSDVForMember(acc1, '250', {from:acc1})
+    expect(BN2Str(await vader.totalSupply())).to.equal('2900');
+    expect(BN2Str(await vader.balanceOf(acc1))).to.equal('2900');
+    expect(BN2Str(await usdv.totalSupply())).to.equal('500');
+    expect(BN2Str(await usdv.balanceOf(acc1))).to.equal('500');
+  });
+  it("Should convert acc1 directly", async function() {
+    await usdv.convertToUSDVDirectly('500', {from:acc1})
     expect(BN2Str(await vader.totalSupply())).to.equal(BN2Str(2400));
     expect(BN2Str(await vader.balanceOf(acc1))).to.equal(BN2Str(2400));
     expect(BN2Str(await usdv.totalSupply())).to.equal(BN2Str(1000));
     expect(BN2Str(await usdv.balanceOf(acc1))).to.equal(BN2Str(1000));
   });
-  it("Should withdraw VADER", async function() {
-    await usdv.redeemtoVADERDirectly('500',{from:acc1})
+  it("Should redeem", async function() {
+    // await usdv.approve(usdv.address, '1000', {from:acc1}) 
+    expect(BN2Str(await usdv.balanceOf(acc1))).to.equal('1000');
+    await usdv.redeemToVADER('250',{from:acc1})
     // expect(BN2Str(await usdv.getMemberDeposit(acc1))).to.equal(BN2Str(0));
-    expect(BN2Str(await usdv.totalSupply())).to.equal(BN2Str(500));
-    expect(BN2Str(await usdv.balanceOf(acc1))).to.equal(BN2Str(500));
-    expect(BN2Str(await vader.totalSupply())).to.equal(BN2Str(2900));
-    expect(BN2Str(await vader.balanceOf(acc1))).to.equal(BN2Str(2900));
+    expect(BN2Str(await usdv.totalSupply())).to.equal('750');
+    expect(BN2Str(await usdv.balanceOf(acc1))).to.equal('750');
+    expect(BN2Str(await vader.totalSupply())).to.equal('2650');
+    expect(BN2Str(await vader.balanceOf(acc1))).to.equal('2650');
   });
+  it("Should redeem for member", async function() {
+    await usdv.redeemToVADERForMember(acc1, '250',{from:acc1})
+    // expect(BN2Str(await usdv.getMemberDeposit(acc1))).to.equal(BN2Str(0));
+    expect(BN2Str(await usdv.totalSupply())).to.equal('500');
+    expect(BN2Str(await usdv.balanceOf(acc1))).to.equal('500');
+    expect(BN2Str(await vader.totalSupply())).to.equal('2900');
+    expect(BN2Str(await vader.balanceOf(acc1))).to.equal('2900');
+  });
+
   it("Should convert acc1", async function() {
     await usdv.convertToUSDVDirectly('500', {from:acc1})
     expect(BN2Str(await vader.totalSupply())).to.equal(BN2Str(2400));
@@ -196,6 +222,9 @@ describe("Member should deposit for rewards", function() {
 
 describe("Should fail attack", function() {
   it("Same block fails", async function() {
+    // console.log(await usdv.isMature({from:acc1}))
+    await attack.attackUSDV('100', {from:acc1})
+    await usdv.setParams('100', '1', '1', '2592000')
     await truffleAssert.reverts(attack.attackUSDV('100', {from:acc1}), "No flash")
   });
 });

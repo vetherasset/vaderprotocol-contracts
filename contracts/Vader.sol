@@ -46,8 +46,11 @@ contract Vader is iERC20 {
     }
     // Stop flash attacks
     modifier flashProof() {
-        require(iUSDV(USDV).lastBlock(tx.origin) != block.number, "No flash");
+        require(isMature(), "No flash");
         _;
+    }
+    function isMature() public view returns(bool){
+        return iUSDV(USDV).isMature();
     }
 
     //=====================================CREATION=========================================//
