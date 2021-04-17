@@ -46,6 +46,7 @@ contract Vault {
         VADER = _vader;
         USDV = _usdv;
         ROUTER = _router;
+        inited = true;
     }
 
     //====================================LIQUIDITY=========================================//

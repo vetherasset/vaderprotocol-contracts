@@ -23,6 +23,7 @@ contract Attack {
         require(_USDV != address(0));
         VADER = _vader;
         USDV = _USDV;
+        inited = true;
     }
 
     //========================================iERC20=========================================//

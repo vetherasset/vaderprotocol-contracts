@@ -83,6 +83,7 @@ contract Vader is iERC20 {
         USDV = _USDV;
         UTILS = _utils;
         rewardAddress = _USDV;
+        inited = true;
     }
 
     //========================================iERC20=========================================//

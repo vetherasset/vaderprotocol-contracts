@@ -59,6 +59,7 @@ contract Router {
         rewardReductionFactor = 1;
         timeForFullProtection = 1;//8640000; //100 days
         curatedPoolLimit = 1;
+        inited = true;
     }
 
     //=========================================DAO=========================================//

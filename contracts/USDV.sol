@@ -80,6 +80,7 @@ contract USDV is iERC20 {
         minimumDepositTime = 1;
         blockDelay = 0;
         minGrantTime = 2592000;     // 30 days
+        inited = true;
     }
 
     //========================================iERC20=========================================//

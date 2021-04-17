@@ -49,6 +49,7 @@ contract DAO {
         VADER = _vader;
         USDV = _usdv;
         coolOffPeriod = 1;
+        inited = true;
     }
 
     //============================== CREATE PROPOSALS ================================//
