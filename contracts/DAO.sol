@@ -43,7 +43,7 @@ contract DAO {
     constructor() {
     }
     function init(address _vader, address _usdv) public {
-        require(inited == false);
+        require(!inited);
         VADER = _vader;
         USDV = _usdv;
         coolOffPeriod = 1;
@@ -78,7 +78,7 @@ contract DAO {
     function voteProposal(uint proposalID) public returns (uint voteWeight) {
         bytes memory _type = bytes(mapPID_type[proposalID]);
         voteWeight = countMemberVotes(proposalID);
-        if(hasQuorum(proposalID) && mapPID_finalising[proposalID] == false){
+        if(hasQuorum(proposalID) && !mapPID_finalising[proposalID]){
             if(isEqual(_type, 'DAO') || isEqual(_type, 'UTILS') || isEqual(_type, 'REWARD')){
                 if(hasMajority(proposalID)){
                     _finalise(proposalID);
@@ -109,7 +109,7 @@ contract DAO {
     // Proposal with quorum can finalise after cool off period
     function finaliseProposal(uint proposalID) public  {
         require((block.timestamp - mapPID_timeStart[proposalID]) > coolOffPeriod, "Must be after cool off");
-        require(mapPID_finalising[proposalID] == true, "Must be finalising");
+        require(mapPID_finalising[proposalID], "Must be finalising");
         if(!hasQuorum(proposalID)){
             _finalise(proposalID);
         }

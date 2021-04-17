@@ -47,7 +47,7 @@ contract Router {
     constructor() {}
     // Init
     function init(address _vader, address _usdv, address _vault) public {
-        require(inited == false);
+        require(!inited);
         VADER = _vader;
         USDV = _usdv;
         VAULT = _vault;
