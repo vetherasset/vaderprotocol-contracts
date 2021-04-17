@@ -29,6 +29,7 @@ contract Vader is iERC20 {
     uint public currentEra;
     uint public nextEraTime;
     uint public feeOnTransfer;
+    uint public excludeFee;
 
     address public VETHER;
     address public USDV;
@@ -36,6 +37,8 @@ contract Vader is iERC20 {
     address public burnAddress;
     address public rewardAddress;
     address public DAO;
+
+    mapping(address => bool) private _isExcluded;
 
     event NewEra(uint currentEra, uint nextEraTime, uint emission);
 
@@ -67,6 +70,7 @@ contract Vader is iERC20 {
         secondsPerEra = 1; //86400;
         nextEraTime = block.timestamp + secondsPerEra;
         emissionCurve = 900;
+        excludeFee = 256;
         DAO = msg.sender;
         burnAddress = 0x0111011001100001011011000111010101100101;
     }
@@ -120,11 +124,13 @@ contract Vader is iERC20 {
         require(sender != address(0), "sender");
         require(recipient != address(this), "recipient");
         _balances[sender] -= amount;
-        uint _fee = iUTILS(UTILS).calcPart(feeOnTransfer, amount);
-        uint _amountMinusFee = amount - _fee;
-        _balances[recipient] += _amountMinusFee;
-        emit Transfer(sender, recipient, _amountMinusFee);
-        _burn(msg.sender, _fee);
+        if(!isExcluded(sender) && !isExcluded(recipient)){
+            uint _fee = iUTILS(UTILS).calcPart(feeOnTransfer, amount);
+            amount -= _fee;
+            _burn(msg.sender, _fee);
+        }
+        _balances[recipient] += amount;
+        emit Transfer(sender, recipient, amount);
         _checkEmission();
     }
     // Internal mint (upgrading and daily emissions)
@@ -161,9 +167,10 @@ contract Vader is iERC20 {
         emitting = false;
     }
     // Can set params
-    function setParams(uint _one, uint _two) public onlyDAO {
+    function setParams(uint _one, uint _two, uint _three) public onlyDAO {
         secondsPerEra = _one;
         emissionCurve = _two;
+        excludeFee = _three;
     }
     // Can set params
     function setRewardAddress(address _address) public onlyDAO {
@@ -205,6 +212,14 @@ contract Vader is iERC20 {
             _adjustedMax = maxSupply;  // 2m
         }
         return (_adjustedMax - totalSupply) / (emissionCurve); // outstanding / 2048 
+    }
+
+    function isExcluded(address member) public view returns(bool){
+        return _isExcluded[member];
+    }
+    function exclude(address member) public {
+        _burn(msg.sender, excludeFee);
+        _isExcluded[member] = true;
     }
 
     //======================================ASSET MINTING========================================//

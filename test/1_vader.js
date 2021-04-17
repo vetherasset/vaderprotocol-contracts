@@ -121,7 +121,7 @@ describe("DAO Functions", function() {
     await truffleAssert.reverts(vader.startEmissions({from:acc1}))
   });
   it("DAO changeEmissionCurve", async function() {
-    await vader.setParams('1', '1')
+    await vader.setParams('1', '1', '200')
     expect(BN2Str(await vader.secondsPerEra())).to.equal('1');
     expect(BN2Str(await vader.emissionCurve())).to.equal('1');
   });
@@ -176,7 +176,7 @@ describe("FeeOnTransfer", function() {
     expect(BN2Str(await vether.balanceOf(acc0))).to.equal('999999999999999999998999');
     await vether.approve(vader.address, '-1', {from:acc0})
     await vader.upgrade('999999999999999999998999', {from:acc0})
-    await vader.setParams('1', '2024', {from:acc2})
+    await vader.setParams('1', '2024', '200', {from:acc2})
     expect(BN2Str(await vader.getDailyEmission())).to.equal(BN2Str('494071146245059288534'));
     expect(BN2Str(await vader.totalSupply())).to.equal('1000000000000000000005399');
     await vader.transfer(acc1, BN2Str(100), {from:acc0})
@@ -186,8 +186,18 @@ describe("FeeOnTransfer", function() {
   });
   it("Should charge fees", async function() {
     let tx = await vader.transfer(acc1, BN2Str(10000), {from:acc0})
-    expect(BN2Str(tx.logs[0].args.value)).to.equal('9950');
-    expect(BN2Str(tx.logs[1].args.value)).to.equal('50');
+    expect(BN2Str(tx.logs[0].args.value)).to.equal('50');
+    expect(BN2Str(tx.logs[1].args.value)).to.equal('9950');
+  });
+  it("Should exclude, no fees", async function() {
+    let balance = await vader.balanceOf(acc1)
+    await vader.exclude(acc1, {from:acc1})
+    expect(await vader.isExcluded(acc1)).to.equal(true);
+    expect(BN2Str(await vader.balanceOf(acc1))).to.equal(BN2Str(balance-200));
+
+    let tx = await vader.transfer(acc1, BN2Str(10000), {from:acc0})
+    expect(BN2Str(tx.logs[0].args.value)).to.equal('10000');
+    // expect(BN2Str(tx.logs[1].args.value)).to.equal('50');
   });
 });
 
