@@ -84,7 +84,7 @@ describe("Convert and redeem", function() {
     expect(BN2Str(await usdv.balanceOf(acc1))).to.equal('500');
   });
   it("Should convert acc1 directly", async function() {
-    await usdv.convertToUSDVDirectly('500', {from:acc1})
+    await usdv.convertToUSDV('500', {from:acc1})
     expect(BN2Str(await vader.totalSupply())).to.equal(BN2Str(2400));
     expect(BN2Str(await vader.balanceOf(acc1))).to.equal(BN2Str(2400));
     expect(BN2Str(await usdv.totalSupply())).to.equal(BN2Str(1000));
@@ -110,7 +110,7 @@ describe("Convert and redeem", function() {
   });
 
   it("Should convert acc1", async function() {
-    await usdv.convertToUSDVDirectly('500', {from:acc1})
+    await usdv.convertToUSDV('500', {from:acc1})
     expect(BN2Str(await vader.totalSupply())).to.equal(BN2Str(2400));
     expect(BN2Str(await vader.balanceOf(acc1))).to.equal(BN2Str(2400));
     expect(BN2Str(await usdv.totalSupply())).to.equal(BN2Str(1000));

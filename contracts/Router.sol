@@ -330,7 +330,11 @@ contract Router {
     function moveTokenToVault(address _token, uint _amount) internal returns(uint safeAmount) {
         if(_token == VADER || _token == USDV){
             safeAmount = _amount;
-            iERC20(_token).transferTo(VAULT, _amount);
+            if(tx.origin==msg.sender){
+                iERC20(_token).transferTo(VAULT, _amount);
+            }else{
+                iERC20(_token).transferFrom(msg.sender, VAULT, _amount);
+            }
         } else {
             uint _startBal = iERC20(_token).balanceOf(VAULT);
             iERC20(_token).transferFrom(msg.sender, VAULT, _amount);
