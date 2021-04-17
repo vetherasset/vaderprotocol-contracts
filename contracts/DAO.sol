@@ -145,14 +145,14 @@ contract DAO {
     function moveUtils(uint _proposalID) internal {
         address _proposedAddress = mapPID_address[_proposalID];
         require(_proposedAddress != address(0), "No address proposed");
-        iVADER(VADER).changeUTILS(_proposedAddress);
         completeProposal(_proposalID);
+        iVADER(VADER).changeUTILS(_proposedAddress);
     }
     function moveRewardAddress(uint _proposalID) internal {
         address _proposedAddress = mapPID_address[_proposalID];
         require(_proposedAddress != address(0), "No address proposed");
-        iVADER(VADER).setRewardAddress(_proposedAddress);
         completeProposal(_proposalID);
+        iVADER(VADER).setRewardAddress(_proposedAddress);
     }
 //============================== CONSENSUS ================================//
 
