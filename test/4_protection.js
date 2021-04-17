@@ -63,7 +63,6 @@ describe("Deploy Protection", function() {
     await vader.upgrade(BN2Str(7400), {from:acc1}) 
 
     await usdv.convertToUSDVDirectly(BN2Str(1000), {from:acc1})
-    // await usdv.withdrawToUSDV('10000', {from:acc1})
 
     await router.addLiquidity(vader.address, '1000', anchor.address, '1000', {from:acc1})
 
@@ -90,19 +89,35 @@ describe("Should do IL Protection", function() {
     for(let i = 0; i<9; i++){
       await router.swap('100', anchor.address, vader.address, {from:acc1})
     }
-    // expect(BN2Str(await vault.mapToken_tokenAmount(vader.address))).to.equal('1080');
-    // expect(BN2Str(await vault.mapToken_baseAmount(vader.address))).to.equal('931');
-    // expect(BN2Str(await usdv.balanceOf(acc1))).to.equal('1053');
     expect(BN2Str(await router.mapMemberToken_depositBase(acc1, anchor.address))).to.equal('1000');
     expect(BN2Str(await router.mapMemberToken_depositToken(acc1, anchor.address))).to.equal('1000');
-
-    // console.log("membe units", BN2Str(await vault.mapTokenMember_Units(vader.address, acc1)));
-    // console.log("units", BN2Str(await vault.mapToken_Units(vader.address)));
     let coverage = await router.getCoverage(acc1, anchor.address)
     expect(BN2Str(coverage)).to.equal('173');
     expect(BN2Str(await router.getProtection(acc1, anchor.address, "10000", coverage))).to.equal('173');
     let reserveVADER = BN2Str(await router.reserveVADER())
     expect(BN2Str(await router.getILProtection(acc1, vader.address, anchor.address, '10000'))).to.equal(reserveVADER);
+
+
+  });
+
+  it("Small swap, need protection on Asset", async function() {
+    asset = await Asset.new();
+    await asset.transfer(acc1, BN2Str(2000))
+    await asset.approve(router.address, BN2Str(one), {from:acc1})
+    await router.addLiquidity(vader.address, '1000', asset.address, '1000', {from:acc1})
+
+
+    expect(BN2Str(await usdv.balanceOf(acc1))).to.equal('900');
+    for(let i = 0; i<9; i++){
+      await router.swap('100', asset.address, usdv.address, {from:acc1})
+    }
+    expect(BN2Str(await router.mapMemberToken_depositBase(acc1, asset.address))).to.equal('1000');
+    expect(BN2Str(await router.mapMemberToken_depositToken(acc1, asset.address))).to.equal('1000');
+    let coverage = await router.getCoverage(acc1, asset.address)
+    expect(BN2Str(coverage)).to.equal('183');
+    expect(BN2Str(await router.getProtection(acc1, asset.address, "10000", coverage))).to.equal('183');
+    let reserveVADER = BN2Str(await router.reserveVADER())
+    expect(BN2Str(await router.getILProtection(acc1, vader.address, asset.address, '10000'))).to.equal(reserveVADER);
 
 
   });

@@ -36,6 +36,7 @@ contract Vault {
     //=====================================CREATION=========================================//
     // Constructor
     constructor() {}
+
     // Init
     function init(address _vader, address _usdv, address _router) public {
         require(inited == false);
