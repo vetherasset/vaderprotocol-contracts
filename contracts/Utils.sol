@@ -199,8 +199,7 @@ contract Utils {
             uint part1 = (t * B);
             uint part2 = (T * b);
             uint part3 = (T * B) * 2;
-            uint _units = (((P * part1) + part2) / part3);
-            return (_units * slipAdjustment) / one;  // Divide by 10**18
+            return (P * part1 + part2) * slipAdjustment / part3 / one;  // Divide by 10**18
         }
     }
 
