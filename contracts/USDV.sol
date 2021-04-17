@@ -72,8 +72,6 @@ contract USDV is iERC20 {
         require(_router != address(0));
         VADER = _vader;
         ROUTER = _router;
-        iERC20(VADER).approve(ROUTER, type(uint).max);
-        _approve(address(this), ROUTER, type(uint).max);
         currentEra = 1;
         nextEraTime = block.timestamp + iVADER(VADER).secondsPerEra();
         erasToEarn = 100;
@@ -81,6 +79,8 @@ contract USDV is iERC20 {
         blockDelay = 0;
         minGrantTime = 2592000;     // 30 days
         inited = true;
+        iERC20(VADER).approve(ROUTER, type(uint).max);
+        _approve(address(this), ROUTER, type(uint).max);
     }
 
     //========================================iERC20=========================================//
@@ -212,9 +212,9 @@ contract USDV is iERC20 {
     }
     // Contracts to redeem for members
     function redeemToVADERForMember(address member, uint amount) public returns(uint redeemAmount) {
+        lastBlock[tx.origin] = block.number;
         _transfer(msg.sender, VADER, amount);                   // Move funds
         redeemAmount = iVADER(VADER).redeemToMember(member);
-        lastBlock[tx.origin] = block.number;
         return redeemAmount;
     }
 
