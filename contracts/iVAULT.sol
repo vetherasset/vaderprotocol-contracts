@@ -8,6 +8,8 @@ interface iVAULT{
     function removeLiquidity(address, address, uint) external returns (uint, uint);
     function sync(address, address) external;
     function swap(address, address, address, bool) external returns (uint);
+    function mintSynth(address, address, address) external returns (uint);
+    function burnSynth(address, address, address) external returns (uint);
     function isMember(address) external view returns(bool);
     function isAsset(address) external view returns(bool);
     function isAnchor(address) external view returns(bool);
@@ -16,4 +18,5 @@ interface iVAULT{
     function getTokenAmount(address) external view returns(uint);
     function getUnits(address) external view returns(uint);
     function getMemberUnits(address, address) external view returns(uint);
+
 }

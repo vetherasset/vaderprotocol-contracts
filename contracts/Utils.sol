@@ -220,6 +220,11 @@ contract Utils {
         return one - (numerator * one) / denominator; // Multiply by 10**18
     }
 
+    function calcSynthUnits(uint b, uint B, uint P) public pure returns(uint){
+        // (P * b)/(2*(b + B))
+        return (P * b) / (2 * (b + B));
+    }
+
     function calcAsymmetricShare(uint u, uint U, uint A) public pure returns (uint){
         // share = (u * U * (2 * A^2 - 2 * U * u + U^2))/U^3
         // (part1 * (part2 - part3 + part4)) / part5

@@ -50,7 +50,7 @@ describe("Deploy DAO", function() {
     await vader.init(vether.address, usdv.address, utils.address)
     await usdv.init(vader.address, router.address)
     await router.init(vader.address, usdv.address, vault.address);
-    await vault.init(vader.address, usdv.address, router.address);
+    await vault.init(vader.address, usdv.address, router.address, router.address);
     await dao.init(vader.address, usdv.address);
     
     await vether.approve(vader.address, '6000', {from:acc0})

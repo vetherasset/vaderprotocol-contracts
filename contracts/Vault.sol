@@ -5,6 +5,7 @@ pragma solidity ^0.8.3;
 import "./iERC20.sol";
 import "./iUTILS.sol";
 import "./iVADER.sol";
+import "./iFACTORY.sol";
 
     //======================================VADER=========================================//
 contract Vault {
@@ -17,6 +18,7 @@ contract Vault {
     address public VADER;
     address public USDV;
     address public ROUTER;
+    address public FACTORY;
 
     mapping(address => bool) _isMember;
     mapping(address => bool) _isAsset;
@@ -26,6 +28,7 @@ contract Vault {
     mapping(address => mapping(address => uint)) public mapTokenMember_Units;
     mapping(address => uint) public mapToken_baseAmount;
     mapping(address => uint) public mapToken_tokenAmount;
+    mapping(address => address) public mapToken_Synth;
 
     // Events
     event AddLiquidity(address indexed member, address indexed base, uint baseAmount, address indexed token, uint tokenAmount, uint liquidityUnits);
@@ -38,11 +41,12 @@ contract Vault {
     constructor() {}
 
     // Init
-    function init(address _vader, address _usdv, address _router) public {
+    function init(address _vader, address _usdv, address _router, address _factory) public {
         require(inited == false);
         VADER = _vader;
         USDV = _usdv;
         ROUTER = _router;
+        FACTORY = _factory;
     }
 
     //====================================LIQUIDITY=========================================//
@@ -123,6 +127,42 @@ contract Vault {
         }
         return outputAmount;
     }
+
+    //======================================SYNTH=========================================//
+
+    function deploySynth(address token) public {
+        require(getSynth(token) == address(0));
+        mapToken_Synth[token] = iFACTORY(FACTORY).deploySynth(token);
+    }
+
+    function mintSynth(address base, address token, address member) public returns (uint outputAmount){
+        require(iFACTORY(FACTORY).isSynth(getSynth(token)));
+        uint _actualInputBase = getAddedAmount(base, token);
+        uint _synthUnits = iUTILS(UTILS()).calcSynthUnits(_actualInputBase, mapToken_baseAmount[token], mapToken_Units[token]);
+        outputAmount = iUTILS(UTILS()).calcSwapOutput(_actualInputBase, mapToken_baseAmount[token], mapToken_tokenAmount[token]);
+        mapTokenMember_Units[token][address(this)] += _synthUnits;
+        mapToken_Units[token] += _synthUnits;
+        mapToken_baseAmount[token] += _actualInputBase;
+        emit AddLiquidity(member, base, _actualInputBase, token, 0, _synthUnits);
+        iFACTORY(FACTORY).mintSynth(getSynth(token), member, outputAmount);
+    }
+    function burnSynth(address base, address token, address member) public returns (uint outputBase){
+        uint _actualInputSynth = iERC20(getSynth(token)).balanceOf(address(this));
+        iERC20(getSynth(token)).burn(_actualInputSynth);
+        uint _unitsToDelete = iUTILS(UTILS()).calcShare(_actualInputSynth, iERC20(getSynth(token)).totalSupply(), mapTokenMember_Units[token][address(this)]);
+        mapTokenMember_Units[token][address(this)] -= _unitsToDelete;
+        mapToken_Units[token] -= _unitsToDelete;
+        outputBase = iUTILS(UTILS()).calcSwapOutput(_actualInputSynth, mapToken_tokenAmount[token], mapToken_baseAmount[token]);
+        emit RemoveLiquidity(member, base, outputBase, token, 0, _unitsToDelete, mapToken_Units[token]);
+        mapToken_baseAmount[token] -= outputBase;
+        transferOut(base, outputBase, member);
+        return outputBase;
+    }
+
+    function getSynth(address token) public returns (address synth){
+        return iFACTORY(FACTORY).getSynth(token);
+    }
+
     
     //======================================LENDING=========================================//
     
@@ -132,16 +172,16 @@ contract Vault {
     // Safe
     function getAddedAmount(address _token, address _pool) internal returns(uint addedAmount) {
         if(_token == VADER && _pool == VADER){
-            addedAmount = (iERC20(_token).balanceOf(address(this))) - pooledVADER;
+            addedAmount = iERC20(_token).balanceOf(address(this)) - pooledVADER;
             pooledVADER = pooledVADER + addedAmount;
         } else if(_token == VADER && _pool != VADER){
-            addedAmount = (iERC20(_token).balanceOf(address(this))) - pooledVADER;
+            addedAmount = iERC20(_token).balanceOf(address(this)) - pooledVADER;
             pooledVADER = pooledVADER + addedAmount;
         } else if(_token == USDV) {
-            addedAmount = (iERC20(_token).balanceOf(address(this))) - pooledUSDV;
+            addedAmount = iERC20(_token).balanceOf(address(this)) - pooledUSDV;
             pooledUSDV = pooledUSDV + addedAmount;
         } else {
-            addedAmount = (iERC20(_token).balanceOf(address(this))) - mapToken_tokenAmount[_pool];
+            addedAmount = iERC20(_token).balanceOf(address(this)) - mapToken_tokenAmount[_pool];
         }
     }
     function transferOut(address _token, uint _amount, address _recipient) internal {
