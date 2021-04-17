@@ -16,6 +16,11 @@ contract Router {
     uint _10k = 10000;
     uint public rewardReductionFactor;
     uint public timeForFullProtection;
+
+    uint public curatedPoolLimit;
+    uint public curatedPoolCount;
+    address[] public curatedPools;
+    mapping(address => bool) private _isCurated;
     
     address public VADER;
     address public USDV;
@@ -30,6 +35,7 @@ contract Router {
 
     event PoolReward(address indexed base, address indexed token, uint amount);
     event Protection(address indexed member, uint amount);
+    event Curated(address indexed curator, address indexed token);
 
     // Only DAO can execute
     modifier onlyDAO() {
@@ -50,13 +56,15 @@ contract Router {
         iERC20(USDV).approve(VAULT, type(uint).max);
         rewardReductionFactor = 1;
         timeForFullProtection = 1;//8640000; //100 days
+        curatedPoolLimit = 1;
     }
 
     //=========================================DAO=========================================//
     // Can set params
-    function setParams(uint _one, uint _two) public onlyDAO {
+    function setParams(uint _one, uint _two, uint _three) public onlyDAO {
         rewardReductionFactor = _one;
         timeForFullProtection = _two;
+        curatedPoolLimit = _three;
     }
 
     //====================================LIQUIDITY=========================================//
@@ -112,7 +120,7 @@ contract Router {
         //====================================INCENTIVES========================================//
     
     function getRewardShare(address token) public view returns (uint rewardShare){
-        if((emitting())){
+        if(emitting() && isCurated(token)){
             uint _baseAmount = iVAULT(VAULT).getBaseAmount(token);
             if (iVAULT(VAULT).isAsset(token)) {
                 uint _share = iUTILS(UTILS()).calcShare(_baseAmount, iVAULT(VAULT).pooledUSDV(), reserveUSDV());
@@ -170,11 +178,13 @@ contract Router {
     }
 
     function getProtection(address member, address token, uint basisPoints, uint coverage) public view returns(uint protection){
-        uint _duration = block.timestamp - mapMemberToken_lastDeposited[member][token];
-        if(_duration <= timeForFullProtection) {
-            protection = iUTILS(UTILS()).calcShare(_duration, timeForFullProtection, coverage);
-        } else {
-            protection = coverage;
+        if(isCurated(token)){
+            uint _duration = block.timestamp - mapMemberToken_lastDeposited[member][token];
+            if(_duration <= timeForFullProtection) {
+                protection = iUTILS(UTILS()).calcShare(_duration, timeForFullProtection, coverage);
+            } else {
+                protection = coverage;
+            }
         }
         return iUTILS(UTILS()).calcPart(basisPoints, protection);
     }
@@ -184,6 +194,27 @@ contract Router {
         uint _B1 = iUTILS(UTILS()).calcShare(_units, iVAULT(VAULT).getUnits(token), iVAULT(VAULT).getBaseAmount(token));
         uint _T1 = iUTILS(UTILS()).calcShare(_units, iVAULT(VAULT).getUnits(token), iVAULT(VAULT).getTokenAmount(token));
         return iUTILS(UTILS()).calcCoverage(_B0, _T0, _B1, _T1);
+    }
+
+    //=====================================CURATION==========================================//
+
+    function curatePool(address token) public {
+        require(iVAULT(VAULT).isAsset(token));
+        if(!isCurated(token)){
+            if(curatedPoolCount < curatedPoolLimit){
+                _isCurated[token] = true;
+                curatedPoolCount += 1;
+            }
+        }
+        emit Curated(msg.sender, token);
+    }
+    function replacePool(address oldToken, address newToken) public {
+        require(iVAULT(VAULT).isAsset(newToken));
+        if(iVAULT(VAULT).getBaseAmount(newToken) > iVAULT(VAULT).getBaseAmount(oldToken)){
+            _isCurated[oldToken] = false;
+            _isCurated[newToken] = true;
+            emit Curated(msg.sender, newToken);
+        }
     }
 
     //=====================================ANCHORS==========================================//
@@ -331,5 +362,13 @@ contract Router {
     }
     function emitting() public view returns(bool){
         return iVADER(VADER).emitting();
+    }
+    function isCurated(address token) public view returns(bool curated){
+        if(_isCurated[token]){
+            curated = true;
+        } else if(iVAULT(VAULT).isAnchor(token)){
+            curated = true;
+        }
+        return curated;
     }
 }

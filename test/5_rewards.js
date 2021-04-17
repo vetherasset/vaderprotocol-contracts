@@ -97,6 +97,7 @@ describe("Should do pool rewards", function() {
 
   it("Swap asset, get rewards", async function() {
     let r = '5';
+    await router.curatePool(asset.address, {from:acc1})
     expect(BN2Str(await router.reserveUSDV())).to.equal(r);
     expect(await router.emitting()).to.equal(true);
     expect(BN2Str(await usdv.balanceOf(router.address))).to.equal(r);
