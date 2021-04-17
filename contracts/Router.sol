@@ -19,7 +19,6 @@ contract Router {
 
     uint public curatedPoolLimit;
     uint public curatedPoolCount;
-    address[] public curatedPools;
     mapping(address => bool) private _isCurated;
     
     address public VADER;
