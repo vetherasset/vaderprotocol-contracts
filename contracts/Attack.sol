@@ -19,6 +19,7 @@ contract Attack {
 
     function init(address _vader, address _USDV) public {
         require(inited == false);
+inited = true;
         VADER = _vader;
         USDV = _USDV;
     }

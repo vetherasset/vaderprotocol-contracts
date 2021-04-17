@@ -54,7 +54,7 @@ describe("Deploy Router", function() {
     await vader.init(vether.address, usdv.address, utils.address)
     await usdv.init(vader.address, router.address)
     await router.init(vader.address, usdv.address, vault.address);
-    await vault.init(vader.address, usdv.address, router.address);
+    await vault.init(vader.address, usdv.address, router.address, router.address);
 
     asset = await Asset.new();
     asset2 = await Asset.new();

@@ -76,6 +76,7 @@ contract Vader is iERC20 {
     }
     function init(address _vether, address _USDV, address _utils) public {
         require(inited == false);
+inited = true;
         VETHER = _vether;
         USDV = _USDV;
         UTILS = _utils;

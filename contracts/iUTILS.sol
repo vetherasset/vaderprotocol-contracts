@@ -9,6 +9,7 @@ interface iUTILS {
     function calcSwapFee(uint, uint, uint) external pure returns (uint);
     function calcSwapSlip(uint, uint) external pure returns (uint);
     function calcLiquidityUnits(uint, uint, uint, uint, uint) external view returns (uint);
+    function calcSynthUnits(uint, uint, uint) external view returns (uint);
     function getSlipAdustment(uint, uint, uint, uint) external view returns (uint);
     function calcAsymmetricShare(uint, uint, uint) external pure returns (uint);
     function calcCoverage(uint, uint, uint, uint) external pure returns(uint);

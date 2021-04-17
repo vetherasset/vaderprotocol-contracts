@@ -48,6 +48,7 @@ contract Router {
     // Init
     function init(address _vader, address _usdv, address _vault) public {
         require(inited == false);
+        inited = true;
         VADER = _vader;
         USDV = _usdv;
         VAULT = _vault;
@@ -85,13 +86,24 @@ contract Router {
 
       //=======================================SWAP===========================================//
     
-    function swap(uint inputAmount, address inputToken, address outputToken) public returns (uint outputAmount){
-        return swapWithLimit(inputAmount, inputToken, outputToken, 10000);
+    function swap(uint inputAmount, address inputToken, address outputToken) external returns (uint outputAmount){
+        return swapWithSynthsWithLimit(inputAmount, inputToken, false, outputToken, false, 10000);
+    }
+    function swapWithLimit(uint inputAmount, address inputToken, address outputToken, uint slipLimit) external returns (uint outputAmount){
+        return swapWithSynthsWithLimit(inputAmount, inputToken, false, outputToken, false, slipLimit);
     }
 
-    function swapWithLimit(uint inputAmount, address inputToken, address outputToken, uint slipLimit) public returns (uint outputAmount){
+    function swapWithSynths(uint inputAmount, address inputToken, bool inSynth, address outputToken, bool outSynth) external returns (uint outputAmount){
+        return swapWithSynthsWithLimit(inputAmount, inputToken, inSynth, outputToken, outSynth, 10000);
+    }
+
+    function swapWithSynthsWithLimit(uint inputAmount, address inputToken, bool inSynth, address outputToken, bool outSynth, uint slipLimit) public returns (uint outputAmount){
         address _member = msg.sender;
-        moveTokenToVault(inputToken, inputAmount);
+        if(!inSynth){
+            moveTokenToVault(inputToken, inputAmount);
+        } else {
+            moveTokenToVault(iVAULT(VAULT).getSynth(inputToken), inputAmount);
+        }
         address _base;
         if(iVAULT(VAULT).isAnchor(inputToken) || iVAULT(VAULT).isAnchor(outputToken)) {
             _base = VADER;
@@ -99,28 +111,42 @@ contract Router {
             _base = USDV;
         }
         if (isBase(outputToken)) {
-            // Token -> BASE
+            // Token||Synth -> BASE
             require(iUTILS(UTILS()).calcSwapSlip(inputAmount, iVAULT(VAULT).getTokenAmount(inputToken)) <= slipLimit);
-            outputAmount = iVAULT(VAULT).swap(_base, inputToken, _member, true);
+            if(!inSynth){
+                outputAmount = iVAULT(VAULT).swap(_base, inputToken, _member, true);
+            } else {
+                outputAmount = iVAULT(VAULT).burnSynth(_base, inputToken, _member);
+            }
             _handlePoolReward(_base, inputToken);
-            _handleAnchorPriceUpdate(inputToken);
         } else if (isBase(inputToken)) {
-            // BASE -> Token
+            // BASE -> Token||Synth
             require(iUTILS(UTILS()).calcSwapSlip(inputAmount, iVAULT(VAULT).getBaseAmount(outputToken)) <= slipLimit);
-            outputAmount = iVAULT(VAULT).swap(_base, outputToken, _member, false);
+            if(!outSynth){
+                outputAmount = iVAULT(VAULT).swap(_base, outputToken, _member, false);
+            } else {
+                outputAmount = iVAULT(VAULT).mintSynth(_base, outputToken, _member);
+            }
             _handlePoolReward(_base, outputToken);
-            _handleAnchorPriceUpdate(outputToken);
         } else if (!isBase(inputToken) && !isBase(outputToken)) {
-            // Token -> Token
+            // Token||Synth -> Token||Synth
             require(iUTILS(UTILS()).calcSwapSlip(inputAmount, iVAULT(VAULT).getTokenAmount(inputToken)) <= slipLimit);
-            iVAULT(VAULT).swap(_base, inputToken, VAULT, true);
+            if(!inSynth){
+                iVAULT(VAULT).swap(_base, inputToken, VAULT, true);
+            } else {
+                iVAULT(VAULT).burnSynth(_base, inputToken, VAULT);
+            }
             require(iUTILS(UTILS()).calcSwapSlip(inputAmount, iVAULT(VAULT).getBaseAmount(outputToken)) <= slipLimit);
-            outputAmount = iVAULT(VAULT).swap(_base, outputToken, _member, false);
+            if(!outSynth){
+                outputAmount = iVAULT(VAULT).swap(_base, outputToken, _member, false);
+            } else {
+                outputAmount = iVAULT(VAULT).mintSynth(_base, outputToken, _member);
+            }
             _handlePoolReward(_base, inputToken);
             _handlePoolReward(_base, outputToken);
-            _handleAnchorPriceUpdate(inputToken);
-            _handleAnchorPriceUpdate(outputToken);
-        } 
+        }
+        _handleAnchorPriceUpdate(inputToken);
+        _handleAnchorPriceUpdate(outputToken); 
         return outputAmount;
     }
 
@@ -336,7 +362,7 @@ contract Router {
 
     // Safe transferFrom in case token charges transfer fees
     function moveTokenToVault(address _token, uint _amount) internal returns(uint safeAmount) {
-        if(_token == VADER || _token == USDV){
+        if(_token == VADER || _token == USDV || iVAULT(VAULT).isSynth(_token)){
             safeAmount = _amount;
             if(tx.origin==msg.sender){
                 iERC20(_token).transferTo(VAULT, _amount);
