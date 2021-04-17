@@ -53,26 +53,18 @@ describe("Deploy Router", function() {
     await factory.init(vault.address);
 
     asset = await Asset.new();
-    asset2 = await Asset.new();
     anchor = await Anchor.new();
-    anchor2 = await Anchor.new();
 
     await vether.transfer(acc1, BN2Str(7407)) 
     await anchor.transfer(acc1, BN2Str(2000))
     await anchor.approve(router.address, BN2Str(one), {from:acc1})
-    await anchor2.transfer(acc1, BN2Str(2000))
-    await anchor2.approve(router.address, BN2Str(one), {from:acc1})
 
     await vether.approve(vader.address, '7400', {from:acc1})
     await vader.upgrade(BN2Str(7400), {from:acc1}) 
-
     await asset.transfer(acc1, BN2Str(2000))
     await asset.approve(router.address, BN2Str(one), {from:acc1})
-    await asset2.transfer(acc1, BN2Str(2000))
-    await asset2.approve(router.address, BN2Str(one), {from:acc1})
 
     await usdv.convertToUSDV(BN2Str(3000), {from:acc1})
-    // await usdv.withdrawToUSDV('10000', {from:acc1})
 
     expect(await router.DAO()).to.equal(acc0);
     expect(await router.UTILS()).to.equal(utils.address);
@@ -90,13 +82,6 @@ describe("Add liquidity", function() {
     expect(BN2Str(await vault.getTokenAmount(anchor.address))).to.equal('1000');
     expect(BN2Str(await vault.getMemberUnits(anchor.address, acc1))).to.equal('1000');
   });
-  it("Should add anchor2", async function() {
-    await router.addLiquidity(vader.address, '1000', anchor2.address, '1000', {from:acc1})
-    expect(BN2Str(await vault.getUnits(anchor2.address))).to.equal('1000');
-    expect(BN2Str(await vault.getBaseAmount(anchor2.address))).to.equal(BN2Str(1000));
-    expect(BN2Str(await vault.getTokenAmount(anchor2.address))).to.equal('1000');
-    expect(BN2Str(await vault.getMemberUnits(anchor2.address, acc1))).to.equal('1000');
-  });
   it("Should add asset", async function() {
     let tx = await router.addLiquidity(usdv.address, '1000', asset.address, '1000', {from:acc1})
     expect(BN2Str(await vault.mapToken_Units(asset.address))).to.equal('1000');
@@ -104,20 +89,12 @@ describe("Add liquidity", function() {
     expect(BN2Str(await vault.mapToken_tokenAmount(asset.address))).to.equal('1000');
     expect(BN2Str(await vault.mapTokenMember_Units(asset.address, acc1))).to.equal('1000');
   });
-  it("Should add asset2", async function() {
-    let tx = await router.addLiquidity(usdv.address, '1000', asset2.address, '1000', {from:acc1})
-    expect(BN2Str(await vault.mapToken_Units(asset2.address))).to.equal('1000');
-    expect(BN2Str(await vault.mapToken_baseAmount(asset2.address))).to.equal(BN2Str(1000));
-    expect(BN2Str(await vault.mapToken_tokenAmount(asset2.address))).to.equal('1000');
-    expect(BN2Str(await vault.mapTokenMember_Units(asset2.address, acc1))).to.equal('1000');
-  });
 });
 
-describe("Should Swap Synths Pools", function() {
-  it("Swap from Base to Synth - Anchor", async function() {
+describe("Should Swap Synths", function() {
+  it("Swap from Base to Synth", async function() {
     await vault.deploySynth(anchor.address)
     await router.swapWithSynths('250', vader.address, false, anchor.address, true, {from:acc1})
-    expect(BN2Str(await vader.balanceOf(acc1))).to.equal('2150');
     expect(BN2Str(await vault.getBaseAmount(anchor.address))).to.equal('1250');
     expect(BN2Str(await vault.getTokenAmount(anchor.address))).to.equal('1000');
     expect(BN2Str(await utils.calcSynthUnits('250', '1000', '1000'))).to.equal('100');
@@ -132,7 +109,7 @@ describe("Should Swap Synths Pools", function() {
     expect(await synth.symbol()).to.equal('TKN2.v');
     expect(BN2Str(await synth.totalSupply())).to.equal('160');
   });
-  it("Swap from Synth to Base - Anchor", async function() {
+  it("Swap from Synth to Base", async function() {
     let synthAddress = await factory.getSynth(anchor.address)
     let synth = await Synth.at(synthAddress);
     await router.swapWithSynths('80', anchor.address, true, vader.address, false, {from:acc1})
@@ -165,60 +142,40 @@ describe("Should Swap Synths Pools", function() {
     expect(BN2Str(await synth2.totalSupply())).to.equal('67');
   });
 
+  it("Swap from token to Synth", async function() {
+    let synthAddress = await factory.getSynth(asset.address)
+    let synth = await Synth.at(synthAddress);
+    expect(BN2Str(await anchor.balanceOf(acc1))).to.equal('1000');
+    expect(BN2Str(await synth.balanceOf(acc1))).to.equal('67');
+
+    await router.swapWithSynths('80', anchor.address, false, asset.address, true, {from:acc1})
+
+    expect(BN2Str(await anchor.balanceOf(acc1))).to.equal('920');
+    expect(BN2Str(await synth.balanceOf(acc1))).to.equal('127');
+  });
+  it("Swap from Synth to token", async function() {
+    let synthAddress = await factory.getSynth(asset.address)
+    let synth = await Synth.at(synthAddress);
+    
+    expect(BN2Str(await synth.balanceOf(acc1))).to.equal('127');
+    expect(BN2Str(await anchor.balanceOf(acc1))).to.equal('920');
+
+    await router.swapWithSynths('50', asset.address, true, anchor.address, false, {from:acc1})
+
+    expect(BN2Str(await synth.balanceOf(acc1))).to.equal('77');
+    expect(BN2Str(await anchor.balanceOf(acc1))).to.equal('970');
+    
+  });
+  it("Swap from Token to its own Synth", async function() {
+    let synthAddress = await factory.getSynth(asset.address)
+    let synth = await Synth.at(synthAddress);
+    expect(BN2Str(await asset.balanceOf(acc1))).to.equal('1000');
+    expect(BN2Str(await synth.balanceOf(acc1))).to.equal('77');
+
+    await router.swapWithSynths('10', asset.address, false, asset.address, true, {from:acc1})
+
+    expect(BN2Str(await asset.balanceOf(acc1))).to.equal('990');
+    expect(BN2Str(await synth.balanceOf(acc1))).to.equal('86');
+  });
+
 });
-
-// describe("Should Swap USDV Pools", function() {
-//   it("Swap from USDV to Anchor", async function() {
-//     await router.swap('250', usdv.address, asset.address, {from:acc1})
-//     expect(BN2Str(await usdv.balanceOf(acc1))).to.equal('750');
-//     expect(BN2Str(await vault.getBaseAmount(asset.address))).to.equal('1250');
-//     expect(BN2Str(await vault.getTokenAmount(asset.address))).to.equal('840');
-//     expect(BN2Str(await asset.balanceOf(acc1))).to.equal('1160');
-//   });
-//   it("Swap to Anchor", async function() {
-//     await router.swap('160', asset.address, usdv.address, {from:acc1})
-//     expect(BN2Str(await asset.balanceOf(acc1))).to.equal('1000');
-//     expect(BN2Str(await vault.getTokenAmount(asset.address))).to.equal('1000');
-//     expect(BN2Str(await vault.getBaseAmount(asset.address))).to.equal('1082');
-//     expect(BN2Str(await usdv.balanceOf(acc1))).to.equal('918');
-//   });
-
-// it("Swap to Other Anchor", async function() {
-//   await router.swap('250', asset.address, asset2.address, {from:acc1})
-//   expect(BN2Str(await anchor.balanceOf(acc1))).to.equal('750');
-//   expect(BN2Str(await vault.getTokenAmount(asset.address))).to.equal('1250');
-//   expect(BN2Str(await vault.getBaseAmount(asset.address))).to.equal('909');
-//   expect(BN2Str(await vault.getBaseAmount(asset2.address))).to.equal('1173');
-//   expect(BN2Str(await vault.getTokenAmount(asset2.address))).to.equal('875');
-//   expect(BN2Str(await asset2.balanceOf(acc1))).to.equal('1125');
-// });
-
-// });
-
-// describe("Should Swap Above Limit", function() {
-//   it("Fail when swap above limit", async function() {
-//     await truffleAssert.reverts(router.swapWithLimit('250', usdv.address, asset.address, '1', {from:acc1}))
-//   });
-  
-// });
-
-// describe("Should remove liquidity", function() {
-//   it("REmove Anchor", async function() {
-//     await router.removeLiquidity(vader.address, anchor.address, '5000', {from:acc1})
-//     expect(BN2Str(await vault.getUnits(anchor.address))).to.equal('500');
-//     expect(BN2Str(await vault.getMemberUnits(anchor.address, acc1))).to.equal('500');
-//     expect(BN2Str(await vault.getBaseAmount(anchor.address))).to.equal('455');
-//     expect(BN2Str(await vault.getTokenAmount(anchor.address))).to.equal('625');
-//     expect(BN2Str(await vader.balanceOf(acc1))).to.equal('2772');
-//     expect(BN2Str(await anchor.balanceOf(acc1))).to.equal('1375');
-//   });
-//   it("REmove Anchor", async function() {
-//     await router.removeLiquidity(vader.address, anchor.address, '10000', {from:acc1})
-//     expect(BN2Str(await vault.getUnits(anchor.address))).to.equal('0');
-//     expect(BN2Str(await vault.getMemberUnits(anchor.address, acc1))).to.equal('0');
-//     expect(BN2Str(await vault.getBaseAmount(anchor.address))).to.equal('0');
-//     expect(BN2Str(await vault.getTokenAmount(anchor.address))).to.equal('0');
-//     expect(BN2Str(await vader.balanceOf(acc1))).to.equal('3227');
-//     expect(BN2Str(await anchor.balanceOf(acc1))).to.equal('2000');
-//   });
-// });
