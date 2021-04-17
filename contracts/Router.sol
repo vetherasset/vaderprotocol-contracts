@@ -54,12 +54,12 @@ contract Router {
         VADER = _vader;
         USDV = _usdv;
         VAULT = _vault;
-        iERC20(VADER).approve(VAULT, type(uint).max);
-        iERC20(USDV).approve(VAULT, type(uint).max);
         rewardReductionFactor = 1;
         timeForFullProtection = 1;//8640000; //100 days
         curatedPoolLimit = 1;
         inited = true;
+        iERC20(VADER).approve(VAULT, type(uint).max);
+        iERC20(USDV).approve(VAULT, type(uint).max);
     }
 
     //=========================================DAO=========================================//
