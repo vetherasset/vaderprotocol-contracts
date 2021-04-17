@@ -76,6 +76,9 @@ contract Vader is iERC20 {
     }
     function init(address _vether, address _USDV, address _utils) public {
         require(!inited);
+        require(_vether != address(0));
+        require(_USDV != address(0));
+        require(_utils != address(0));
         VETHER = _vether;
         USDV = _USDV;
         UTILS = _utils;
@@ -174,6 +177,7 @@ contract Vader is iERC20 {
     }
     // Can set params
     function setRewardAddress(address _address) public onlyDAO {
+        require(_address != address(0));
         rewardAddress = _address;
     }
     // Can change DAO

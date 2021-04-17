@@ -37,6 +37,7 @@ contract Utils {
         // Can set vault
     function init(address _vault) public {
         if(VAULT == address(0)){
+            require(_vault != address(0));
             VAULT = _vault;
         }
     }
