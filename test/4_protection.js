@@ -69,9 +69,9 @@ describe("Deploy Protection", function() {
     await vader.transfer(acc0, '100', {from:acc1})
     await usdv.transfer(acc0, '100', {from:acc1})
     expect(BN2Str(await vader.getDailyEmission())).to.equal('7');
-    expect(BN2Str(await usdv.reserveUSDV())).to.equal('7');
-    expect(BN2Str(await router.reserveUSDV())).to.equal('7');
-    expect(BN2Str(await router.reserveVADER())).to.equal('8');
+    expect(BN2Str(await usdv.reserveUSDV())).to.equal('5');
+    expect(BN2Str(await router.reserveUSDV())).to.equal('4');
+    expect(BN2Str(await router.reserveVADER())).to.equal('5');
     
   });
 });
@@ -85,15 +85,15 @@ describe("Should do IL Protection", function() {
     expect(BN2Str(await utils.calcCoverage('100', '1000', '20', '2000'))).to.equal('70');
   });
   it("Small swap, need protection", async function() {
-    expect(BN2Str(await usdv.balanceOf(acc1))).to.equal('900');
+    expect(BN2Str(await usdv.balanceOf(acc1))).to.equal('908');
     for(let i = 0; i<9; i++){
       await router.swap('100', anchor.address, vader.address, {from:acc1})
     }
     expect(BN2Str(await router.mapMemberToken_depositBase(acc1, anchor.address))).to.equal('1000');
     expect(BN2Str(await router.mapMemberToken_depositToken(acc1, anchor.address))).to.equal('1000');
     let coverage = await router.getCoverage(acc1, anchor.address)
-    expect(BN2Str(coverage)).to.equal('173');
-    expect(BN2Str(await router.getProtection(acc1, anchor.address, "10000", coverage))).to.equal('173');
+    expect(BN2Str(coverage)).to.equal('177');
+    expect(BN2Str(await router.getProtection(acc1, anchor.address, "10000", coverage))).to.equal('177');
     let reserveVADER = BN2Str(await router.reserveVADER())
     expect(BN2Str(await router.getILProtection(acc1, vader.address, anchor.address, '10000'))).to.equal(reserveVADER);
 
@@ -107,7 +107,7 @@ describe("Should do IL Protection", function() {
     await router.addLiquidity(vader.address, '1000', asset.address, '1000', {from:acc1})
 
 
-    expect(BN2Str(await usdv.balanceOf(acc1))).to.equal('900');
+    expect(BN2Str(await usdv.balanceOf(acc1))).to.equal('908');
     for(let i = 0; i<9; i++){
       await router.swap('100', asset.address, usdv.address, {from:acc1})
     }

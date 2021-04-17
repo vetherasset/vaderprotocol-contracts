@@ -70,9 +70,9 @@ describe("Deploy Rewards", function() {
     await router.addLiquidity(usdv.address, '1000', asset.address, '1000', {from:acc1})
     
     expect(BN2Str(await vader.getDailyEmission())).to.equal('7');
-    expect(BN2Str(await usdv.reserveUSDV())).to.equal('5');
-    expect(BN2Str(await router.reserveUSDV())).to.equal('5');
-    expect(BN2Str(await router.reserveVADER())).to.equal('5');
+    expect(BN2Str(await usdv.reserveUSDV())).to.equal('2');
+    expect(BN2Str(await router.reserveUSDV())).to.equal('2');
+    expect(BN2Str(await router.reserveVADER())).to.equal('3');
     
   });
 });
@@ -80,7 +80,7 @@ describe("Deploy Rewards", function() {
 describe("Should do pool rewards", function() {
 
   it("Swap anchor, get rewards", async function() {
-    let r = '5';
+    let r = '3';
     expect(BN2Str(await router.reserveVADER())).to.equal(r);
     expect(await router.emitting()).to.equal(true);
     expect(BN2Str(await vader.balanceOf(router.address))).to.equal(r);
@@ -89,14 +89,14 @@ describe("Should do pool rewards", function() {
     expect(BN2Str(await vault.getBaseAmount(anchor.address))).to.equal('1000');
     let tx = await router.swap('100', vader.address, anchor.address, {from:acc1})
     expect(BN2Str(tx.logs[0].args.amount)).to.equal(r);
-    expect(BN2Str(await vault.getBaseAmount(anchor.address))).to.equal('1105');
+    expect(BN2Str(await vault.getBaseAmount(anchor.address))).to.equal('1103');
     expect(BN2Str(await router.reserveVADER())).to.equal('0');
     expect(BN2Str(await router.getRewardShare(anchor.address))).to.equal('0');
     expect(BN2Str(await router.getReducedShare('0'))).to.equal('0');
   });
 
   it("Swap asset, get rewards", async function() {
-    let r = '5';
+    let r = '2';
     await router.curatePool(asset.address, {from:acc1})
     expect(BN2Str(await router.reserveUSDV())).to.equal(r);
     expect(await router.emitting()).to.equal(true);
@@ -105,8 +105,8 @@ describe("Should do pool rewards", function() {
     expect(BN2Str(await router.getReducedShare(r))).to.equal(r);
     expect(BN2Str(await vault.getBaseAmount(asset.address))).to.equal('1000');
     let tx = await router.swap('100', usdv.address, asset.address, {from:acc1})
-    expect(BN2Str(tx.logs[0].args.amount)).to.equal('9');
-    expect(BN2Str(await vault.getBaseAmount(asset.address))).to.equal('1109');
+    expect(BN2Str(tx.logs[0].args.amount)).to.equal('6');
+    expect(BN2Str(await vault.getBaseAmount(asset.address))).to.equal('1106');
     expect(BN2Str(await router.reserveUSDV())).to.equal('0');
     expect(BN2Str(await router.getRewardShare(asset.address))).to.equal('0');
     expect(BN2Str(await router.getReducedShare('0'))).to.equal('0');
