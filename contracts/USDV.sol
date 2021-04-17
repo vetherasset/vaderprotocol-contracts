@@ -186,11 +186,6 @@ contract USDV is iERC20 {
         uint _safeAmount = getFunds(amount);
         return _convert(member, _safeAmount);
     }
-    // // EOAs to convert
-    // function convertToUSDVDirectly(uint amount) public returns(uint convertedAmount) {
-    //     uint _safeAmount = getFunds(amount);
-    //     return _convert(tx.origin, _safeAmount);
-    // }
     function getFunds(uint amount) public returns(uint safeAmount){
         uint _startBal = iERC20(VADER).balanceOf(address(this));
         if(tx.origin==msg.sender){
