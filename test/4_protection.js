@@ -62,7 +62,7 @@ describe("Deploy Protection", function() {
     await vether.approve(vader.address, '7400', {from:acc1})
     await vader.upgrade(BN2Str(7400), {from:acc1}) 
 
-    await usdv.convertToUSDVDirectly(BN2Str(1000), {from:acc1})
+    await usdv.convertToUSDV(BN2Str(1000), {from:acc1})
 
     await router.addLiquidity(vader.address, '1000', anchor.address, '1000', {from:acc1})
 

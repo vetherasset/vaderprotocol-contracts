@@ -75,7 +75,7 @@ describe("Deploy Router", function() {
     await asset2.transfer(acc1, BN2Str(2000))
     await asset2.approve(router.address, BN2Str(one), {from:acc1})
 
-    await usdv.convertToUSDVDirectly(BN2Str(3000), {from:acc1})
+    await usdv.convertToUSDV(BN2Str(3000), {from:acc1})
     // await usdv.withdrawToUSDV('10000', {from:acc1})
 
     expect(await router.DAO()).to.equal(acc0);
@@ -171,6 +171,13 @@ it("Swap to Other Anchor", async function() {
   expect(BN2Str(await asset2.balanceOf(acc1))).to.equal('1125');
 });
 
+});
+
+describe("Should Swap Above Limit", function() {
+  it("Fail when swap above limit", async function() {
+    await truffleAssert.reverts(router.swapWithLimit('250', usdv.address, asset.address, '1', {from:acc1}))
+  });
+  
 });
 
 describe("Should remove liquidity", function() {

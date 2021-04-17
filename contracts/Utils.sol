@@ -156,7 +156,7 @@ contract Utils {
 
     //====================================CORE-MATH====================================//
 
-    function calcPart(uint bp, uint total) public pure returns (uint part){
+    function calcPart(uint bp, uint total) public pure returns (uint){
         // 10,000 basis points = 100.00%
         require((bp <= 10000) && (bp >= 0), "Must be correct BP");
         return calcShare(bp, 10000, total);
@@ -170,21 +170,25 @@ contract Utils {
         return share;
     }
 
-    function calcSwapOutput(uint x, uint X, uint Y) public pure returns (uint output){
+    function calcSwapOutput(uint x, uint X, uint Y) public pure returns (uint){
         // y = (x * X * Y )/(x + X)^2
         uint numerator = (x * X * Y);
         uint denominator = (x + X) * (x + X);
         return (numerator / denominator);
     }
 
-    function calcSwapFee(uint x, uint X, uint Y) public pure returns (uint output){
-        // y = (x * x * Y) / (x + X)^2
+    function calcSwapFee(uint x, uint X, uint Y) public pure returns (uint){
+        // fee = (x * x * Y) / (x + X)^2
         uint numerator = (x * x * Y);
         uint denominator = (x + X) * (x + X);
         return (numerator / denominator);
     }
+    function calcSwapSlip(uint x, uint X) public pure returns (uint){
+        // slip = (x) / (x + X)
+        return (x*10000) / (x + X);
+    }
 
-    function calcLiquidityUnits(uint b, uint B, uint t, uint T, uint P) public view returns (uint units){
+    function calcLiquidityUnits(uint b, uint B, uint t, uint T, uint P) public view returns (uint){
         if(P == 0){
             return b;
         } else {
@@ -199,7 +203,7 @@ contract Utils {
         }
     }
 
-    function getSlipAdustment(uint b, uint B, uint t, uint T) public view returns (uint slipAdjustment){
+    function getSlipAdustment(uint b, uint B, uint t, uint T) public view returns (uint){
         // slipAdjustment = (1 - ABS((B t - b T)/((2 b + B) (t + T))))
         // 1 - ABS(part1 - part2)/(part3 * part4))
         uint part1 = B * t;
@@ -216,7 +220,7 @@ contract Utils {
         return one - (numerator * one) / denominator; // Multiply by 10**18
     }
 
-    function calcAsymmetricShare(uint u, uint U, uint A) public pure returns (uint share){
+    function calcAsymmetricShare(uint u, uint U, uint A) public pure returns (uint){
         // share = (u * U * (2 * A^2 - 2 * U * u + U^2))/U^3
         // (part1 * (part2 - part3 + part4)) / part5
         uint part1 = (u * A);

@@ -86,6 +86,10 @@ contract Router {
       //=======================================SWAP===========================================//
     
     function swap(uint inputAmount, address inputToken, address outputToken) public returns (uint outputAmount){
+        return swapWithLimit(inputAmount, inputToken, outputToken, 10000);
+    }
+
+    function swapWithLimit(uint inputAmount, address inputToken, address outputToken, uint slipLimit) public returns (uint outputAmount){
         address _member = msg.sender;
         moveTokenToVault(inputToken, inputAmount);
         address _base;
@@ -96,17 +100,21 @@ contract Router {
         }
         if (isBase(outputToken)) {
             // Token -> BASE
+            require(iUTILS(UTILS()).calcSwapSlip(inputAmount, iVAULT(VAULT).getTokenAmount(inputToken)) <= slipLimit);
             outputAmount = iVAULT(VAULT).swap(_base, inputToken, _member, true);
             _handlePoolReward(_base, inputToken);
             _handleAnchorPriceUpdate(inputToken);
         } else if (isBase(inputToken)) {
             // BASE -> Token
+            require(iUTILS(UTILS()).calcSwapSlip(inputAmount, iVAULT(VAULT).getBaseAmount(outputToken)) <= slipLimit);
             outputAmount = iVAULT(VAULT).swap(_base, outputToken, _member, false);
             _handlePoolReward(_base, outputToken);
             _handleAnchorPriceUpdate(outputToken);
         } else if (!isBase(inputToken) && !isBase(outputToken)) {
             // Token -> Token
+            require(iUTILS(UTILS()).calcSwapSlip(inputAmount, iVAULT(VAULT).getTokenAmount(inputToken)) <= slipLimit);
             iVAULT(VAULT).swap(_base, inputToken, VAULT, true);
+            require(iUTILS(UTILS()).calcSwapSlip(inputAmount, iVAULT(VAULT).getBaseAmount(outputToken)) <= slipLimit);
             outputAmount = iVAULT(VAULT).swap(_base, outputToken, _member, false);
             _handlePoolReward(_base, inputToken);
             _handlePoolReward(_base, outputToken);

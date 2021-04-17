@@ -61,7 +61,7 @@ describe("Deploy Rewards", function() {
     await vether.approve(vader.address, '7400', {from:acc1})
     await vader.upgrade(BN2Str(7400), {from:acc1}) 
 
-    await usdv.convertToUSDVDirectly(BN2Str(1100), {from:acc1})
+    await usdv.convertToUSDV(BN2Str(1100), {from:acc1})
     // await usdv.withdrawToUSDV('10000', {from:acc1})
     await asset.transfer(acc1, BN2Str(2000))
     await asset.approve(router.address, BN2Str(one), {from:acc1})

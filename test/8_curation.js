@@ -69,7 +69,7 @@ describe("Deploy Router", function() {
     await asset3.transfer(acc1, BN2Str(2000))
     await asset3.approve(router.address, BN2Str(one), {from:acc1})
 
-    await usdv.convertToUSDVDirectly(BN2Str(3000), {from:acc1})
+    await usdv.convertToUSDV(BN2Str(3000), {from:acc1})
     await usdv.transfer(acc0, '1', {from:acc1})
     await usdv.transfer(acc1, '1', {from:acc0})
 

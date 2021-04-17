@@ -60,8 +60,8 @@ describe("Deploy DAO", function() {
     await vether.approve(vader.address, '6000', {from:acc1})
     await vader.upgrade('1000', {from:acc1}) 
 
-    await usdv.convertToUSDVDirectly('1000', {from:acc0})
-    await usdv.convertToUSDVDirectly('1000', {from:acc1})
+    await usdv.convertToUSDV('1000', {from:acc0})
+    await usdv.convertToUSDV('1000', {from:acc1})
 
     await usdv.deposit('100', {from:acc0})
     await usdv.deposit('100', {from:acc1})
