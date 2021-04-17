@@ -183,13 +183,22 @@ contract USDV is iERC20 {
     }
     // Contracts to convert for members
     function convertToUSDVForMember(address member, uint amount) public returns(uint) {
-        require(iERC20(VADER).transferFrom(msg.sender, address(this), amount));   // Get funds
-        return _convert(member, amount);
+        uint _safeAmount = getFunds(amount);
+        return _convert(member, _safeAmount);
     }
-    // EOAs to convert
-    function convertToUSDVDirectly(uint amount) public returns(uint) {
-        require(iERC20(VADER).transferTo(address(this), amount));   // Get funds
-        return _convert(tx.origin, amount);
+    // // EOAs to convert
+    // function convertToUSDVDirectly(uint amount) public returns(uint convertedAmount) {
+    //     uint _safeAmount = getFunds(amount);
+    //     return _convert(tx.origin, _safeAmount);
+    // }
+    function getFunds(uint amount) public returns(uint safeAmount){
+        uint _startBal = iERC20(VADER).balanceOf(address(this));
+        if(tx.origin==msg.sender){
+            require(iERC20(VADER).transferTo(address(this), amount));
+        }else{
+            require(iERC20(VADER).transferFrom(msg.sender, address(this), amount));
+        }
+        return (iERC20(VADER).balanceOf(address(this)) - _startBal);
     }
     // Internal convert
     function _convert(address _member, uint amount) internal flashProof returns(uint _convertAmount){
@@ -280,7 +289,6 @@ contract USDV is iERC20 {
         emit MemberWithdraws(_member, _amount, totalFunds);
         return _amount;
     }
-
 
     //============================== HELPERS ================================//
 
