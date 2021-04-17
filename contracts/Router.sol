@@ -48,6 +48,7 @@ contract Router {
     // Init
     function init(address _vader, address _usdv, address _vault) public {
         require(inited == false);
+        inited = true;
         VADER = _vader;
         USDV = _usdv;
         VAULT = _vault;
@@ -98,7 +99,11 @@ contract Router {
 
     function swapWithSynthsWithLimit(uint inputAmount, address inputToken, bool inSynth, address outputToken, bool outSynth, uint slipLimit) public returns (uint outputAmount){
         address _member = msg.sender;
-        moveTokenToVault(inputToken, inputAmount);
+        if(!inSynth){
+            moveTokenToVault(inputToken, inputAmount);
+        } else {
+            moveTokenToVault(iVAULT(VAULT).getSynth(inputToken), inputAmount);
+        }
         address _base;
         if(iVAULT(VAULT).isAnchor(inputToken) || iVAULT(VAULT).isAnchor(outputToken)) {
             _base = VADER;
@@ -357,7 +362,7 @@ contract Router {
 
     // Safe transferFrom in case token charges transfer fees
     function moveTokenToVault(address _token, uint _amount) internal returns(uint safeAmount) {
-        if(_token == VADER || _token == USDV){
+        if(_token == VADER || _token == USDV || iVAULT(VAULT).isSynth(_token)){
             safeAmount = _amount;
             if(tx.origin==msg.sender){
                 iERC20(_token).transferTo(VAULT, _amount);

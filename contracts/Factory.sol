@@ -24,17 +24,15 @@ contract Factory {
     // Minting event
     constructor(){
     }
-    function init(address _vader, address _usdv, address _vault) public {
+    function init(address _vault) public {
         require(inited == false);
-        VADER = _vader;
-        USDV = _usdv;
+        inited = true;
         VAULT = _vault;
     }
 
     //Create a synth asset
-    function deploySynth(address token) public returns(address synth){
+    function deploySynth(address token) public onlyVAULT returns(address synth){
         require(getSynth(token) == address(0), "CreateErr");
-        require(token != VADER || token != USDV);
         Synth newSynth;
         newSynth = new Synth(token);  
         synth = address(newSynth);

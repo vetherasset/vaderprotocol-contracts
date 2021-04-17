@@ -44,6 +44,7 @@ contract DAO {
     }
     function init(address _vader, address _usdv) public {
         require(inited == false);
+inited = true;
         VADER = _vader;
         USDV = _usdv;
         coolOffPeriod = 1;

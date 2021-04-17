@@ -27,8 +27,8 @@ contract Synth is iERC20 {
     // Minting event
     constructor(address _token){
         FACTORY = msg.sender;
-        string memory synthName = " - VaderSynth";
-        string memory synthSymbol = ".vdr";
+        string memory synthName = " - vSynth";
+        string memory synthSymbol = ".v";
         name = string(abi.encodePacked(iERC20(_token).name(), synthName));
         symbol = string(abi.encodePacked(iERC20(_token).symbol(), synthSymbol));
     }

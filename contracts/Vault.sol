@@ -28,7 +28,6 @@ contract Vault {
     mapping(address => mapping(address => uint)) public mapTokenMember_Units;
     mapping(address => uint) public mapToken_baseAmount;
     mapping(address => uint) public mapToken_tokenAmount;
-    mapping(address => address) public mapToken_Synth;
 
     // Events
     event AddLiquidity(address indexed member, address indexed base, uint baseAmount, address indexed token, uint tokenAmount, uint liquidityUnits);
@@ -43,6 +42,7 @@ contract Vault {
     // Init
     function init(address _vader, address _usdv, address _router, address _factory) public {
         require(inited == false);
+inited = true;
         VADER = _vader;
         USDV = _usdv;
         ROUTER = _router;
@@ -131,8 +131,8 @@ contract Vault {
     //======================================SYNTH=========================================//
 
     function deploySynth(address token) public {
-        require(getSynth(token) == address(0));
-        mapToken_Synth[token] = iFACTORY(FACTORY).deploySynth(token);
+        require(token != VADER || token != USDV);
+        iFACTORY(FACTORY).deploySynth(token);
     }
 
     function mintSynth(address base, address token, address member) public returns (uint outputAmount){
@@ -148,8 +148,8 @@ contract Vault {
     }
     function burnSynth(address base, address token, address member) public returns (uint outputBase){
         uint _actualInputSynth = iERC20(getSynth(token)).balanceOf(address(this));
-        iERC20(getSynth(token)).burn(_actualInputSynth);
         uint _unitsToDelete = iUTILS(UTILS()).calcShare(_actualInputSynth, iERC20(getSynth(token)).totalSupply(), mapTokenMember_Units[token][address(this)]);
+        iERC20(getSynth(token)).burn(_actualInputSynth);
         mapTokenMember_Units[token][address(this)] -= _unitsToDelete;
         mapToken_Units[token] -= _unitsToDelete;
         outputBase = iUTILS(UTILS()).calcSwapOutput(_actualInputSynth, mapToken_tokenAmount[token], mapToken_baseAmount[token]);
@@ -159,8 +159,11 @@ contract Vault {
         return outputBase;
     }
 
-    function getSynth(address token) public returns (address synth){
+    function getSynth(address token) public returns (address){
         return iFACTORY(FACTORY).getSynth(token);
+    }
+    function isSynth(address token) public returns (bool){
+        return iFACTORY(FACTORY).isSynth(token);
     }
 
     

@@ -68,6 +68,7 @@ contract USDV is iERC20 {
     }
     function init(address _vader, address _router) public {
         require(inited == false);
+inited = true;
         VADER = _vader;
         ROUTER = _router;
         iERC20(VADER).approve(ROUTER, type(uint).max);
