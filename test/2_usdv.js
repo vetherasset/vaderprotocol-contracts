@@ -46,7 +46,7 @@ before(async function() {
 describe("Deploy USDV", function() {
   it("Should deploy", async function() {
     await vader.init(vether.address, usdv.address, utils.address)
-    await usdv.init(vader.address, router.address)
+    await usdv.init(vader.address, router.address, vault.address)
     await router.init(vader.address, usdv.address, vault.address);
     await vault.init(vader.address, usdv.address, router.address, router.address);
     await attack.init(vader.address, usdv.address)
@@ -69,22 +69,22 @@ describe("Deploy USDV", function() {
 describe("Convert and redeem", function() {
 
   it("Should convert acc1", async function() {
-    await vader.approve(usdv.address, '1000', {from:acc1}) 
-    await usdv.convertToUSDV('250', {from:acc1})
+    // await vader.approve(usdv.address, '1000', {from:acc1}) 
+    await usdv.convert('250', {from:acc1})
     expect(BN2Str(await vader.totalSupply())).to.equal('3150');
     expect(BN2Str(await vader.balanceOf(acc1))).to.equal('3150');
     expect(BN2Str(await usdv.totalSupply())).to.equal('250');
     expect(BN2Str(await usdv.balanceOf(acc1))).to.equal('250');
   });
   it("Should convert for member", async function() {
-    await usdv.convertToUSDVForMember(acc1, '250', {from:acc1})
+    await usdv.convertForMember(acc1, '250', {from:acc1})
     expect(BN2Str(await vader.totalSupply())).to.equal('2900');
     expect(BN2Str(await vader.balanceOf(acc1))).to.equal('2900');
     expect(BN2Str(await usdv.totalSupply())).to.equal('500');
     expect(BN2Str(await usdv.balanceOf(acc1))).to.equal('500');
   });
   it("Should convert acc1 directly", async function() {
-    await usdv.convertToUSDV('500', {from:acc1})
+    await usdv.convert('500', {from:acc1})
     expect(BN2Str(await vader.totalSupply())).to.equal(BN2Str(2400));
     expect(BN2Str(await vader.balanceOf(acc1))).to.equal(BN2Str(2400));
     expect(BN2Str(await usdv.totalSupply())).to.equal(BN2Str(1000));
@@ -93,7 +93,7 @@ describe("Convert and redeem", function() {
   it("Should redeem", async function() {
     // await usdv.approve(usdv.address, '1000', {from:acc1}) 
     expect(BN2Str(await usdv.balanceOf(acc1))).to.equal('1000');
-    await usdv.redeemToVADER('250',{from:acc1})
+    await usdv.redeem('250',{from:acc1})
     // expect(BN2Str(await usdv.getMemberDeposit(acc1))).to.equal(BN2Str(0));
     expect(BN2Str(await usdv.totalSupply())).to.equal('750');
     expect(BN2Str(await usdv.balanceOf(acc1))).to.equal('750');
@@ -101,7 +101,7 @@ describe("Convert and redeem", function() {
     expect(BN2Str(await vader.balanceOf(acc1))).to.equal('2650');
   });
   it("Should redeem for member", async function() {
-    await usdv.redeemToVADERForMember(acc1, '250',{from:acc1})
+    await usdv.redeemForMember(acc1, '250',{from:acc1})
     // expect(BN2Str(await usdv.getMemberDeposit(acc1))).to.equal(BN2Str(0));
     expect(BN2Str(await usdv.totalSupply())).to.equal('500');
     expect(BN2Str(await usdv.balanceOf(acc1))).to.equal('500');
@@ -110,7 +110,7 @@ describe("Convert and redeem", function() {
   });
 
   it("Should convert acc1", async function() {
-    await usdv.convertToUSDV('500', {from:acc1})
+    await usdv.convert('500', {from:acc1})
     expect(BN2Str(await vader.totalSupply())).to.equal(BN2Str(2400));
     expect(BN2Str(await vader.balanceOf(acc1))).to.equal(BN2Str(2400));
     expect(BN2Str(await usdv.totalSupply())).to.equal(BN2Str(1000));
@@ -168,12 +168,12 @@ describe("Be a valid ERC-20", function() {
 describe("Member should deposit for rewards", function() {
   it("Should deposit", async function() {
     // await vader.transfer(acc3, balance/2, {from:acc1})
-    await usdv.deposit('200', {from:acc1})
+    await usdv.deposit(usdv.address, '200', {from:acc1})
     expect(BN2Str(await usdv.balanceOf(acc1))).to.equal(BN2Str(600));
     expect(BN2Str(await usdv.balanceOf(usdv.address))).to.equal(BN2Str(200));
-    expect(BN2Str(await usdv.getMemberDeposit(acc1))).to.equal(BN2Str(200));
+    expect(BN2Str(await usdv.getMemberDeposit(usdv.address, acc1))).to.equal(BN2Str(200));
     expect(await usdv.isMember(acc1)).to.equal(true);
-    expect(BN2Str(await usdv.totalFunds())).to.equal(BN2Str(200));
+    expect(BN2Str(await usdv.totalWeight())).to.equal(BN2Str(200));
   });
 // acc  | VTH | VADER  | USDV | DEP |
 // acc0 |   0 |    0 |  0   |   0 |
@@ -194,27 +194,29 @@ describe("Member should deposit for rewards", function() {
     expect(BN2Str(await usdv.reserveUSDV())).to.equal(BN2Str(400));
     expect(BN2Str(await usdv.balanceOf(usdv.address))).to.equal(BN2Str(600));
     expect(BN2Str(await vader.balanceOf(usdv.address))).to.equal(BN2Str(1400));
-    expect(BN2Str(await usdv.calcPayment(acc1))).to.equal(BN2Str(4)); // 666/100
-    expect(BN2Str(await usdv.calcCurrentPayment(acc1))).to.equal(BN2Str(16)); // * by seconds
+    expect(BN2Str(await usdv.calcPayment(usdv.address, acc1))).to.equal(BN2Str(4)); // 666/100
+    expect(BN2Str(await usdv.calcCurrentPayment(usdv.address, acc1))).to.equal(BN2Str(16)); // * by seconds
   });
   it("Should harvest", async function() {
     expect(BN2Str(await usdv.balanceOf(acc1))).to.equal(BN2Str(500));
-    expect(BN2Str(await usdv.calcCurrentPayment(acc1))).to.equal(BN2Str(16)); // * by seconds
+    expect(BN2Str(await usdv.calcCurrentPayment(usdv.address, acc1))).to.equal(BN2Str(16)); // * by seconds
+    expect(BN2Str(await usdv.calcPayment(usdv.address, acc1))).to.equal(BN2Str(4)); // * by seconds
+
     expect(BN2Str(await usdv.balanceOf(usdv.address))).to.equal(BN2Str(600));
     expect(BN2Str(await usdv.reserveUSDV())).to.equal(BN2Str(400));
     expect(BN2Str(await vader.balanceOf(usdv.address))).to.equal(BN2Str(1400));
     expect(BN2Str(await router.getAnchorPrice())).to.equal('1000000000000000000')
     expect(BN2Str(await router.getVADERAmount('100'))).to.equal('100')
 
-    await usdv.harvest({from:acc1})
+    await usdv.harvest(usdv.address, {from:acc1})
     expect(BN2Str(await usdv.balanceOf(acc1))).to.equal(BN2Str(520));
     expect(BN2Str(await usdv.balanceOf(usdv.address))).to.equal(BN2Str(1047));
   });
   it("Should withdraw", async function() {
     expect(BN2Str(await usdv.balanceOf(acc1))).to.equal(BN2Str(520));
-    expect(BN2Str(await usdv.getMemberDeposit(acc1))).to.equal(BN2Str(200));
+    expect(BN2Str(await usdv.getMemberDeposit(usdv.address, acc1))).to.equal(BN2Str(200));
     expect(BN2Str(await usdv.balanceOf(usdv.address))).to.equal(BN2Str(1047));
-    let tx = await usdv.withdraw("10000",{from:acc1})
+    let tx = await usdv.withdraw(usdv.address, "10000",{from:acc1})
     expect(BN2Str(await usdv.balanceOf(acc1))).to.equal(BN2Str(728));
     expect(BN2Str(await usdv.balanceOf(usdv.address))).to.equal(BN2Str(1383));
   });

@@ -42,7 +42,7 @@ contract Vault {
     // Init
     function init(address _vader, address _usdv, address _router, address _factory) public {
         require(inited == false);
-inited = true;
+        inited = true;
         VADER = _vader;
         USDV = _usdv;
         ROUTER = _router;
