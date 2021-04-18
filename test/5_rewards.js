@@ -45,7 +45,7 @@ before(async function() {
 describe("Deploy Rewards", function() {
   it("Should have right reserves", async function() {
     await vader.init(vether.address, usdv.address, utils.address)
-    await usdv.init(vader.address, router.address)
+    await usdv.init(vader.address, router.address, vault.address)
     await router.init(vader.address, usdv.address, vault.address);
     await vault.init(vader.address, usdv.address, router.address, router.address);
 
@@ -61,7 +61,7 @@ describe("Deploy Rewards", function() {
     await vether.approve(vader.address, '7400', {from:acc1})
     await vader.upgrade(BN2Str(7400), {from:acc1}) 
 
-    await usdv.convertToUSDV(BN2Str(1100), {from:acc1})
+    await usdv.convert(BN2Str(1100), {from:acc1})
     // await usdv.withdrawToUSDV('10000', {from:acc1})
     await asset.transfer(acc1, BN2Str(2000))
     await asset.approve(router.address, BN2Str(one), {from:acc1})

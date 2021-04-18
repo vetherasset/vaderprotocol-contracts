@@ -49,7 +49,7 @@ describe("Deploy Protection", function() {
     await vader.startEmissions()
 
     await vader.init(vether.address, usdv.address, utils.address)
-    await usdv.init(vader.address, router.address)
+    await usdv.init(vader.address, router.address, vault.address)
     await router.init(vader.address, usdv.address, vault.address);
     await vault.init(vader.address, usdv.address, router.address, router.address);
 
@@ -62,7 +62,7 @@ describe("Deploy Protection", function() {
     await vether.approve(vader.address, '7400', {from:acc1})
     await vader.upgrade(BN2Str(7400), {from:acc1}) 
 
-    await usdv.convertToUSDV(BN2Str(1000), {from:acc1})
+    await usdv.convert(BN2Str(1000), {from:acc1})
 
     await router.addLiquidity(vader.address, '1000', anchor.address, '1000', {from:acc1})
 

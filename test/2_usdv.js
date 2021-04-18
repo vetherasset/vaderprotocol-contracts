@@ -165,7 +165,7 @@ describe("Be a valid ERC-20", function() {
 
 });
 
-describe("Member should deposit for rewards", function() {
+describe("Member should deposit USDV for rewards", function() {
   it("Should deposit", async function() {
     // await vader.transfer(acc3, balance/2, {from:acc1})
     await usdv.deposit(usdv.address, '200', {from:acc1})

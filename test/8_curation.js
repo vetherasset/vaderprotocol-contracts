@@ -44,7 +44,7 @@ before(async function() {
 describe("Deploy Router", function() {
   it("Should deploy", async function() {
     await vader.init(vether.address, usdv.address, utils.address)
-    await usdv.init(vader.address, router.address)
+    await usdv.init(vader.address, router.address, vault.address)
     await router.init(vader.address, usdv.address, vault.address);
     await vault.init(vader.address, usdv.address, router.address, router.address);
 
@@ -69,7 +69,7 @@ describe("Deploy Router", function() {
     await asset3.transfer(acc1, BN2Str(2000))
     await asset3.approve(router.address, BN2Str(one), {from:acc1})
 
-    await usdv.convertToUSDV(BN2Str(3000), {from:acc1})
+    await usdv.convert(BN2Str(3000), {from:acc1})
     await usdv.transfer(acc0, '1', {from:acc1})
     await usdv.transfer(acc1, '1', {from:acc0})
 

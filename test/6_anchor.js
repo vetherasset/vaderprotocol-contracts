@@ -51,7 +51,7 @@ describe("Deploy Anchor", function() {
   it("Should have right prices", async function() {
     await utils.init(vault.address)
     await vader.init(vether.address, usdv.address, utils.address)
-    await usdv.init(vader.address, router.address)
+    await usdv.init(vader.address, router.address, vault.address)
     await router.init(vader.address, usdv.address, vault.address);
     await vault.init(vader.address, usdv.address, router.address, router.address);
     

@@ -52,7 +52,7 @@ before(async function() {
 describe("Deploy Router", function() {
   it("Should deploy", async function() {
     await vader.init(vether.address, usdv.address, utils.address)
-    await usdv.init(vader.address, router.address)
+    await usdv.init(vader.address, router.address, vault.address)
     await router.init(vader.address, usdv.address, vault.address);
     await vault.init(vader.address, usdv.address, router.address, router.address);
 
@@ -75,7 +75,7 @@ describe("Deploy Router", function() {
     await asset2.transfer(acc1, BN2Str(2000))
     await asset2.approve(router.address, BN2Str(one), {from:acc1})
 
-    await usdv.convertToUSDV(BN2Str(3000), {from:acc1})
+    await usdv.convert(BN2Str(3000), {from:acc1})
     // await usdv.withdrawToUSDV('10000', {from:acc1})
 
     expect(await router.DAO()).to.equal(acc0);

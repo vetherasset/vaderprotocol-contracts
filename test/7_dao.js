@@ -48,7 +48,7 @@ describe("Deploy DAO", function() {
   it("Should deploy right", async function() {
     await utils.init(vault.address)
     await vader.init(vether.address, usdv.address, utils.address)
-    await usdv.init(vader.address, router.address)
+    await usdv.init(vader.address, router.address, vault.address)
     await router.init(vader.address, usdv.address, vault.address);
     await vault.init(vader.address, usdv.address, router.address, router.address);
     await dao.init(vader.address, usdv.address);
@@ -60,8 +60,8 @@ describe("Deploy DAO", function() {
     await vether.approve(vader.address, '6000', {from:acc1})
     await vader.upgrade('1000', {from:acc1}) 
 
-    await usdv.convertToUSDV('1000', {from:acc0})
-    await usdv.convertToUSDV('1000', {from:acc1})
+    await usdv.convert('1000', {from:acc0})
+    await usdv.convert('1000', {from:acc1})
 
     await usdv.deposit('100', {from:acc0})
     await usdv.deposit('100', {from:acc1})

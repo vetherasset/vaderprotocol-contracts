@@ -25,8 +25,6 @@ contract USDV is iERC20 {
     uint public currentEra;
     uint public nextEraTime;
     uint public erasToEarn;
-    uint public totalWeight;
-    uint public minimumDepositTime;
     uint public minGrantTime;
     uint public lastGranted;
     uint public blockDelay;
@@ -35,17 +33,22 @@ contract USDV is iERC20 {
     address public ROUTER;
     address public VAULT;
 
+    uint public minimumDepositTime;
+    uint public totalWeight;
+    uint public totalRewards;
+
     mapping(address => bool) private _isMember; // Is Member
     mapping(address => uint) private mapToken_totalFunds;
     mapping(address => mapping(address => uint)) private mapMemberToken_deposit;
+    mapping(address => mapping(address => uint)) private mapMemberToken_reward;
     mapping(address => mapping(address => uint)) private mapMemberToken_weight;
     mapping(address => mapping(address => uint)) private mapMemberToken_lastTime;
     mapping(address => uint) public lastBlock;
 
     // Events
     event MemberDeposits(address indexed token, address indexed member, uint newDeposit, uint totalDeposit, uint weight, uint totalWeight);
-    event MemberWithdraws(address indexed token, address indexed member, uint amount, uint totalWeight);
-    event MemberHarvests(address indexed token, address indexed member, uint amount);
+    event MemberWithdraws(address indexed token, address indexed member, uint amount, uint weight, uint totalWeight);
+    event MemberHarvests(address indexed token, address indexed member, uint amount, uint weight, uint totalWeight);
 
     // Only DAO can execute
     modifier onlyDAO() {
@@ -214,6 +217,14 @@ contract USDV is iERC20 {
     }
 
     //======================================DEPOSITS========================================//
+    // Users deposit USDV or SYNTHS
+    // Work out weight in USDV
+    // When harvest, allocate them rewards, deduct from reserve (but do not send funds)
+    // When withdraw, do a final harvest, then:
+    // 1) Add rewards to principle, if SYNTH, swap to synth first
+    // 2) send them all
+
+
     // USDV holders to deposit for Interest Payments
     function deposit(address token, uint amount) public {
         depositForMember(token, msg.sender, amount);
@@ -223,12 +234,6 @@ contract USDV is iERC20 {
         require(token==address(this) || iVAULT(VAULT).isSynth(token));
         getFunds(token, amount);
         _deposit(token, member, amount);
-    }
-    // Harvest, then re-invest
-    function harvestAndDeposit(address token) public {
-        address member = msg.sender;
-        uint _payment = calcCurrentPayment(token, member);
-        _deposit(token, member, _payment);
     }
     function _deposit(address _token, address _member, uint _amount) internal {
         if (!isMember(_member)) {
@@ -250,13 +255,22 @@ contract USDV is iERC20 {
 
     //======================================HARVEST & WITHDRAW========================================//
 
-    // Harvest, get rewards immediately
+    // Harvest, get payment, allocate, increase weight
     function harvest(address token) public {
-        address member = msg.sender;
-        uint _payment = calcCurrentPayment(token, member);
-        mapMemberToken_lastTime[member][token] = block.timestamp;
-        sendFunds(token, member, _payment);
-        emit MemberHarvests(token, member, _payment);
+        address _member = msg.sender;
+        uint _payment = calcCurrentPayment(token, _member);
+        mapMemberToken_lastTime[_member][token] = block.timestamp;
+        mapMemberToken_reward[_member][token] += _payment;
+        totalRewards += _payment;
+        uint _weight;
+        if(token==address(this)){
+            _weight = _payment;
+        } else {
+            _weight = iUTILS(UTILS()).calcValueInBase(iSYNTH(token).TOKEN(), _payment);
+        }
+        mapMemberToken_weight[_member][token] += _weight;
+        totalWeight += _weight;
+        emit MemberHarvests(token, _member, _payment, _weight, totalWeight);
     }
 
     // Get the payment owed for a member
@@ -280,25 +294,31 @@ contract USDV is iERC20 {
     // Members to withdraw
     function withdraw(address token, uint basisPoints) public returns(uint redeemedAmount) {
         address _member = msg.sender;
-        redeemedAmount = _processWithdraw(token, _member, basisPoints);                         // get USDV to withdraw
+        redeemedAmount = _processWithdraw(token, _member, basisPoints);                         // get amount to withdraw
         sendFunds(token, _member, redeemedAmount);
         return redeemedAmount;
     }
-    function _processWithdraw(address _token, address _member, uint basisPoints) internal returns(uint _amount) {
+    function _processWithdraw(address _token, address _member, uint _basisPoints) internal returns(uint _amount) {
         require((block.timestamp - mapMemberToken_lastTime[_member][_token]) >= minimumDepositTime, "DepositTime");    // stops attacks
-        harvestAndDeposit(_token);                                                    // harvest first
-        _amount = ((mapMemberToken_deposit[_member][_token] * basisPoints)) / 10000;         // In Basis Points
-        mapMemberToken_deposit[_member][_token] -= _amount;                                  // reduce for member
-        mapToken_totalFunds[_token] -= _amount;
+        uint _reward = ((mapMemberToken_reward[_member][_token] * _basisPoints)) / 10000; 
+        mapMemberToken_reward[_member][_token] -= _reward;
+        totalRewards -= _reward;
+        if(_token!=address(this)){
+            iERC20(_token).transfer(VAULT, _reward);
+            _reward = iVAULT(VAULT).mintSynth(address(this), iSYNTH(_token).TOKEN(), address(this));
+        }
+        uint _principle = ((mapMemberToken_deposit[_member][_token] * _basisPoints)) / 10000; 
+        mapMemberToken_deposit[_member][_token] -= _principle;                                   
+        mapToken_totalFunds[_token] -= _principle;
         uint _weight;
         if(_token==address(this)){
-            _weight = _amount;
+            _weight = _principle + _reward;
         } else {
-            _weight = iUTILS(UTILS()).calcValueInBase(iSYNTH(_token).TOKEN(), _amount);
+            _weight = iUTILS(UTILS()).calcValueInBase(iSYNTH(_token).TOKEN(), _principle + _reward);
         }
-        totalWeight -= _weight;                                                             // reduce for total
-        emit MemberWithdraws(_token, _member, _amount, totalWeight);
-        return _amount;
+        totalWeight -= iUTILS(UTILS()).calcShare(_weight, totalWeight, totalWeight);                                                           // reduce for total
+        emit MemberWithdraws(_token, _member, _amount, _weight, totalWeight);
+        return _principle + _reward;
     }
 
     //============================== ASSETS ================================//
