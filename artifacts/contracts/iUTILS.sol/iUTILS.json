@@ -7,17 +7,17 @@
       "inputs": [
         {
           "internalType": "uint256",
-          "name": "",
+          "name": "u",
           "type": "uint256"
         },
         {
           "internalType": "uint256",
-          "name": "",
+          "name": "U",
           "type": "uint256"
         },
         {
           "internalType": "uint256",
-          "name": "",
+          "name": "A",
           "type": "uint256"
         }
       ],
@@ -36,22 +36,22 @@
       "inputs": [
         {
           "internalType": "uint256",
-          "name": "",
+          "name": "B0",
           "type": "uint256"
         },
         {
           "internalType": "uint256",
-          "name": "",
+          "name": "T0",
           "type": "uint256"
         },
         {
           "internalType": "uint256",
-          "name": "",
+          "name": "B1",
           "type": "uint256"
         },
         {
           "internalType": "uint256",
-          "name": "",
+          "name": "T1",
           "type": "uint256"
         }
       ],
@@ -70,27 +70,27 @@
       "inputs": [
         {
           "internalType": "uint256",
-          "name": "",
+          "name": "b",
           "type": "uint256"
         },
         {
           "internalType": "uint256",
-          "name": "",
+          "name": "B",
           "type": "uint256"
         },
         {
           "internalType": "uint256",
-          "name": "",
+          "name": "t",
           "type": "uint256"
         },
         {
           "internalType": "uint256",
-          "name": "",
+          "name": "T",
           "type": "uint256"
         },
         {
           "internalType": "uint256",
-          "name": "",
+          "name": "P",
           "type": "uint256"
         }
       ],
@@ -109,12 +109,12 @@
       "inputs": [
         {
           "internalType": "uint256",
-          "name": "",
+          "name": "bp",
           "type": "uint256"
         },
         {
           "internalType": "uint256",
-          "name": "",
+          "name": "total",
           "type": "uint256"
         }
       ],
@@ -133,17 +133,17 @@
       "inputs": [
         {
           "internalType": "uint256",
-          "name": "",
+          "name": "part",
           "type": "uint256"
         },
         {
           "internalType": "uint256",
-          "name": "",
+          "name": "total",
           "type": "uint256"
         },
         {
           "internalType": "uint256",
-          "name": "",
+          "name": "amount",
           "type": "uint256"
         }
       ],
@@ -162,17 +162,17 @@
       "inputs": [
         {
           "internalType": "uint256",
-          "name": "",
+          "name": "x",
           "type": "uint256"
         },
         {
           "internalType": "uint256",
-          "name": "",
+          "name": "X",
           "type": "uint256"
         },
         {
           "internalType": "uint256",
-          "name": "",
+          "name": "Y",
           "type": "uint256"
         }
       ],
@@ -191,17 +191,17 @@
       "inputs": [
         {
           "internalType": "uint256",
-          "name": "",
+          "name": "x",
           "type": "uint256"
         },
         {
           "internalType": "uint256",
-          "name": "",
+          "name": "X",
           "type": "uint256"
         },
         {
           "internalType": "uint256",
-          "name": "",
+          "name": "Y",
           "type": "uint256"
         }
       ],
@@ -220,12 +220,12 @@
       "inputs": [
         {
           "internalType": "uint256",
-          "name": "",
+          "name": "x",
           "type": "uint256"
         },
         {
           "internalType": "uint256",
-          "name": "",
+          "name": "X",
           "type": "uint256"
         }
       ],
@@ -257,7 +257,7 @@
       "outputs": [
         {
           "internalType": "uint256",
-          "name": "value",
+          "name": "",
           "type": "uint256"
         }
       ],
@@ -281,7 +281,7 @@
       "outputs": [
         {
           "internalType": "uint256",
-          "name": "value",
+          "name": "",
           "type": "uint256"
         }
       ],
@@ -292,17 +292,17 @@
       "inputs": [
         {
           "internalType": "uint256",
-          "name": "",
+          "name": "b",
           "type": "uint256"
         },
         {
           "internalType": "uint256",
-          "name": "",
+          "name": "B",
           "type": "uint256"
         },
         {
           "internalType": "uint256",
-          "name": "",
+          "name": "P",
           "type": "uint256"
         }
       ],
@@ -321,12 +321,12 @@
       "inputs": [
         {
           "internalType": "address",
-          "name": "",
+          "name": "token",
           "type": "address"
         },
         {
           "internalType": "uint256",
-          "name": "",
+          "name": "amount",
           "type": "uint256"
         }
       ],
@@ -345,12 +345,12 @@
       "inputs": [
         {
           "internalType": "address",
-          "name": "",
+          "name": "token",
           "type": "address"
         },
         {
           "internalType": "uint256",
-          "name": "",
+          "name": "amount",
           "type": "uint256"
         }
       ],
@@ -369,12 +369,12 @@
       "inputs": [
         {
           "internalType": "uint256",
-          "name": "",
+          "name": "totalSupply",
           "type": "uint256"
         },
         {
           "internalType": "uint256",
-          "name": "",
+          "name": "maxSupply",
           "type": "uint256"
         }
       ],
@@ -393,22 +393,22 @@
       "inputs": [
         {
           "internalType": "uint256",
-          "name": "",
+          "name": "b",
           "type": "uint256"
         },
         {
           "internalType": "uint256",
-          "name": "",
+          "name": "B",
           "type": "uint256"
         },
         {
           "internalType": "uint256",
-          "name": "",
+          "name": "t",
           "type": "uint256"
         },
         {
           "internalType": "uint256",
-          "name": "",
+          "name": "T",
           "type": "uint256"
         }
       ],

@@ -50,7 +50,7 @@ contract Pools {
 
     //====================================LIQUIDITY=========================================//
 
-    function addLiquidity(address base, address token, address member) public returns(uint liquidityUnits){
+    function addLiquidity(address base, address token, address member) external returns(uint liquidityUnits) {
         require(token != USDV);
         uint _actualInputBase;
         if(base == VADER){
@@ -74,10 +74,10 @@ contract Pools {
         return liquidityUnits;
     }
 
-    function removeLiquidity(address base, address token, uint basisPoints) public returns (uint outputBase, uint outputToken) {
+    function removeLiquidity(address base, address token, uint basisPoints) external returns (uint outputBase, uint outputToken) {
         return _removeLiquidity(base, token, basisPoints, tx.origin);
     }
-    function removeLiquidityDirectly(address base, address token, uint basisPoints) public returns (uint outputBase, uint outputToken) {
+    function removeLiquidityDirectly(address base, address token, uint basisPoints) external returns (uint outputBase, uint outputToken) {
         return _removeLiquidity(base, token, basisPoints, msg.sender);
     }
     function _removeLiquidity(address base, address token, uint basisPoints, address member) internal returns (uint outputBase, uint outputToken) {
@@ -96,7 +96,7 @@ contract Pools {
     }
     
     //=======================================SWAP===========================================//
-    function sync(address token, address pool) public {
+    function sync(address token, address pool) external {
         uint _actualInput = getAddedAmount(token, pool);
         if (token == VADER || token == USDV){
             mapToken_baseAmount[pool] += _actualInput;
@@ -106,7 +106,7 @@ contract Pools {
         emit Sync(token, pool, _actualInput);
     }
     
-    function swap(address base, address token, address member, bool toBase) public returns (uint outputAmount){
+    function swap(address base, address token, address member, bool toBase) external returns (uint outputAmount) {
         if(toBase){
             uint _actualInput = getAddedAmount(token, token);
             outputAmount = iUTILS(UTILS()).calcSwapOutput(_actualInput, mapToken_tokenAmount[token], mapToken_baseAmount[token]);
@@ -129,12 +129,12 @@ contract Pools {
 
     //======================================SYNTH=========================================//
 
-    function deploySynth(address token) public {
+    function deploySynth(address token) external {
         require(token != VADER || token != USDV);
         iFACTORY(FACTORY).deploySynth(token);
     }
 
-    function mintSynth(address base, address token, address member) public returns (uint outputAmount){
+    function mintSynth(address base, address token, address member) external returns (uint outputAmount) {
         require(iFACTORY(FACTORY).isSynth(getSynth(token)), "!synth");
         uint _actualInputBase = getAddedAmount(base, token);
         uint _synthUnits = iUTILS(UTILS()).calcSynthUnits(_actualInputBase, mapToken_baseAmount[token], mapToken_Units[token]);
@@ -146,7 +146,7 @@ contract Pools {
         iFACTORY(FACTORY).mintSynth(getSynth(token), member, outputAmount);
         return outputAmount;
     }
-    function burnSynth(address base, address token, address member) public returns (uint outputBase){
+    function burnSynth(address base, address token, address member) external returns (uint outputBase) {
         uint _actualInputSynth = iERC20(getSynth(token)).balanceOf(address(this));
         uint _unitsToDelete = iUTILS(UTILS()).calcShare(_actualInputSynth, iERC20(getSynth(token)).totalSupply(), mapTokenMember_Units[token][address(this)]);
         iERC20(getSynth(token)).burn(_actualInputSynth);
@@ -159,10 +159,10 @@ contract Pools {
         return outputBase;
     }
 
-    function getSynth(address token) public returns (address){
+    function getSynth(address token) public returns (address) {
         return iFACTORY(FACTORY).getSynth(token);
     }
-    function isSynth(address token) public returns (bool){
+    function isSynth(address token) public returns (bool) {
         return iFACTORY(FACTORY).isSynth(token);
     }
 
@@ -215,7 +215,7 @@ contract Pools {
     function isAnchor(address token) public view returns(bool) {
         return _isAnchor[token];
     }
-    function getPoolAmounts(address token) public view returns(uint, uint) {
+    function getPoolAmounts(address token) external view returns(uint, uint) {
         return (getBaseAmount(token), getTokenAmount(token));
     }
     function getBaseAmount(address token) public view returns(uint) {
@@ -224,10 +224,10 @@ contract Pools {
     function getTokenAmount(address token) public view returns(uint) {
         return mapToken_tokenAmount[token];
     }
-    function getUnits(address token) public view returns(uint) {
+    function getUnits(address token) external view returns(uint) {
         return mapToken_Units[token];
     }
-    function getMemberUnits(address token, address member) public view returns(uint) {
+    function getMemberUnits(address token, address member) external view returns(uint) {
         return mapTokenMember_Units[token][member];
     }
     function UTILS() public view returns(address){
