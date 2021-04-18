@@ -10,31 +10,8 @@ contract Utils {
     uint private one = 10**18;
     address public POOLS;
 
-    // struct GlobalDetails {
-    //     uint totalStaked;
-    //     uint totalVolume;
-    //     uint totalFees;
-    //     uint unstakeTx;
-    //     uint stakeTx;
-    //     uint swapTx;
-    // }
-
-    // struct PoolDataStruct {
-    //     address tokenAddress;
-    //     address poolAddress;
-    //     uint genesis;
-    //     uint baseAmt;
-    //     uint tokenAmt;
-    //     uint baseAmtStaked;
-    //     uint tokenAmtStaked;
-    //     uint fees;
-    //     uint volume;
-    //     uint txCount;
-    //     uint poolUnits;
-    // }
-
     constructor () {}
-        // Can set pool
+
     function init(address _pool) public {
         if(POOLS == address(0)){
             POOLS = _pool;
@@ -45,80 +22,6 @@ contract Utils {
     function getFeeOnTransfer(uint totalSupply, uint maxSupply) public pure returns(uint){
         return calcShare(totalSupply, maxSupply, 100); // 0->100BP
     }
-
-    // function getMemberShare(address token, address member) public view returns(uint baseAmt, uint tokenAmt){
-    //     address pools = getPool(token);
-    //     uint units = iERC20(pool).balanceOf(member);
-    //     return getPoolShare(token, units);
-    // }
-
-    // function getPoolShare(address token, uint units) public view returns(uint baseAmt, uint tokenAmt){
-    //     address payable pools = getPool(token);
-    //     baseAmt = calcShare(units, iERC20(pool).totalSupply(), iPOOLS(pool).baseAmt());
-    //     tokenAmt = calcShare(units, iERC20(pool).totalSupply(), iPOOLS(pool).tokenAmt());
-    //     return (baseAmt, tokenAmt);
-    // }
-
-    // function getShareOfBaseAmount(address token, address member) public view returns(uint baseAmt){
-    //     address payable pools = getPool(token);
-    //     uint units = iERC20(pool).balanceOf(member);
-    //     return calcShare(units, iERC20(pool).totalSupply(), iPOOLS(pool).baseAmt());
-    // }
-    // function getShareOfTokenAmount(address token, address member) public view returns(uint baseAmt){
-    //     address payable pools = getPool(token);
-    //     uint units = iERC20(pool).balanceOf(member);
-    //     return calcShare(units, iERC20(pool).totalSupply(), iPOOLS(pool).tokenAmt());
-    // }
-
-    // function getPoolShareAssym(address token, uint units, bool toBase) public view returns(uint baseAmt, uint tokenAmt, uint outputAmt){
-    //     address payable pools = getPool(token);
-    //     if(toBase){
-    //         baseAmt = calcAsymmetricShare(units, iERC20(pool).totalSupply(), iPOOLS(pool).baseAmt());
-    //         tokenAmt = 0;
-    //         outputAmt = baseAmt;
-    //     } else {
-    //         baseAmt = 0;
-    //         tokenAmt = calcAsymmetricShare(units, iERC20(pool).totalSupply(), iPOOLS(pool).tokenAmt());
-    //         outputAmt = tokenAmt;
-    //     }
-    //     return (baseAmt, tokenAmt, outputAmt);
-    // }
-
-//     function getPoolAge(address token) public view returns (uint daysSinceGenesis){
-//         address payable pools = getPool(token);
-//         uint genesis = iPOOLS(pool).genesis();
-//         if(now < genesis + 86400)){
-//             return 1;
-//         } else {
-//             return (now - genesis)) / 86400);
-//         }
-//     }
-
-//     function getPoolROI(address token) public view returns (uint roi){
-//         address payable pools = getPool(token);
-//         uint _baseStart = iPOOLS(pool).baseAmtStaked() * 2);
-//         uint _baseEnd = iPOOLS(pool).baseAmt() * 2);
-//         uint _ROIS = (_baseEnd * 10000)) / _baseStart);
-//         uint _tokenStart = iPOOLS(pool).tokenAmtStaked() * 2);
-//         uint _tokenEnd = iPOOLS(pool).tokenAmt() * 2);
-//         uint _ROIA = (_tokenEnd * 10000)) / _tokenStart);
-//         return (_ROIS + _ROIA) / 2);
-//    }
-
-//    function getPoolAPY(address token) public view returns (uint apy){
-//         uint avgROI = getPoolROI(token);
-//         uint poolAge = getPoolAge(token);
-//         return (avgROI * 365)) / poolAge);
-//    }
-
-//     function isMember(address token, address member) public view returns(bool){
-//         address payable pools = getPool(token);
-//         if (iERC20(pool).balanceOf(member) > 0){
-//             return true;
-//         } else {
-//             return false;
-//         }
-//     }
 
     //====================================PRICING====================================//
 
@@ -140,28 +43,6 @@ contract Utils {
         (uint _baseAmt, uint _tokenAmt) = iPOOLS(POOLS).getPoolAmounts(token);
         return calcSwapOutput(amount, _baseAmt, _tokenAmt);
     }
-
-//     function calcTokenPPinBase(address token, uint amount) public view returns (uint _output){
-//         address payable pools = getPool(token);
-//         return  calcTokenPPinBaseWithPool(pool, amount);
-//    }
-
-//     function calcBasePPinToken(address token, uint amount) public view returns (uint _output){
-//         address payable pools = getPool(token);
-//         return  calcValueInBaseWithPool(pool, amount);
-//     }
-
-//     function calcTokenPPinBaseWithPool(address payable pool, uint amount) public view returns (uint _output){
-//         uint _baseAmt = iPOOLS(pool).baseAmt();
-//         uint _tokenAmt = iPOOLS(pool).tokenAmt();
-//         return  calcSwapOutput(amount, _tokenAmt, _baseAmt);
-//    }
-
-//     function calcBasePPinTokenWithPool(address payable pool, uint amount) public view returns (uint _output){
-//         uint _baseAmt = iPOOLS(pool).baseAmt();
-//         uint _tokenAmt = iPOOLS(pool).tokenAmt();
-//         return  calcSwapOutput(amount, _baseAmt, _tokenAmt);
-//     }
 
     //====================================CORE-MATH====================================//
 
