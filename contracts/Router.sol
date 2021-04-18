@@ -59,22 +59,22 @@ contract Router {
 
     //=========================================DAO=========================================//
     // Can set params
-    function setParams(uint _one, uint _two, uint _three) public onlyDAO {
-        rewardReductionFactor = _one;
-        timeForFullProtection = _two;
-        curatedPoolLimit = _three;
+    function setParams(uint newFactor, uint newTime, uint newLimit) external onlyDAO {
+        rewardReductionFactor = newFactor;
+        timeForFullProtection = newTime;
+        curatedPoolLimit = newLimit;
     }
 
     //====================================LIQUIDITY=========================================//
 
-    function addLiquidity(address base, uint inputBase, address token, uint inputToken) public returns(uint){
+    function addLiquidity(address base, uint inputBase, address token, uint inputToken) external returns(uint){
         uint _actualInputBase = moveTokenToPools(base, inputBase);
         uint _actualInputToken = moveTokenToPools(token, inputToken);
         addDepositData(msg.sender, token, _actualInputBase, _actualInputToken); 
         return iPOOLS(POOLS).addLiquidity(base, token, msg.sender);
     }
 
-    function removeLiquidity(address base, address token, uint basisPoints) public returns (uint amountBase, uint amountToken) {
+    function removeLiquidity(address base, address token, uint basisPoints) external returns (uint amountBase, uint amountToken) {
         (amountBase, amountToken) = iPOOLS(POOLS).removeLiquidity(base, token, basisPoints);
         address _member = msg.sender;
         uint _protection = getILProtection(_member, base, token, basisPoints);
@@ -84,18 +84,18 @@ contract Router {
 
       //=======================================SWAP===========================================//
     
-    function swap(uint inputAmount, address inputToken, address outputToken) external returns (uint outputAmount){
+    function swap(uint inputAmount, address inputToken, address outputToken) external returns (uint outputAmount) {
         return swapWithSynthsWithLimit(inputAmount, inputToken, false, outputToken, false, 10000);
     }
-    function swapWithLimit(uint inputAmount, address inputToken, address outputToken, uint slipLimit) external returns (uint outputAmount){
+    function swapWithLimit(uint inputAmount, address inputToken, address outputToken, uint slipLimit) external returns (uint outputAmount) {
         return swapWithSynthsWithLimit(inputAmount, inputToken, false, outputToken, false, slipLimit);
     }
 
-    function swapWithSynths(uint inputAmount, address inputToken, bool inSynth, address outputToken, bool outSynth) external returns (uint outputAmount){
+    function swapWithSynths(uint inputAmount, address inputToken, bool inSynth, address outputToken, bool outSynth) external returns (uint outputAmount) {
         return swapWithSynthsWithLimit(inputAmount, inputToken, inSynth, outputToken, outSynth, 10000);
     }
 
-    function swapWithSynthsWithLimit(uint inputAmount, address inputToken, bool inSynth, address outputToken, bool outSynth, uint slipLimit) public returns (uint outputAmount){
+    function swapWithSynthsWithLimit(uint inputAmount, address inputToken, bool inSynth, address outputToken, bool outSynth, uint slipLimit) public returns (uint outputAmount) {
         address _member = msg.sender;
         if(!inSynth){
             moveTokenToPools(inputToken, inputAmount);
@@ -150,7 +150,7 @@ contract Router {
 
         //====================================INCENTIVES========================================//
     
-    function getRewardShare(address token) public view returns (uint rewardShare){
+    function getRewardShare(address token) public view returns (uint rewardShare) {
         if(emitting() && isCurated(token)){
             uint _baseAmount = iPOOLS(POOLS).getBaseAmount(token);
             if (iPOOLS(POOLS).isAsset(token)) {
@@ -164,7 +164,7 @@ contract Router {
         return rewardShare;
     }
 
-    function getReducedShare(uint amount) public view returns(uint){
+    function getReducedShare(uint amount) public view returns(uint) {
         return iUTILS(UTILS()).calcShare(1, rewardReductionFactor, amount);
     }
 
@@ -174,7 +174,7 @@ contract Router {
         iPOOLS(POOLS).sync(_base, _token);
         emit PoolReward(_base, _token, _reward);
     }
-    function pullIncentives(uint shareVADER, uint shareUSDV) public {
+    function pullIncentives(uint shareVADER, uint shareUSDV) external {
         iERC20(VADER).transferFrom(msg.sender, address(this), shareVADER);
         iERC20(USDV).transferFrom(msg.sender, address(this), shareUSDV);
     }
@@ -208,7 +208,7 @@ contract Router {
         return protection;
     }
 
-    function getProtection(address member, address token, uint basisPoints, uint coverage) public view returns(uint protection){
+    function getProtection(address member, address token, uint basisPoints, uint coverage) public view returns(uint protection) {
         if(isCurated(token)){
             uint _duration = block.timestamp - mapMemberToken_lastDeposited[member][token];
             if(_duration <= timeForFullProtection) {
@@ -219,7 +219,7 @@ contract Router {
         }
         return iUTILS(UTILS()).calcPart(basisPoints, protection);
     }
-    function getCoverage(address member, address token) public view returns (uint){
+    function getCoverage(address member, address token) public view returns (uint) {
         uint _B0 = mapMemberToken_depositBase[member][token]; uint _T0 = mapMemberToken_depositToken[member][token];
         uint _units = iPOOLS(POOLS).getMemberUnits(token, member);
         uint _B1 = iUTILS(UTILS()).calcShare(_units, iPOOLS(POOLS).getUnits(token), iPOOLS(POOLS).getBaseAmount(token));
@@ -229,7 +229,7 @@ contract Router {
 
     //=====================================CURATION==========================================//
 
-    function curatePool(address token) public {
+    function curatePool(address token) external {
         require(iPOOLS(POOLS).isAsset(token));
         if(!isCurated(token)){
             if(curatedPoolCount < curatedPoolLimit){
@@ -239,7 +239,7 @@ contract Router {
         }
         emit Curated(msg.sender, token);
     }
-    function replacePool(address oldToken, address newToken) public {
+    function replacePool(address oldToken, address newToken) external {
         require(iPOOLS(POOLS).isAsset(newToken));
         if(iPOOLS(POOLS).getBaseAmount(newToken) > iPOOLS(POOLS).getBaseAmount(oldToken)){
             _isCurated[oldToken] = false;
@@ -250,7 +250,7 @@ contract Router {
 
     //=====================================ANCHORS==========================================//
 
-    function listAnchor(address token) public {
+    function listAnchor(address token) external {
         require(arrayAnchors.length < 5);
         require(iPOOLS(POOLS).isAnchor(token));
         arrayAnchors.push(token);
@@ -258,7 +258,7 @@ contract Router {
         updateAnchorPrice(token);
     }
 
-    function replaceAnchor(address oldToken, address newToken) public {
+    function replaceAnchor(address oldToken, address newToken) external {
         require(iPOOLS(POOLS).isAnchor(newToken), "Not anchor");
         require((iPOOLS(POOLS).getBaseAmount(newToken) > iPOOLS(POOLS).getBaseAmount(oldToken)), "Not deeper");
         _requirePriceBounds(oldToken, 500, false);                              // if price oldToken >5%
@@ -300,7 +300,7 @@ contract Router {
     }
 
     // Price of 1 VADER in USD
-    function getAnchorPrice() public view returns (uint anchorPrice){
+    function getAnchorPrice() public view returns (uint anchorPrice) {
         if(arrayPrices.length > 0){
             uint[] memory _sortedAnchorFeed = _sortArray(arrayPrices);  // Sort price array
             anchorPrice = _sortedAnchorFeed[2];                         // Return the middle
@@ -343,18 +343,16 @@ contract Router {
 
     //======================================HELPERS=========================================//
 
-    function isBase(address token) public view returns(bool _isBase) {
-        _isBase = false;
+    function isBase(address token) public view returns(bool base) {
         if(token == VADER || token == USDV){
-            _isBase = true;
+            return true;
         }
-        return _isBase;
     }
 
-    function reserveVADER() public view returns(uint){
+    function reserveVADER() public view returns(uint) {
         return iERC20(VADER).balanceOf(address(this));
     }
-    function reserveUSDV() public view returns(uint){
+    function reserveUSDV() public view returns(uint) {
         return iERC20(USDV).balanceOf(address(this));
     }
 
@@ -398,7 +396,7 @@ contract Router {
     function emitting() public view returns(bool){
         return iVADER(VADER).emitting();
     }
-    function isCurated(address token) public view returns(bool curated){
+    function isCurated(address token) public view returns(bool curated) {
         if(_isCurated[token]){
             curated = true;
         } else if(iPOOLS(POOLS).isAnchor(token)){

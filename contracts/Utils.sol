@@ -19,34 +19,34 @@ contract Utils {
     }
     //====================================SYSTEM FUNCTIONS====================================//
     // VADER FeeOnTransfer
-    function getFeeOnTransfer(uint totalSupply, uint maxSupply) public pure returns(uint){
+    function getFeeOnTransfer(uint totalSupply, uint maxSupply) external pure returns(uint){
         return calcShare(totalSupply, maxSupply, 100); // 0->100BP
     }
 
     //====================================PRICING====================================//
 
-    function calcValueInBase(address token, uint amount) public view returns (uint){
+    function calcValueInBase(address token, uint amount) external view returns (uint){
        (uint _baseAmt, uint _tokenAmt) = iPOOLS(POOLS).getPoolAmounts(token);
        return (amount * _baseAmt) / _tokenAmt;
     }
 
-    function calcValueInToken(address token, uint amount) public view returns (uint){
+    function calcValueInToken(address token, uint amount) external view returns (uint){
         (uint _baseAmt, uint _tokenAmt) = iPOOLS(POOLS).getPoolAmounts(token);
         return (amount * _tokenAmt) / _baseAmt;
     }
 
-    function calcSwapValueInBase(address token, uint amount) public view returns (uint){
+    function calcSwapValueInBase(address token, uint amount) external view returns (uint){
         (uint _baseAmt, uint _tokenAmt) = iPOOLS(POOLS).getPoolAmounts(token);
         return calcSwapOutput(amount, _tokenAmt, _baseAmt);
     }
-    function calcSwapValueInToken(address token, uint amount) public view returns (uint){
+    function calcSwapValueInToken(address token, uint amount) external view returns (uint){
         (uint _baseAmt, uint _tokenAmt) = iPOOLS(POOLS).getPoolAmounts(token);
         return calcSwapOutput(amount, _baseAmt, _tokenAmt);
     }
 
     //====================================CORE-MATH====================================//
 
-    function calcPart(uint bp, uint total) public pure returns (uint){
+    function calcPart(uint bp, uint total) external pure returns (uint){
         // 10,000 basis points = 100.00%
         require((bp <= 10000) && (bp >= 0), "Must be correct BP");
         return calcShare(bp, 10000, total);
@@ -67,18 +67,18 @@ contract Utils {
         return (numerator / denominator);
     }
 
-    function calcSwapFee(uint x, uint X, uint Y) public pure returns (uint){
+    function calcSwapFee(uint x, uint X, uint Y) external pure returns (uint){
         // fee = (x * x * Y) / (x + X)^2
         uint numerator = (x * x * Y);
         uint denominator = (x + X) * (x + X);
         return (numerator / denominator);
     }
-    function calcSwapSlip(uint x, uint X) public pure returns (uint){
+    function calcSwapSlip(uint x, uint X) external pure returns (uint){
         // slip = (x) / (x + X)
         return (x*10000) / (x + X);
     }
 
-    function calcLiquidityUnits(uint b, uint B, uint t, uint T, uint P) public view returns (uint){
+    function calcLiquidityUnits(uint b, uint B, uint t, uint T, uint P) external view returns (uint){
         if(P == 0){
             return b;
         } else {
@@ -110,12 +110,12 @@ contract Utils {
         return one - (numerator * one) / denominator; // Multiply by 10**18
     }
 
-    function calcSynthUnits(uint b, uint B, uint P) public pure returns(uint){
+    function calcSynthUnits(uint b, uint B, uint P) external pure returns(uint){
         // (P * b)/(2*(b + B))
         return (P * b) / (2 * (b + B));
     }
 
-    function calcAsymmetricShare(uint u, uint U, uint A) public pure returns (uint){
+    function calcAsymmetricShare(uint u, uint U, uint A) external pure returns (uint){
         // share = (u * U * (2 * A^2 - 2 * U * u + U^2))/U^3
         // (part1 * (part2 - part3 + part4)) / part5
         uint part1 = (u * A);
@@ -126,10 +126,10 @@ contract Utils {
         uint part5 = ((U * U) * U);
         return (numerator / part5);
     }
-    function calcCoverage(uint _B0, uint _T0, uint _B1, uint _T1) public pure returns(uint coverage){
-        if(_B1 > 0 && _T1 > 0){
-            uint _depositValue = _B0 + (_T0 * _B1) / _T1; // B0+(T0*B1/T1)
-            uint _redemptionValue = _B1 + (_T1 * _B1) / _T1; // B1+(T1*B1/T1)
+    function calcCoverage(uint B0, uint T0, uint B1, uint T1) external pure returns(uint coverage){
+        if(B0 > 0 && T1 > 0){
+            uint _depositValue = B0 + (T0 * B1) / T1; // B0+(T0*B1/T1)
+            uint _redemptionValue = B1 + (T1 * B1) / T1; // B1+(T1*B1/T1)
             if(_redemptionValue <= _depositValue){
                 coverage = (_depositValue - _redemptionValue);
             }
