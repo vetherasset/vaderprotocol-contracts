@@ -7,7 +7,6 @@ import "./iUTILS.sol";
 import "./iVADER.sol";
 import "./iFACTORY.sol";
 
-    //======================================VADER=========================================//
 contract Vault {
 
     // Parameters
@@ -42,7 +41,7 @@ contract Vault {
     // Init
     function init(address _vader, address _usdv, address _router, address _factory) public {
         require(inited == false);
-inited = true;
+        inited = true;
         VADER = _vader;
         USDV = _usdv;
         ROUTER = _router;
@@ -136,7 +135,7 @@ inited = true;
     }
 
     function mintSynth(address base, address token, address member) public returns (uint outputAmount){
-        require(iFACTORY(FACTORY).isSynth(getSynth(token)));
+        require(iFACTORY(FACTORY).isSynth(getSynth(token)), "!synth");
         uint _actualInputBase = getAddedAmount(base, token);
         uint _synthUnits = iUTILS(UTILS()).calcSynthUnits(_actualInputBase, mapToken_baseAmount[token], mapToken_Units[token]);
         outputAmount = iUTILS(UTILS()).calcSwapOutput(_actualInputBase, mapToken_baseAmount[token], mapToken_tokenAmount[token]);
@@ -145,6 +144,7 @@ inited = true;
         mapToken_baseAmount[token] += _actualInputBase;
         emit AddLiquidity(member, base, _actualInputBase, token, 0, _synthUnits);
         iFACTORY(FACTORY).mintSynth(getSynth(token), member, outputAmount);
+        return outputAmount;
     }
     function burnSynth(address base, address token, address member) public returns (uint outputBase){
         uint _actualInputSynth = iERC20(getSynth(token)).balanceOf(address(this));

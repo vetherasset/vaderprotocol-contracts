@@ -4,6 +4,7 @@ var Vether = artifacts.require('./Vether')
 var Vader = artifacts.require('./Vader')
 var USDV = artifacts.require('./USDV')
 var Router = artifacts.require('./Router')
+var VAULT = artifacts.require('./Vault')
 
 const BigNumber = require('bignumber.js')
 const truffleAssert = require('truffle-assertions')
@@ -31,8 +32,10 @@ before(async function() {
   vader = await Vader.new();
   usdv = await USDV.new();
   router = await Router.new();
+  vault = await VAULT.new();
+
   await vader.init(vether.address, usdv.address, utils.address)
-  await usdv.init(vader.address, router.address)
+  await usdv.init(vader.address, router.address, vault.address)
 
   await vether.transfer(acc1, BN2Str(1001))
 // acc  | VTH | VADER  |
@@ -62,7 +65,7 @@ describe("Deploy Vader", function() {
 describe("Upgrade", function() {
 
   it("Should upgrade acc1", async function() {
-    await vether.approve(vader.address, '-1', {from:acc1})
+    await vether.approve(vader.address, '10000000000000000000000', {from:acc1})
     await vader.upgrade(1000, {from:acc1})
     expect(BN2Str(await vader.totalSupply())).to.equal(BN2Str(1000));
     expect(BN2Str(await vether.balanceOf(acc1))).to.equal(BN2Str(0));
@@ -174,7 +177,7 @@ describe("FeeOnTransfer", function() {
     expect(BN2Str(await vader.feeOnTransfer())).to.equal('0');
     expect(BN2Str(await vader.totalSupply())).to.equal(BN2Str(6400));
     expect(BN2Str(await vether.balanceOf(acc0))).to.equal('999999999999999999998999');
-    await vether.approve(vader.address, '-1', {from:acc0})
+    await vether.approve(vader.address, '999999999999999999998999', {from:acc0})
     await vader.upgrade('999999999999999999998999', {from:acc0})
     await vader.setParams('1', '2024', '200', {from:acc2})
     expect(BN2Str(await vader.getDailyEmission())).to.equal(BN2Str('494071146245059288534'));

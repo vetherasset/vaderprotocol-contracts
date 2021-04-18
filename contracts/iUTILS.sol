@@ -15,4 +15,6 @@ interface iUTILS {
     function calcCoverage(uint, uint, uint, uint) external pure returns(uint);
     function calcValueInBase(address, uint) external view returns (uint);
     function calcValueInToken(address, uint) external view returns (uint);
+    function calcSwapValueInBase(address token, uint amount) external view returns (uint value);
+    function calcSwapValueInToken(address token, uint amount) external view returns (uint value);
 }

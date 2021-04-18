@@ -6,6 +6,10 @@ import "./iERC20.sol";
 import "./iUTILS.sol";
 import "./iVADER.sol";
 import "./iROUTER.sol";
+import "./iVAULT.sol";
+import "./iSYNTH.sol";
+
+import "hardhat/console.sol";
 
     //======================================VADER=========================================//
 contract USDV is iERC20 {
@@ -20,27 +24,32 @@ contract USDV is iERC20 {
 
     // Parameters
     bool private inited;
-    uint public totalFunds;
     uint public currentEra;
     uint public nextEraTime;
     uint public erasToEarn;
-    uint public minimumDepositTime;
     uint public minGrantTime;
     uint public lastGranted;
     uint public blockDelay;
 
     address public VADER;
     address public ROUTER;
+    address public VAULT;
 
-    mapping(address => bool) private _isMember; // Is Member
-    mapping(address => uint) private mapMember_deposit;
-    mapping(address => uint) private mapMember_lastTime;
+    uint public minimumDepositTime;
+    uint public totalWeight;
+    uint public totalRewards;
+
+    mapping(address => uint) private mapToken_totalFunds;
+    mapping(address => uint) private mapMember_weight;
+    mapping(address => mapping(address => uint)) private mapMemberToken_deposit;
+    mapping(address => mapping(address => uint)) private mapMemberToken_reward;
+    mapping(address => mapping(address => uint)) private mapMemberToken_lastTime;
     mapping(address => uint) public lastBlock;
 
     // Events
-    event MemberDeposits(address indexed member, uint newDeposit, uint totalDeposit, uint totalFunds);
-    event MemberWithdraws(address indexed member, uint amount, uint totalFunds);
-    event MemberHarvests(address indexed member, uint amount);
+    event MemberDeposits(address indexed token, address indexed member, uint newDeposit, uint totalDeposit, uint weight, uint totalWeight);
+    event MemberWithdraws(address indexed token, address indexed member, uint amount, uint weight, uint totalWeight);
+    event MemberHarvests(address indexed token, address indexed member, uint amount, uint weight, uint totalWeight);
 
     // Only DAO can execute
     modifier onlyDAO() {
@@ -66,11 +75,12 @@ contract USDV is iERC20 {
         decimals = 18;
         totalSupply = 0;
     }
-    function init(address _vader, address _router) public {
+    function init(address _vader, address _router, address _vault) public {
         require(inited == false);
-inited = true;
+        inited = true;
         VADER = _vader;
         ROUTER = _router;
+        VAULT = _vault;
         iERC20(VADER).approve(ROUTER, type(uint).max);
         _approve(address(this), ROUTER, type(uint).max);
         currentEra = 1;
@@ -179,22 +189,13 @@ inited = true;
     
     //======================================ASSET MINTING========================================//
     // Contracts to convert
-    function convertToUSDV(uint amount) public returns(uint) {
-        return convertToUSDVForMember(msg.sender, amount);
+    function convert(uint amount) public returns(uint) {
+        return convertForMember(msg.sender, amount);
     }
     // Contracts to convert for members
-    function convertToUSDVForMember(address member, uint amount) public returns(uint) {
-        uint _safeAmount = getFunds(amount);
-        return _convert(member, _safeAmount);
-    }
-    function getFunds(uint amount) public returns(uint safeAmount){
-        uint _startBal = iERC20(VADER).balanceOf(address(this));
-        if(tx.origin==msg.sender){
-            require(iERC20(VADER).transferTo(address(this), amount));
-        }else{
-            require(iERC20(VADER).transferFrom(msg.sender, address(this), amount));
-        }
-        return (iERC20(VADER).balanceOf(address(this)) - _startBal);
+    function convertForMember(address member, uint amount) public returns(uint) {
+        getFunds(VADER, amount);
+        return _convert(member, amount);
     }
     // Internal convert
     function _convert(address _member, uint amount) internal flashProof returns(uint _convertAmount){
@@ -205,57 +206,70 @@ inited = true;
         return _convertAmount;
     }
     // Contracts to redeem
-    function redeemToVADER(uint amount) public returns(uint convertAmount) {
-        return redeemToVADERForMember(msg.sender, amount);
+    function redeem(uint amount) public returns(uint convertAmount) {
+        return redeemForMember(msg.sender, amount);
     }
     // Contracts to redeem for members
-    function redeemToVADERForMember(address member, uint amount) public returns(uint redeemAmount) {
+    function redeemForMember(address member, uint amount) public returns(uint redeemAmount) {
         _transfer(msg.sender, VADER, amount);                   // Move funds
         redeemAmount = iVADER(VADER).redeemToMember(member);
         lastBlock[tx.origin] = block.number;
         return redeemAmount;
     }
 
-    //======================================USDV DEPOSITS========================================//
-    // USDV holders to deposit for Interest Payments
-    function deposit(uint amount) public {
-        depositForMember(msg.sender, amount);
+    //======================================DEPOSITS========================================//
+
+    // Holders to deposit for Interest Payments
+    function deposit(address token, uint amount) public {
+        depositForMember(token, msg.sender, amount);
     }
     // Wrapper for contracts
-    function depositForMember(address member, uint amount) public {
-        require(transferTo(address(this), amount));
-        _deposit(member, amount);
+    function depositForMember(address token, address member, uint amount) public {
+        require(token==address(this) || (iVAULT(VAULT).isSynth(token) && iVAULT(VAULT).isAsset(iSYNTH(token).TOKEN())));
+        getFunds(token, amount);
+        _deposit(token, member, amount);
     }
-    // Harvest, then re-invest
-    function harvestAndDeposit() public {
-        address member = msg.sender;
-        uint _payment = calcCurrentPayment(member);
-        _deposit(member, _payment);
-    }
-    function _deposit(address _member, uint _amount) internal {
-        if (!isMember(_member)) {
-            _isMember[_member] = true;
+    function _deposit(address _token, address _member, uint _amount) internal {
+        mapMemberToken_lastTime[_member][_token] = block.timestamp;
+        mapMemberToken_deposit[_member][_token] += _amount; // Record balance for member
+        uint _weight;
+        if(_token==address(this)){
+            _weight = _amount;
+        } else {
+            _weight = iUTILS(UTILS()).calcValueInBase(iSYNTH(_token).TOKEN(), _amount);
         }
-        mapMember_lastTime[_member] = block.timestamp;
-        mapMember_deposit[_member] += _amount; // Record balance for member
-        totalFunds += _amount;
-        emit MemberDeposits(_member, _amount, mapMember_deposit[_member], totalFunds);
+        mapToken_totalFunds[_token] += _amount;
+        mapMember_weight[_member] += _weight;
+        totalWeight += _weight;
+        emit MemberDeposits(_token, _member, _amount, mapToken_totalFunds[_token], _weight, totalWeight);
     }
 
-    // Harvest, get rewards immediately
-    function harvest() public {
-        address member = msg.sender;
-        uint _payment = calcCurrentPayment(member);
-        mapMember_lastTime[member] = block.timestamp;
-        _transfer(address(this), member, _payment);
-        emit MemberHarvests(member, _payment);
+    //====================================== HARVEST ========================================//
+
+    // Harvest, get payment, allocate, increase weight
+    function harvest(address token) public returns(uint reward){
+        address _member = msg.sender;
+        reward = calcCurrentReward(token, _member);
+        mapMemberToken_lastTime[_member][token] = block.timestamp;
+        mapMemberToken_reward[_member][token] += reward;
+        totalRewards += reward;
+        uint _weight;
+        if(token==address(this)){
+            _weight = reward;
+        } else {
+            _weight = iUTILS(UTILS()).calcValueInBase(iSYNTH(token).TOKEN(), reward);
+        }
+        mapMember_weight[_member] += _weight;
+        totalWeight += _weight;
+        emit MemberHarvests(token, _member, reward, _weight, totalWeight);
+        return reward;
     }
 
     // Get the payment owed for a member
-    function calcCurrentPayment(address member) public view returns(uint){
-        uint _secondsSinceClaim = block.timestamp - mapMember_lastTime[member];        // Get time since last claim
-        uint _share = calcPayment(member);                                              // Get share of rewards for member
-        uint _reward = (_share * _secondsSinceClaim) / iVADER(VADER).secondsPerEra();   // Get owed amount, based on per-day rates
+    function calcCurrentReward(address token, address member) public view returns(uint _reward){
+        uint _secondsSinceClaim = block.timestamp - mapMemberToken_lastTime[member][token];        // Get time since last claim
+        uint _share = calcReward(member);                                              // Get share of rewards for member
+        _reward = (_share * _secondsSinceClaim) / iVADER(VADER).secondsPerEra();   // Get owed amount, based on per-day rates
         uint _reserve = reserveUSDV();
         if(_reward >= _reserve) {
             _reward = _reserve;                                                         // Send full reserve if the last
@@ -263,46 +277,85 @@ inited = true;
         return _reward;
     }
 
-    function calcPayment(address member) public view returns(uint){
-        uint _balance = mapMember_deposit[member];
-        uint _reserve = (reserveUSDV() / erasToEarn);                          // Deplete reserve over a number of days
-        return iUTILS(UTILS()).calcShare(_balance, totalFunds, _reserve);         // Get member's share of that
+    function calcReward(address member) public view returns(uint){
+        uint _weight = mapMember_weight[member];
+        uint _reserve = reserveUSDV() / erasToEarn;                               // Deplete reserve over a number of eras
+        return iUTILS(UTILS()).calcShare(_weight, totalWeight, _reserve);         // Get member's share of that
     }
 
+//====================================== WITHDRAW ========================================//
+
     // Members to withdraw
-    function withdraw(uint basisPoints) public returns(uint redeemedAmount) {
+    function withdraw(address token, uint basisPoints) public returns(uint redeemedAmount) {
         address _member = msg.sender;
-        redeemedAmount = _processWithdraw(_member, basisPoints);                         // get USDV to withdraw
-        _transfer(address(this), msg.sender, redeemedAmount);                    // Forward to member
+        redeemedAmount = _processWithdraw(token, _member, basisPoints);                         // get amount to withdraw
+        sendFunds(token, _member, redeemedAmount);
         return redeemedAmount;
     }
-    function _processWithdraw(address _member, uint basisPoints) internal returns(uint _amount) {
-        require((block.timestamp - mapMember_lastTime[_member]) >= minimumDepositTime, "DepositTime");    // stops attacks
-        harvestAndDeposit();                                                    // harvest first
-        _amount = ((mapMember_deposit[_member] * basisPoints)) / 10000;         // In Basis Points
-        mapMember_deposit[_member] -= _amount;                                  // reduce for member
-        totalFunds -= _amount;                                                  // reduce for total
-        emit MemberWithdraws(_member, _amount, totalFunds);
-        return _amount;
+    function _processWithdraw(address _token, address _member, uint _basisPoints) internal returns(uint _amount) {
+        require((block.timestamp - mapMemberToken_lastTime[_member][_token]) >= minimumDepositTime, "DepositTime");    // stops attacks
+        uint _reward = iUTILS(UTILS()).calcPart(_basisPoints, mapMemberToken_reward[_member][_token]); // share of reward
+        mapMemberToken_reward[_member][_token] -= _reward;
+        totalRewards -= _reward;
+        if(_token!=address(this)){
+            _reward = iUTILS(UTILS()).calcSwapValueInToken(iSYNTH(_token).TOKEN(), _reward);
+            _transfer(address(this), VAULT, _reward);
+            _reward = iVAULT(VAULT).mintSynth(address(this), iSYNTH(_token).TOKEN(), address(this));
+        }
+        uint _principle = iUTILS(UTILS()).calcPart(_basisPoints, mapMemberToken_deposit[_member][_token]); // share of deposits
+        mapMemberToken_deposit[_member][_token] -= _principle;                                   
+        mapToken_totalFunds[_token] -= _principle;
+        uint _weight = iUTILS(UTILS()).calcPart(_basisPoints, mapMember_weight[_member]);
+        mapMember_weight[_member] -= _weight; 
+        totalWeight -= _weight;                                                     // reduce for total
+        emit MemberWithdraws(_token, _member, _amount, _weight, totalWeight);
+        return (_principle + _reward);
+    }
+
+    //============================== ASSETS ================================//
+
+    function getFunds(address token, uint amount) internal{
+        if(token == address(this)){
+            _transfer(msg.sender, address(this), amount);
+        } else {
+            if(tx.origin==msg.sender){
+                require(iERC20(token).transferTo(address(this), amount));
+            }else{
+                require(iERC20(token).transferFrom(msg.sender, address(this), amount));
+            }
+        }
+    }
+    function sendFunds(address token, address member, uint amount) internal{
+        if(token == address(this)){
+            _transfer(address(this), member, amount);
+        } else {
+            require(iERC20(token).transfer(member, amount));
+        }
     }
 
     //============================== HELPERS ================================//
 
     function reserveUSDV() public view returns(uint){
-        return balanceOf(address(this)) - totalFunds;
+        return balanceOf(address(this)) - mapToken_totalFunds[address(this)] - totalRewards; // Balance - deposits - rewards
     }
 
     function _twothirds(uint _amount) internal pure returns(uint){
         return (_amount * 2) / 3;
     }
-    function getMemberDeposit(address member) public view returns(uint){
-        return mapMember_deposit[member];
+    function getTokenDeposits(address token) external view returns(uint){
+        return mapToken_totalFunds[token];
     }
-    function getMemberLastTime(address member) public view returns(uint){
-        return mapMember_lastTime[member];
+    function getMemberDeposit(address token, address member) external view returns(uint){
+        return mapMemberToken_deposit[member][token];
     }
-    function isMember(address member) public view returns(bool){
-        return _isMember[member];
+    function getMemberReward(address token, address member) external view returns(uint){
+        return mapMemberToken_reward[member][token];
+    }
+    function getMemberWeight(address member) external view returns(uint){
+        return mapMember_weight[member];
+    }
+    function getMemberLastTime(address token, address member) external view returns(uint){
+        return mapMemberToken_lastTime[member][token];
     }
     function UTILS() public view returns(address){
         return iVADER(VADER).UTILS();

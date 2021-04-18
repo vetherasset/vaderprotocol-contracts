@@ -21,7 +21,7 @@ function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-var utils; var vader; var vether; var usdv; var vault; var anchor; var asset; var factory;
+var utils; var vader; var vether; var usdv; var vault; var anchor; var asset; var factory; var router;
 var anchor0; var anchor1; var anchor2; var anchor3; var anchor4;  var anchor5; 
 var acc0; var acc1; var acc2; var acc3; var acc0; var acc5;
 const one = 10**18
@@ -46,8 +46,9 @@ before(async function() {
 
 describe("Deploy Router", function() {
   it("Should deploy", async function() {
+    await utils.init(vault.address)
     await vader.init(vether.address, usdv.address, utils.address)
-    await usdv.init(vader.address, router.address)
+    await usdv.init(vader.address, router.address, vault.address)
     await router.init(vader.address, usdv.address, vault.address);
     await vault.init(vader.address, usdv.address, router.address, factory.address);
     await factory.init(vault.address);
@@ -64,7 +65,7 @@ describe("Deploy Router", function() {
     await asset.transfer(acc1, BN2Str(2000))
     await asset.approve(router.address, BN2Str(one), {from:acc1})
 
-    await usdv.convertToUSDV(BN2Str(3000), {from:acc1})
+    await usdv.convert(BN2Str(3000), {from:acc1})
 
     expect(await router.DAO()).to.equal(acc0);
     expect(await router.UTILS()).to.equal(utils.address);
@@ -178,4 +179,68 @@ describe("Should Swap Synths", function() {
     expect(BN2Str(await synth.balanceOf(acc1))).to.equal('86');
   });
 
+});
+
+describe("Member should deposit Synths for rewards", function() {
+  it("Should deposit", async function() {
+    let synthAddress = await factory.getSynth(asset.address)
+    let synth = await Synth.at(synthAddress);
+    await usdv.deposit(synth.address, '20', {from:acc1})
+    expect(BN2Str(await synth.balanceOf(acc1))).to.equal(('66'));
+    expect(BN2Str(await synth.balanceOf(usdv.address))).to.equal(('20'));
+    expect(BN2Str(await usdv.getMemberDeposit(synth.address, acc1))).to.equal(('20'));
+    expect(BN2Str(await usdv.getMemberWeight(acc1))).to.equal(('21'));
+    expect(BN2Str(await usdv.getTokenDeposits(synth.address))).to.equal(('20'));
+    expect(BN2Str(await usdv.totalWeight())).to.equal(('21'));
+  });
+
+  it("Should calc rewards", async function() {
+    await vader.startEmissions()
+    await vader.setParams('1', '2', '200')
+    let synth = await Synth.at(await factory.getSynth(asset.address));
+    
+    let balanceStart = await vader.balanceOf(usdv.address)
+    expect(BN2Str(balanceStart)).to.equal(('0'));
+    expect(BN2Str(await vader.getDailyEmission())).to.equal(('2200'));
+    await vader.transfer(acc0, ('100'), {from:acc1})
+    expect(BN2Str(await vader.currentEra())).to.equal(('2'));
+    expect(BN2Str(await vader.getDailyEmission())).to.equal(('3300'));
+    expect(BN2Str(await vader.balanceOf(usdv.address))).to.equal(('2200'));
+    await usdv.transfer(acc0, ('100'), {from:acc1})
+    expect(BN2Str(await usdv.reserveUSDV())).to.equal(('733'));
+    expect(BN2Str(await synth.balanceOf(usdv.address))).to.equal(('20'));
+    expect(BN2Str(await usdv.calcReward(acc1))).to.equal(('7')); // 666/100
+    expect(BN2Str(await usdv.calcCurrentReward(synth.address, acc1))).to.equal(('28')); // * by seconds
+  });
+  it("Should harvest", async function() {
+    let synth = await Synth.at(await factory.getSynth(asset.address));
+    expect(BN2Str(await usdv.getMemberWeight(acc1))).to.equal(('21'));
+    expect(BN2Str(await usdv.getMemberReward(synth.address, acc1))).to.equal(('0'));
+    expect(BN2Str(await usdv.totalWeight())).to.equal(('21'));
+    expect(BN2Str(await usdv.totalRewards())).to.equal(('0'));
+    await usdv.harvest(synth.address, {from:acc1})
+    expect(BN2Str(await usdv.getMemberWeight(acc1))).to.equal(('59'));
+    expect(BN2Str(await usdv.getMemberReward(synth.address, acc1))).to.equal(('35'));
+    expect(BN2Str(await usdv.totalWeight())).to.equal(('59'));
+    expect(BN2Str(await usdv.totalRewards())).to.equal(('35'));
+  });
+  it("Should withdraw", async function() {
+    let synth = await Synth.at(await factory.getSynth(asset.address));
+    expect(BN2Str(await synth.balanceOf(acc1))).to.equal('66');
+    expect(BN2Str(await synth.balanceOf(usdv.address))).to.equal('20');
+    expect(BN2Str(await usdv.balanceOf(usdv.address))).to.equal('733');
+    expect(BN2Str(await usdv.getMemberDeposit(synth.address, acc1))).to.equal('20');
+    expect(BN2Str(await usdv.getMemberWeight(acc1))).to.equal('59');
+    expect(BN2Str(await usdv.getMemberReward(synth.address, acc1))).to.equal('35');
+    expect(BN2Str(await usdv.totalRewards())).to.equal('35');
+    expect(BN2Str(await usdv.getTokenDeposits(synth.address))).to.equal('20');
+    await vader.stopEmissions()
+    let tx = await usdv.withdraw(synth.address, "10000",{from:acc1})
+    expect(BN2Str(await usdv.getMemberDeposit(synth.address, acc1))).to.equal('0');
+    expect(BN2Str(await usdv.getMemberWeight(acc1))).to.equal('0');
+    expect(BN2Str(await usdv.totalWeight())).to.equal('0');
+    expect(BN2Str(await usdv.getMemberReward(synth.address, acc1))).to.equal('0');
+    expect(BN2Str(await synth.balanceOf(usdv.address))).to.equal('0');
+    expect(BN2Str(await synth.balanceOf(acc1))).to.equal('112');
+  });
 });

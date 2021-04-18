@@ -47,13 +47,11 @@ contract Router {
     constructor() {}
     // Init
     function init(address _vader, address _usdv, address _vault) public {
-        require(inited == false);
+        require(inited == false,  "inited");
         inited = true;
         VADER = _vader;
         USDV = _usdv;
         VAULT = _vault;
-        iERC20(VADER).approve(VAULT, type(uint).max);
-        iERC20(USDV).approve(VAULT, type(uint).max);
         rewardReductionFactor = 1;
         timeForFullProtection = 1;//8640000; //100 days
         curatedPoolLimit = 1;

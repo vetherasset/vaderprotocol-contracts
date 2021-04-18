@@ -5,6 +5,7 @@ var Vader = artifacts.require('./Vader')
 var USDV = artifacts.require('./USDV')
 var Vault = artifacts.require('./Vault')
 var Router = artifacts.require('./Router')
+var Factory = artifacts.require('./Factory')
 var Asset = artifacts.require('./Token1')
 var Anchor = artifacts.require('./Token2')
 
@@ -18,7 +19,7 @@ function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-var utils; var vader; var vether; var usdv; var vault; var anchor; 
+var utils; var vader; var vether; var usdv; var vault; var anchor; var factory; var router;
 var asset; var asset2; var asset3;
 var anchor0; var anchor1; var anchor2; var anchor3; var anchor4;  var anchor5; 
 var acc0; var acc1; var acc2; var acc3; var acc0; var acc5;
@@ -37,6 +38,7 @@ before(async function() {
   usdv = await USDV.new();
   router = await Router.new();
   vault = await Vault.new();
+  factory = await Factory.new();
 
 })
 
@@ -44,9 +46,10 @@ before(async function() {
 describe("Deploy Router", function() {
   it("Should deploy", async function() {
     await vader.init(vether.address, usdv.address, utils.address)
-    await usdv.init(vader.address, router.address)
+    await usdv.init(vader.address, router.address, vault.address)
     await router.init(vader.address, usdv.address, vault.address);
-    await vault.init(vader.address, usdv.address, router.address, router.address);
+    await vault.init(vader.address, usdv.address, router.address, factory.address);
+    await factory.init(vault.address);
 
     await vader.startEmissions()
 
@@ -69,7 +72,7 @@ describe("Deploy Router", function() {
     await asset3.transfer(acc1, BN2Str(2000))
     await asset3.approve(router.address, BN2Str(one), {from:acc1})
 
-    await usdv.convertToUSDV(BN2Str(3000), {from:acc1})
+    await usdv.convert(BN2Str(3000), {from:acc1})
     await usdv.transfer(acc0, '1', {from:acc1})
     await usdv.transfer(acc1, '1', {from:acc0})
 

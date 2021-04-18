@@ -44,7 +44,7 @@ contract DAO {
     }
     function init(address _vader, address _usdv) public {
         require(inited == false);
-inited = true;
+        inited = true;
         VADER = _vader;
         USDV = _usdv;
         coolOffPeriod = 1;
@@ -104,7 +104,7 @@ inited = true;
         require(hasMinority(newProposalID), "Must have minority");
         require(isEqual(bytes(mapPID_type[oldProposalID]), bytes(mapPID_type[newProposalID])), "Must be same");
         mapPID_votes[oldProposalID] = 0;
-        emit CancelProposal(msg.sender, oldProposalID, mapPID_votes[oldProposalID], mapPID_votes[newProposalID], iUSDV(USDV).totalFunds());
+        emit CancelProposal(msg.sender, oldProposalID, mapPID_votes[oldProposalID], mapPID_votes[newProposalID], iUSDV(USDV).totalWeight());
     }
 
     // Proposal with quorum can finalise after cool off period
@@ -126,7 +126,7 @@ inited = true;
 
     function completeProposal(uint _proposalID) internal {
         string memory _typeStr = mapPID_type[_proposalID];
-        emit FinalisedProposal(msg.sender, _proposalID, mapPID_votes[_proposalID], iUSDV(USDV).totalFunds(), _typeStr);
+        emit FinalisedProposal(msg.sender, _proposalID, mapPID_votes[_proposalID], iUSDV(USDV).totalWeight(), _typeStr);
         mapPID_votes[_proposalID] = 0;
         mapPID_finalised[_proposalID] = true;
         mapPID_finalising[_proposalID] = false;
@@ -156,7 +156,7 @@ inited = true;
 
     function countMemberVotes(uint _proposalID) internal returns (uint voteWeight){
         mapPID_votes[_proposalID] -= mapPIDMember_votes[_proposalID][msg.sender];
-        voteWeight = iUSDV(USDV).getMemberDeposit(msg.sender);
+        voteWeight = iUSDV(USDV).getMemberWeight(msg.sender);
         mapPID_votes[_proposalID] += voteWeight;
         mapPIDMember_votes[_proposalID][msg.sender] = voteWeight;
         return voteWeight;
@@ -164,7 +164,7 @@ inited = true;
 
     function hasMajority(uint _proposalID) public view returns(bool){
         uint votes = mapPID_votes[_proposalID];
-        uint consensus = iUSDV(USDV).totalFunds() / 2; // >50%
+        uint consensus = iUSDV(USDV).totalWeight() / 2; // >50%
         if(votes > consensus){
             return true;
         } else {
@@ -173,7 +173,7 @@ inited = true;
     }
     function hasQuorum(uint _proposalID) public view returns(bool){
         uint votes = mapPID_votes[_proposalID];
-        uint consensus = iUSDV(USDV).totalFunds() / 3; // >33%
+        uint consensus = iUSDV(USDV).totalWeight() / 3; // >33%
         if(votes > consensus){
             return true;
         } else {
@@ -182,7 +182,7 @@ inited = true;
     }
     function hasMinority(uint _proposalID) public view returns(bool){
         uint votes = mapPID_votes[_proposalID];
-        uint consensus = iUSDV(USDV).totalFunds() / 6; // >16%
+        uint consensus = iUSDV(USDV).totalWeight() / 6; // >16%
         if(votes > consensus){
             return true;
         } else {

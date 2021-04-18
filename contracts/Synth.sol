@@ -8,6 +8,7 @@ import "./iERC20.sol";
 contract Synth is iERC20 {
 
     address public FACTORY;
+    address public TOKEN;
 
     // Coin Defaults
     string public override name;
@@ -26,6 +27,7 @@ contract Synth is iERC20 {
     
     // Minting event
     constructor(address _token){
+        TOKEN = _token;
         FACTORY = msg.sender;
         string memory synthName = " - vSynth";
         string memory synthSymbol = ".v";
@@ -74,11 +76,12 @@ contract Synth is iERC20 {
     // Internal transfer function
     function _transfer(address sender, address recipient, uint amount) internal virtual {
         require(sender != address(0), "sender");
+        require(recipient != address(this), "recipient");
         _balances[sender] -= amount;
         _balances[recipient] += amount;
         emit Transfer(sender, recipient, amount);
     }
-    // Only VAULT can mint
+    // Only FACTORY can mint
     function mint(address account, uint amount) public virtual onlyFACTORY {
         require(account != address(0), "recipient");
         totalSupply += amount;
