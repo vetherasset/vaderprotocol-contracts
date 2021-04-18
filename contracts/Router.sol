@@ -5,7 +5,7 @@ pragma solidity ^0.8.3;
 import "./iERC20.sol";
 import "./iUTILS.sol";
 import "./iVADER.sol";
-import "./iVAULT.sol";
+import "./iPOOLS.sol";
 
     //======================================VADER=========================================//
 contract Router {
@@ -23,7 +23,7 @@ contract Router {
     
     address public VADER;
     address public USDV;
-    address public VAULT;
+    address public POOLS;
 
     address[] public arrayAnchors;
     uint[] public arrayPrices;
@@ -46,12 +46,12 @@ contract Router {
     // Constructor
     constructor() {}
     // Init
-    function init(address _vader, address _usdv, address _vault) public {
+    function init(address _vader, address _usdv, address _pool) public {
         require(inited == false,  "inited");
         inited = true;
         VADER = _vader;
         USDV = _usdv;
-        VAULT = _vault;
+        POOLS = _pool;
         rewardReductionFactor = 1;
         timeForFullProtection = 1;//8640000; //100 days
         curatedPoolLimit = 1;
@@ -68,14 +68,14 @@ contract Router {
     //====================================LIQUIDITY=========================================//
 
     function addLiquidity(address base, uint inputBase, address token, uint inputToken) public returns(uint){
-        uint _actualInputBase = moveTokenToVault(base, inputBase);
-        uint _actualInputToken = moveTokenToVault(token, inputToken);
+        uint _actualInputBase = moveTokenToPools(base, inputBase);
+        uint _actualInputToken = moveTokenToPools(token, inputToken);
         addDepositData(msg.sender, token, _actualInputBase, _actualInputToken); 
-        return iVAULT(VAULT).addLiquidity(base, token, msg.sender);
+        return iPOOLS(POOLS).addLiquidity(base, token, msg.sender);
     }
 
     function removeLiquidity(address base, address token, uint basisPoints) public returns (uint amountBase, uint amountToken) {
-        (amountBase, amountToken) = iVAULT(VAULT).removeLiquidity(base, token, basisPoints);
+        (amountBase, amountToken) = iPOOLS(POOLS).removeLiquidity(base, token, basisPoints);
         address _member = msg.sender;
         uint _protection = getILProtection(_member, base, token, basisPoints);
         removeDepositData(_member, token, basisPoints, _protection); 
@@ -98,47 +98,47 @@ contract Router {
     function swapWithSynthsWithLimit(uint inputAmount, address inputToken, bool inSynth, address outputToken, bool outSynth, uint slipLimit) public returns (uint outputAmount){
         address _member = msg.sender;
         if(!inSynth){
-            moveTokenToVault(inputToken, inputAmount);
+            moveTokenToPools(inputToken, inputAmount);
         } else {
-            moveTokenToVault(iVAULT(VAULT).getSynth(inputToken), inputAmount);
+            moveTokenToPools(iPOOLS(POOLS).getSynth(inputToken), inputAmount);
         }
         address _base;
-        if(iVAULT(VAULT).isAnchor(inputToken) || iVAULT(VAULT).isAnchor(outputToken)) {
+        if(iPOOLS(POOLS).isAnchor(inputToken) || iPOOLS(POOLS).isAnchor(outputToken)) {
             _base = VADER;
         } else {
             _base = USDV;
         }
         if (isBase(outputToken)) {
             // Token||Synth -> BASE
-            require(iUTILS(UTILS()).calcSwapSlip(inputAmount, iVAULT(VAULT).getTokenAmount(inputToken)) <= slipLimit);
+            require(iUTILS(UTILS()).calcSwapSlip(inputAmount, iPOOLS(POOLS).getTokenAmount(inputToken)) <= slipLimit);
             if(!inSynth){
-                outputAmount = iVAULT(VAULT).swap(_base, inputToken, _member, true);
+                outputAmount = iPOOLS(POOLS).swap(_base, inputToken, _member, true);
             } else {
-                outputAmount = iVAULT(VAULT).burnSynth(_base, inputToken, _member);
+                outputAmount = iPOOLS(POOLS).burnSynth(_base, inputToken, _member);
             }
             _handlePoolReward(_base, inputToken);
         } else if (isBase(inputToken)) {
             // BASE -> Token||Synth
-            require(iUTILS(UTILS()).calcSwapSlip(inputAmount, iVAULT(VAULT).getBaseAmount(outputToken)) <= slipLimit);
+            require(iUTILS(UTILS()).calcSwapSlip(inputAmount, iPOOLS(POOLS).getBaseAmount(outputToken)) <= slipLimit);
             if(!outSynth){
-                outputAmount = iVAULT(VAULT).swap(_base, outputToken, _member, false);
+                outputAmount = iPOOLS(POOLS).swap(_base, outputToken, _member, false);
             } else {
-                outputAmount = iVAULT(VAULT).mintSynth(_base, outputToken, _member);
+                outputAmount = iPOOLS(POOLS).mintSynth(_base, outputToken, _member);
             }
             _handlePoolReward(_base, outputToken);
         } else if (!isBase(inputToken) && !isBase(outputToken)) {
             // Token||Synth -> Token||Synth
-            require(iUTILS(UTILS()).calcSwapSlip(inputAmount, iVAULT(VAULT).getTokenAmount(inputToken)) <= slipLimit);
+            require(iUTILS(UTILS()).calcSwapSlip(inputAmount, iPOOLS(POOLS).getTokenAmount(inputToken)) <= slipLimit);
             if(!inSynth){
-                iVAULT(VAULT).swap(_base, inputToken, VAULT, true);
+                iPOOLS(POOLS).swap(_base, inputToken, POOLS, true);
             } else {
-                iVAULT(VAULT).burnSynth(_base, inputToken, VAULT);
+                iPOOLS(POOLS).burnSynth(_base, inputToken, POOLS);
             }
-            require(iUTILS(UTILS()).calcSwapSlip(inputAmount, iVAULT(VAULT).getBaseAmount(outputToken)) <= slipLimit);
+            require(iUTILS(UTILS()).calcSwapSlip(inputAmount, iPOOLS(POOLS).getBaseAmount(outputToken)) <= slipLimit);
             if(!outSynth){
-                outputAmount = iVAULT(VAULT).swap(_base, outputToken, _member, false);
+                outputAmount = iPOOLS(POOLS).swap(_base, outputToken, _member, false);
             } else {
-                outputAmount = iVAULT(VAULT).mintSynth(_base, outputToken, _member);
+                outputAmount = iPOOLS(POOLS).mintSynth(_base, outputToken, _member);
             }
             _handlePoolReward(_base, inputToken);
             _handlePoolReward(_base, outputToken);
@@ -152,12 +152,12 @@ contract Router {
     
     function getRewardShare(address token) public view returns (uint rewardShare){
         if(emitting() && isCurated(token)){
-            uint _baseAmount = iVAULT(VAULT).getBaseAmount(token);
-            if (iVAULT(VAULT).isAsset(token)) {
-                uint _share = iUTILS(UTILS()).calcShare(_baseAmount, iVAULT(VAULT).pooledUSDV(), reserveUSDV());
+            uint _baseAmount = iPOOLS(POOLS).getBaseAmount(token);
+            if (iPOOLS(POOLS).isAsset(token)) {
+                uint _share = iUTILS(UTILS()).calcShare(_baseAmount, iPOOLS(POOLS).pooledUSDV(), reserveUSDV());
                 rewardShare = getReducedShare(_share);
-            } else if(iVAULT(VAULT).isAnchor(token)) {
-                uint _share = iUTILS(UTILS()).calcShare(_baseAmount, iVAULT(VAULT).pooledVADER(), reserveVADER());
+            } else if(iPOOLS(POOLS).isAnchor(token)) {
+                uint _share = iUTILS(UTILS()).calcShare(_baseAmount, iPOOLS(POOLS).pooledVADER(), reserveVADER());
                 rewardShare = getReducedShare(_share);
             }
         }
@@ -170,8 +170,8 @@ contract Router {
 
     function _handlePoolReward(address _base, address _token) internal{
         uint _reward = getRewardShare(_token);
-        iERC20(_base).transfer(VAULT, _reward);
-        iVAULT(VAULT).sync(_base, _token);
+        iERC20(_base).transfer(POOLS, _reward);
+        iPOOLS(POOLS).sync(_base, _token);
         emit PoolReward(_base, _token, _reward);
     }
     function pullIncentives(uint shareVADER, uint shareUSDV) public {
@@ -221,16 +221,16 @@ contract Router {
     }
     function getCoverage(address member, address token) public view returns (uint){
         uint _B0 = mapMemberToken_depositBase[member][token]; uint _T0 = mapMemberToken_depositToken[member][token];
-        uint _units = iVAULT(VAULT).getMemberUnits(token, member);
-        uint _B1 = iUTILS(UTILS()).calcShare(_units, iVAULT(VAULT).getUnits(token), iVAULT(VAULT).getBaseAmount(token));
-        uint _T1 = iUTILS(UTILS()).calcShare(_units, iVAULT(VAULT).getUnits(token), iVAULT(VAULT).getTokenAmount(token));
+        uint _units = iPOOLS(POOLS).getMemberUnits(token, member);
+        uint _B1 = iUTILS(UTILS()).calcShare(_units, iPOOLS(POOLS).getUnits(token), iPOOLS(POOLS).getBaseAmount(token));
+        uint _T1 = iUTILS(UTILS()).calcShare(_units, iPOOLS(POOLS).getUnits(token), iPOOLS(POOLS).getTokenAmount(token));
         return iUTILS(UTILS()).calcCoverage(_B0, _T0, _B1, _T1);
     }
 
     //=====================================CURATION==========================================//
 
     function curatePool(address token) public {
-        require(iVAULT(VAULT).isAsset(token));
+        require(iPOOLS(POOLS).isAsset(token));
         if(!isCurated(token)){
             if(curatedPoolCount < curatedPoolLimit){
                 _isCurated[token] = true;
@@ -240,8 +240,8 @@ contract Router {
         emit Curated(msg.sender, token);
     }
     function replacePool(address oldToken, address newToken) public {
-        require(iVAULT(VAULT).isAsset(newToken));
-        if(iVAULT(VAULT).getBaseAmount(newToken) > iVAULT(VAULT).getBaseAmount(oldToken)){
+        require(iPOOLS(POOLS).isAsset(newToken));
+        if(iPOOLS(POOLS).getBaseAmount(newToken) > iPOOLS(POOLS).getBaseAmount(oldToken)){
             _isCurated[oldToken] = false;
             _isCurated[newToken] = true;
             emit Curated(msg.sender, newToken);
@@ -252,15 +252,15 @@ contract Router {
 
     function listAnchor(address token) public {
         require(arrayAnchors.length < 5);
-        require(iVAULT(VAULT).isAnchor(token));
+        require(iPOOLS(POOLS).isAnchor(token));
         arrayAnchors.push(token);
         arrayPrices.push(iUTILS(UTILS()).calcValueInBase(token, one));
         updateAnchorPrice(token);
     }
 
     function replaceAnchor(address oldToken, address newToken) public {
-        require(iVAULT(VAULT).isAnchor(newToken), "Not anchor");
-        require((iVAULT(VAULT).getBaseAmount(newToken) > iVAULT(VAULT).getBaseAmount(oldToken)), "Not deeper");
+        require(iPOOLS(POOLS).isAnchor(newToken), "Not anchor");
+        require((iPOOLS(POOLS).getBaseAmount(newToken) > iPOOLS(POOLS).getBaseAmount(oldToken)), "Not deeper");
         _requirePriceBounds(oldToken, 500, false);                              // if price oldToken >5%
         _requirePriceBounds(newToken, 200, true);                               // if price newToken <2%
         // list/delist, add to arrayAnchors
@@ -294,7 +294,7 @@ contract Router {
     }
 
     function _handleAnchorPriceUpdate(address _token) internal{
-        if(iVAULT(VAULT).isAnchor(_token)){
+        if(iPOOLS(POOLS).isAnchor(_token)){
             updateAnchorPrice(_token);
         }
     }
@@ -359,18 +359,18 @@ contract Router {
     }
 
     // Safe transferFrom in case token charges transfer fees
-    function moveTokenToVault(address _token, uint _amount) internal returns(uint safeAmount) {
-        if(_token == VADER || _token == USDV || iVAULT(VAULT).isSynth(_token)){
+    function moveTokenToPools(address _token, uint _amount) internal returns(uint safeAmount) {
+        if(_token == VADER || _token == USDV || iPOOLS(POOLS).isSynth(_token)){
             safeAmount = _amount;
             if(tx.origin==msg.sender){
-                iERC20(_token).transferTo(VAULT, _amount);
+                iERC20(_token).transferTo(POOLS, _amount);
             }else{
-                iERC20(_token).transferFrom(msg.sender, VAULT, _amount);
+                iERC20(_token).transferFrom(msg.sender, POOLS, _amount);
             }
         } else {
-            uint _startBal = iERC20(_token).balanceOf(VAULT);
-            iERC20(_token).transferFrom(msg.sender, VAULT, _amount);
-            safeAmount = iERC20(_token).balanceOf(VAULT) - _startBal;
+            uint _startBal = iERC20(_token).balanceOf(POOLS);
+            iERC20(_token).transferFrom(msg.sender, POOLS, _amount);
+            safeAmount = iERC20(_token).balanceOf(POOLS) - _startBal;
         }
         return safeAmount;
     }
@@ -401,7 +401,7 @@ contract Router {
     function isCurated(address token) public view returns(bool curated){
         if(_isCurated[token]){
             curated = true;
-        } else if(iVAULT(VAULT).isAnchor(token)){
+        } else if(iPOOLS(POOLS).isAnchor(token)){
             curated = true;
         }
         return curated;

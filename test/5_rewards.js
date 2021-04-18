@@ -3,7 +3,7 @@ var Utils = artifacts.require('./Utils')
 var Vether = artifacts.require('./Vether')
 var Vader = artifacts.require('./Vader')
 var USDV = artifacts.require('./USDV')
-var Vault = artifacts.require('./Vault')
+var Pools = artifacts.require('./Pools')
 var Router = artifacts.require('./Router')
 var Factory = artifacts.require('./Factory')
 var Asset = artifacts.require('./Token1')
@@ -20,7 +20,7 @@ function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-var utils; var vader; var vether; var usdv; var vault; var anchor; var asset; var router; var factory;
+var utils; var vader; var vether; var usdv; var pools; var anchor; var asset; var router; var factory;
 var anchor0; var anchor1; var anchor2; var anchor3; var anchor4;  var anchor5; 
 var acc0; var acc1; var acc2; var acc3; var acc0; var acc5;
 const one = 10**18
@@ -37,20 +37,20 @@ before(async function() {
   vader = await Vader.new();
   usdv = await USDV.new();
   router = await Router.new();
-  vault = await Vault.new();
+  pools = await Pools.new();
   factory = await Factory.new();
 })
 // acc  | VTH | VADER  | USDV | Anr  |  Ass |
-// vault|   0 | 2000 | 2000 | 1000 | 1000 |
+// pool|   0 | 2000 | 2000 | 1000 | 1000 |
 // acc1 |   0 | 1000 | 1000 | 1000 | 1000 |
 
 describe("Deploy Rewards", function() {
   it("Should have right reserves", async function() {
     await vader.init(vether.address, usdv.address, utils.address)
-    await usdv.init(vader.address, router.address, vault.address)
-    await router.init(vader.address, usdv.address, vault.address);
-    await vault.init(vader.address, usdv.address, router.address, factory.address);
-    await factory.init(vault.address);
+    await usdv.init(vader.address, router.address, pools.address)
+    await router.init(vader.address, usdv.address, pools.address);
+    await pools.init(vader.address, usdv.address, router.address, factory.address);
+    await factory.init(pools.address);
 
     await vader.startEmissions()
 
@@ -89,10 +89,10 @@ describe("Should do pool rewards", function() {
     expect(BN2Str(await vader.balanceOf(router.address))).to.equal(r);
     expect(BN2Str(await router.getRewardShare(anchor.address))).to.equal(r);
     expect(BN2Str(await router.getReducedShare(r))).to.equal(r);
-    expect(BN2Str(await vault.getBaseAmount(anchor.address))).to.equal('1000');
+    expect(BN2Str(await pools.getBaseAmount(anchor.address))).to.equal('1000');
     let tx = await router.swap('100', vader.address, anchor.address, {from:acc1})
     expect(BN2Str(tx.logs[0].args.amount)).to.equal(r);
-    expect(BN2Str(await vault.getBaseAmount(anchor.address))).to.equal('1105');
+    expect(BN2Str(await pools.getBaseAmount(anchor.address))).to.equal('1105');
     expect(BN2Str(await router.reserveVADER())).to.equal('0');
     expect(BN2Str(await router.getRewardShare(anchor.address))).to.equal('0');
     expect(BN2Str(await router.getReducedShare('0'))).to.equal('0');
@@ -106,10 +106,10 @@ describe("Should do pool rewards", function() {
     expect(BN2Str(await usdv.balanceOf(router.address))).to.equal(r);
     expect(BN2Str(await router.getRewardShare(asset.address))).to.equal(r);
     expect(BN2Str(await router.getReducedShare(r))).to.equal(r);
-    expect(BN2Str(await vault.getBaseAmount(asset.address))).to.equal('1000');
+    expect(BN2Str(await pools.getBaseAmount(asset.address))).to.equal('1000');
     let tx = await router.swap('100', usdv.address, asset.address, {from:acc1})
     expect(BN2Str(tx.logs[0].args.amount)).to.equal('9');
-    expect(BN2Str(await vault.getBaseAmount(asset.address))).to.equal(BN2Str(1100 + 9));
+    expect(BN2Str(await pools.getBaseAmount(asset.address))).to.equal(BN2Str(1100 + 9));
     expect(BN2Str(await router.reserveUSDV())).to.equal('0');
     expect(BN2Str(await router.getRewardShare(asset.address))).to.equal('0');
     expect(BN2Str(await router.getReducedShare('0'))).to.equal('0');

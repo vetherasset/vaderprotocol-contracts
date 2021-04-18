@@ -7,7 +7,7 @@ import "./iUTILS.sol";
 import "./iVADER.sol";
 import "./iFACTORY.sol";
 
-contract Vault {
+contract Pools {
 
     // Parameters
     bool private inited;

@@ -3,7 +3,7 @@ var Utils = artifacts.require('./Utils')
 var Vether = artifacts.require('./Vether')
 var Vader = artifacts.require('./Vader')
 var USDV = artifacts.require('./USDV')
-var Vault = artifacts.require('./Vault')
+var Pools = artifacts.require('./Pools')
 var Router = artifacts.require('./Router')
 var Factory = artifacts.require('./Factory')
 var Asset = artifacts.require('./Token1')
@@ -19,7 +19,7 @@ function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-var utils; var vader; var vether; var usdv; var vault; var anchor; var asset; var router; var factory;
+var utils; var vader; var vether; var usdv; var pools; var anchor; var asset; var router; var factory;
 var anchor0; var anchor1; var anchor2; var anchor3; var anchor4;  var anchor5; 
 var acc0; var acc1; var acc2; var acc3; var acc0; var acc5;
 const one = 10**18
@@ -36,7 +36,7 @@ before(async function() {
   vader = await Vader.new();
   usdv = await USDV.new();
   router = await Router.new();
-  vault = await Vault.new();
+  pools = await Pools.new();
   factory = await Factory.new();
 
   asset = await Asset.new();
@@ -52,12 +52,12 @@ before(async function() {
 describe("Deploy Anchor", function() {
   it("Should deploy", async function() {
     await sleep(100)
-    await utils.init(vault.address)
+    await utils.init(pools.address)
     await vader.init(vether.address, usdv.address, utils.address)
-    await usdv.init(vader.address, router.address, vault.address)
-    await router.init(vader.address, usdv.address, vault.address);
-    await vault.init(vader.address, usdv.address, router.address, factory.address);
-    await factory.init(vault.address);
+    await usdv.init(vader.address, router.address, pools.address)
+    await router.init(vader.address, usdv.address, pools.address);
+    await pools.init(vader.address, usdv.address, router.address, factory.address);
+    await factory.init(pools.address);
     
     await vether.transfer(acc1, BN2Str(6006)) 
     await vether.approve(vader.address, '6000', {from:acc1})
@@ -109,8 +109,8 @@ describe("Handle Anchors", function() {
   });
   it("Replace Median", async function() {
     await router.swap('2', vader.address, anchor4.address, {from:acc1})
-    expect(BN2Str(await vault.mapToken_baseAmount(anchor4.address))).to.equal('102');
-    expect(BN2Str(await vault.mapToken_tokenAmount(anchor4.address))).to.equal('102');
+    expect(BN2Str(await pools.mapToken_baseAmount(anchor4.address))).to.equal('102');
+    expect(BN2Str(await pools.mapToken_tokenAmount(anchor4.address))).to.equal('102');
     expect(BN2Str(await utils.calcValueInBase(anchor4.address, '100'))).to.equal('100');
     expect(BN2Str(await router.getAnchorPrice())).to.equal('1000000000000000000')
     expect(BN2Str(await router.getVADERAmount('100'))).to.equal('100')
@@ -118,8 +118,8 @@ describe("Handle Anchors", function() {
   });
   it("Create outlier", async function() {
     await router.swap('10', vader.address, anchor0.address, {from:acc1})
-    expect(BN2Str(await vault.mapToken_baseAmount(anchor0.address))).to.equal('110');
-    expect(BN2Str(await vault.mapToken_tokenAmount(anchor0.address))).to.equal('91');
+    expect(BN2Str(await pools.mapToken_baseAmount(anchor0.address))).to.equal('110');
+    expect(BN2Str(await pools.mapToken_tokenAmount(anchor0.address))).to.equal('91');
     expect(BN2Str(await utils.calcValueInBase(anchor0.address, '100'))).to.equal('120');
     expect(BN2Str(await router.getAnchorPrice())).to.equal('1000000000000000000')
     expect(BN2Str(await router.getVADERAmount('100'))).to.equal('100')

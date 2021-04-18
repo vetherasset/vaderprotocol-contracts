@@ -16,7 +16,7 @@ VADER USD (USDV)
 * Harvest, withdraw
 * Has a reserve for interest payments
 
-VAULT
+POOLS
 * Add liquidity to Asset or Anchor pools
 * Remove liquidity with 100 Days IL Protection
 * Swap between Asset <> USDV <> VADER <> Anchor
@@ -30,9 +30,9 @@ VAULT
 * Deploy VETHER
 * Deploy VADER(vether.address)
 * Deploy USDV(vader.address, utils.address)
-* Deploy VAULT(vader.address, usdv.address, utils.address)
+* Deploy POOLS(vader.address, usdv.address, utils.address)
 * Set VADER.setUSDV(USDV.address)
-* Set USDV.setVault(vault.address)
+* Set USDV.setPools(pools.address)
 
 ## Addresses
 
