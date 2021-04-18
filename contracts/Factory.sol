@@ -9,29 +9,29 @@ contract Factory {
     bool private inited;
     address public VADER;
     address public USDV;
-    address public VAULT;
+    address public POOLS;
 
     address[] public arraySynths;
     mapping(address => address) private mapToken_Synth;
     mapping(address => bool) public isSynth;
     event CreateSynth(address indexed token, address indexed pool);
 
-    modifier onlyVAULT() {
-        require(msg.sender == VAULT, "!VAULT");
+    modifier onlyPOOLS() {
+        require(msg.sender == POOLS, "!POOLS");
         _;
     }
     
     // Minting event
     constructor(){
     }
-    function init(address _vault) public {
+    function init(address _pool) public {
         require(inited == false);
         inited = true;
-        VAULT = _vault;
+        POOLS = _pool;
     }
 
     //Create a synth asset
-    function deploySynth(address token) public onlyVAULT returns(address synth){
+    function deploySynth(address token) public onlyPOOLS returns(address synth){
         require(getSynth(token) == address(0), "CreateErr");
         Synth newSynth;
         newSynth = new Synth(token);  
@@ -41,7 +41,7 @@ contract Factory {
         return synth;
     }
 
-    function mintSynth(address synth, address member, uint amount) public onlyVAULT returns(bool){
+    function mintSynth(address synth, address member, uint amount) public onlyPOOLS returns(bool){
          Synth(synth).mint(member, amount); 
         return true;
     }

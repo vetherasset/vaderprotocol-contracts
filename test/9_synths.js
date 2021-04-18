@@ -3,7 +3,7 @@ var Utils = artifacts.require('./Utils')
 var Vether = artifacts.require('./Vether')
 var Vader = artifacts.require('./Vader')
 var USDV = artifacts.require('./USDV')
-var Vault = artifacts.require('./Vault')
+var Pools = artifacts.require('./Pools')
 var Router = artifacts.require('./Router')
 var Factory = artifacts.require('./Factory')
 var Synth = artifacts.require('./Synth')
@@ -21,7 +21,7 @@ function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-var utils; var vader; var vether; var usdv; var vault; var anchor; var asset; var factory; var router;
+var utils; var vader; var vether; var usdv; var pools; var anchor; var asset; var factory; var router;
 var anchor0; var anchor1; var anchor2; var anchor3; var anchor4;  var anchor5; 
 var acc0; var acc1; var acc2; var acc3; var acc0; var acc5;
 const one = 10**18
@@ -38,7 +38,7 @@ before(async function() {
   vader = await Vader.new();
   usdv = await USDV.new();
   router = await Router.new();
-  vault = await Vault.new();
+  pools = await Pools.new();
   factory = await Factory.new();
 
 })
@@ -46,12 +46,12 @@ before(async function() {
 
 describe("Deploy Router", function() {
   it("Should deploy", async function() {
-    await utils.init(vault.address)
+    await utils.init(pools.address)
     await vader.init(vether.address, usdv.address, utils.address)
-    await usdv.init(vader.address, router.address, vault.address)
-    await router.init(vader.address, usdv.address, vault.address);
-    await vault.init(vader.address, usdv.address, router.address, factory.address);
-    await factory.init(vault.address);
+    await usdv.init(vader.address, router.address, pools.address)
+    await router.init(vader.address, usdv.address, pools.address);
+    await pools.init(vader.address, usdv.address, router.address, factory.address);
+    await factory.init(pools.address);
 
     asset = await Asset.new();
     anchor = await Anchor.new();
@@ -78,29 +78,29 @@ describe("Deploy Router", function() {
 describe("Add liquidity", function() {
   it("Should add anchor", async function() {
     await router.addLiquidity(vader.address, '1000', anchor.address, '1000', {from:acc1})
-    expect(BN2Str(await vault.getUnits(anchor.address))).to.equal('1000');
-    expect(BN2Str(await vault.getBaseAmount(anchor.address))).to.equal(BN2Str(1000));
-    expect(BN2Str(await vault.getTokenAmount(anchor.address))).to.equal('1000');
-    expect(BN2Str(await vault.getMemberUnits(anchor.address, acc1))).to.equal('1000');
+    expect(BN2Str(await pools.getUnits(anchor.address))).to.equal('1000');
+    expect(BN2Str(await pools.getBaseAmount(anchor.address))).to.equal(BN2Str(1000));
+    expect(BN2Str(await pools.getTokenAmount(anchor.address))).to.equal('1000');
+    expect(BN2Str(await pools.getMemberUnits(anchor.address, acc1))).to.equal('1000');
   });
   it("Should add asset", async function() {
     let tx = await router.addLiquidity(usdv.address, '1000', asset.address, '1000', {from:acc1})
-    expect(BN2Str(await vault.mapToken_Units(asset.address))).to.equal('1000');
-    expect(BN2Str(await vault.mapToken_baseAmount(asset.address))).to.equal(BN2Str(1000));
-    expect(BN2Str(await vault.mapToken_tokenAmount(asset.address))).to.equal('1000');
-    expect(BN2Str(await vault.mapTokenMember_Units(asset.address, acc1))).to.equal('1000');
+    expect(BN2Str(await pools.mapToken_Units(asset.address))).to.equal('1000');
+    expect(BN2Str(await pools.mapToken_baseAmount(asset.address))).to.equal(BN2Str(1000));
+    expect(BN2Str(await pools.mapToken_tokenAmount(asset.address))).to.equal('1000');
+    expect(BN2Str(await pools.mapTokenMember_Units(asset.address, acc1))).to.equal('1000');
   });
 });
 
 describe("Should Swap Synths", function() {
   it("Swap from Base to Synth", async function() {
-    await vault.deploySynth(anchor.address)
+    await pools.deploySynth(anchor.address)
     await router.swapWithSynths('250', vader.address, false, anchor.address, true, {from:acc1})
-    expect(BN2Str(await vault.getBaseAmount(anchor.address))).to.equal('1250');
-    expect(BN2Str(await vault.getTokenAmount(anchor.address))).to.equal('1000');
+    expect(BN2Str(await pools.getBaseAmount(anchor.address))).to.equal('1250');
+    expect(BN2Str(await pools.getTokenAmount(anchor.address))).to.equal('1000');
     expect(BN2Str(await utils.calcSynthUnits('250', '1000', '1000'))).to.equal('100');
-    expect(BN2Str(await vault.mapTokenMember_Units(anchor.address, vault.address))).to.equal('100');
-    expect(BN2Str(await vault.mapToken_Units(anchor.address))).to.equal('1100');
+    expect(BN2Str(await pools.mapTokenMember_Units(anchor.address, pools.address))).to.equal('100');
+    expect(BN2Str(await pools.mapToken_Units(anchor.address))).to.equal('1100');
 
     expect(BN2Str(await utils.calcSwapOutput('250', '1000', '1000'))).to.equal('160');
     let synthAddress = await factory.getSynth(anchor.address)
@@ -115,24 +115,24 @@ describe("Should Swap Synths", function() {
     let synth = await Synth.at(synthAddress);
     await router.swapWithSynths('80', anchor.address, true, vader.address, false, {from:acc1})
     expect(BN2Str(await synth.balanceOf(acc1))).to.equal('80');
-    expect(BN2Str(await vault.getBaseAmount(anchor.address))).to.equal('1165');
-    expect(BN2Str(await vault.getTokenAmount(anchor.address))).to.equal('1000');
+    expect(BN2Str(await pools.getBaseAmount(anchor.address))).to.equal('1165');
+    expect(BN2Str(await pools.getTokenAmount(anchor.address))).to.equal('1000');
     expect(BN2Str(await utils.calcShare('80', '160', '100'))).to.equal('50');
-    expect(BN2Str(await vault.mapTokenMember_Units(anchor.address, vault.address))).to.equal('50');
-    expect(BN2Str(await vault.mapToken_Units(anchor.address))).to.equal('1050');
+    expect(BN2Str(await pools.mapTokenMember_Units(anchor.address, pools.address))).to.equal('50');
+    expect(BN2Str(await pools.mapToken_Units(anchor.address))).to.equal('1050');
   });
 
   it("Swap from Synth to Synth", async function() {
-    await vault.deploySynth(asset.address)
+    await pools.deploySynth(asset.address)
     let synthAddress = await factory.getSynth(anchor.address)
     let synth = await Synth.at(synthAddress);
     await router.swapWithSynths('80', anchor.address, true, asset.address, true, {from:acc1})
     expect(BN2Str(await synth.balanceOf(acc1))).to.equal('0');
-    expect(BN2Str(await vault.getBaseAmount(anchor.address))).to.equal('1086');
-    expect(BN2Str(await vault.getTokenAmount(anchor.address))).to.equal('1000');
+    expect(BN2Str(await pools.getBaseAmount(anchor.address))).to.equal('1086');
+    expect(BN2Str(await pools.getTokenAmount(anchor.address))).to.equal('1000');
     expect(BN2Str(await utils.calcShare('80', '160', '100'))).to.equal('50');
-    expect(BN2Str(await vault.mapTokenMember_Units(anchor.address, vault.address))).to.equal('0');
-    expect(BN2Str(await vault.mapToken_Units(anchor.address))).to.equal('1000');
+    expect(BN2Str(await pools.mapTokenMember_Units(anchor.address, pools.address))).to.equal('0');
+    expect(BN2Str(await pools.mapToken_Units(anchor.address))).to.equal('1000');
     
     expect(BN2Str(await utils.calcSwapOutput('250', '1000', '1000'))).to.equal('160');
     let synthAddress2 = await factory.getSynth(asset.address)

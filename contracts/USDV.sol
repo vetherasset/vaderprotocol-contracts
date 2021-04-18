@@ -6,7 +6,7 @@ import "./iERC20.sol";
 import "./iUTILS.sol";
 import "./iVADER.sol";
 import "./iROUTER.sol";
-import "./iVAULT.sol";
+import "./iPOOLS.sol";
 import "./iSYNTH.sol";
 
 import "hardhat/console.sol";
@@ -33,7 +33,7 @@ contract USDV is iERC20 {
 
     address public VADER;
     address public ROUTER;
-    address public VAULT;
+    address public POOLS;
 
     uint public minimumDepositTime;
     uint public totalWeight;
@@ -75,12 +75,12 @@ contract USDV is iERC20 {
         decimals = 18;
         totalSupply = 0;
     }
-    function init(address _vader, address _router, address _vault) public {
+    function init(address _vader, address _router, address _pool) public {
         require(inited == false);
         inited = true;
         VADER = _vader;
         ROUTER = _router;
-        VAULT = _vault;
+        POOLS = _pool;
         iERC20(VADER).approve(ROUTER, type(uint).max);
         _approve(address(this), ROUTER, type(uint).max);
         currentEra = 1;
@@ -225,7 +225,7 @@ contract USDV is iERC20 {
     }
     // Wrapper for contracts
     function depositForMember(address token, address member, uint amount) public {
-        require(token==address(this) || (iVAULT(VAULT).isSynth(token) && iVAULT(VAULT).isAsset(iSYNTH(token).TOKEN())));
+        require(token==address(this) || (iPOOLS(POOLS).isSynth(token) && iPOOLS(POOLS).isAsset(iSYNTH(token).TOKEN())));
         getFunds(token, amount);
         _deposit(token, member, amount);
     }
@@ -299,8 +299,8 @@ contract USDV is iERC20 {
         totalRewards -= _reward;
         if(_token!=address(this)){
             _reward = iUTILS(UTILS()).calcSwapValueInToken(iSYNTH(_token).TOKEN(), _reward);
-            _transfer(address(this), VAULT, _reward);
-            _reward = iVAULT(VAULT).mintSynth(address(this), iSYNTH(_token).TOKEN(), address(this));
+            _transfer(address(this), POOLS, _reward);
+            _reward = iPOOLS(POOLS).mintSynth(address(this), iSYNTH(_token).TOKEN(), address(this));
         }
         uint _principle = iUTILS(UTILS()).calcPart(_basisPoints, mapMemberToken_deposit[_member][_token]); // share of deposits
         mapMemberToken_deposit[_member][_token] -= _principle;                                   

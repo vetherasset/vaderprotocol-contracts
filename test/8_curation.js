@@ -3,7 +3,7 @@ var Utils = artifacts.require('./Utils')
 var Vether = artifacts.require('./Vether')
 var Vader = artifacts.require('./Vader')
 var USDV = artifacts.require('./USDV')
-var Vault = artifacts.require('./Vault')
+var Pools = artifacts.require('./Pools')
 var Router = artifacts.require('./Router')
 var Factory = artifacts.require('./Factory')
 var Asset = artifacts.require('./Token1')
@@ -19,7 +19,7 @@ function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-var utils; var vader; var vether; var usdv; var vault; var anchor; var factory; var router;
+var utils; var vader; var vether; var usdv; var pools; var anchor; var factory; var router;
 var asset; var asset2; var asset3;
 var anchor0; var anchor1; var anchor2; var anchor3; var anchor4;  var anchor5; 
 var acc0; var acc1; var acc2; var acc3; var acc0; var acc5;
@@ -37,7 +37,7 @@ before(async function() {
   vader = await Vader.new();
   usdv = await USDV.new();
   router = await Router.new();
-  vault = await Vault.new();
+  pools = await Pools.new();
   factory = await Factory.new();
 
 })
@@ -46,10 +46,10 @@ before(async function() {
 describe("Deploy Router", function() {
   it("Should deploy", async function() {
     await vader.init(vether.address, usdv.address, utils.address)
-    await usdv.init(vader.address, router.address, vault.address)
-    await router.init(vader.address, usdv.address, vault.address);
-    await vault.init(vader.address, usdv.address, router.address, factory.address);
-    await factory.init(vault.address);
+    await usdv.init(vader.address, router.address, pools.address)
+    await router.init(vader.address, usdv.address, pools.address);
+    await pools.init(vader.address, usdv.address, router.address, factory.address);
+    await factory.init(pools.address);
 
     await vader.startEmissions()
 
@@ -92,37 +92,37 @@ describe("Deploy Router", function() {
 describe("Add liquidity", function() {
   it("Should add anchor", async function() {
     await router.addLiquidity(vader.address, '1000', anchor.address, '1000', {from:acc1})
-    expect(BN2Str(await vault.getUnits(anchor.address))).to.equal('1000');
-    expect(BN2Str(await vault.getBaseAmount(anchor.address))).to.equal(BN2Str(1000));
-    expect(BN2Str(await vault.getTokenAmount(anchor.address))).to.equal('1000');
-    expect(BN2Str(await vault.getMemberUnits(anchor.address, acc1))).to.equal('1000');
+    expect(BN2Str(await pools.getUnits(anchor.address))).to.equal('1000');
+    expect(BN2Str(await pools.getBaseAmount(anchor.address))).to.equal(BN2Str(1000));
+    expect(BN2Str(await pools.getTokenAmount(anchor.address))).to.equal('1000');
+    expect(BN2Str(await pools.getMemberUnits(anchor.address, acc1))).to.equal('1000');
   });
   it("Should add asset", async function() {
     let tx = await router.addLiquidity(usdv.address, '1000', asset.address, '1000', {from:acc1})
-    expect(BN2Str(await vault.mapToken_Units(asset.address))).to.equal('1000');
-    expect(BN2Str(await vault.mapToken_baseAmount(asset.address))).to.equal(BN2Str(1000));
-    expect(BN2Str(await vault.mapToken_tokenAmount(asset.address))).to.equal('1000');
-    expect(BN2Str(await vault.mapTokenMember_Units(asset.address, acc1))).to.equal('1000');
+    expect(BN2Str(await pools.mapToken_Units(asset.address))).to.equal('1000');
+    expect(BN2Str(await pools.mapToken_baseAmount(asset.address))).to.equal(BN2Str(1000));
+    expect(BN2Str(await pools.mapToken_tokenAmount(asset.address))).to.equal('1000');
+    expect(BN2Str(await pools.mapTokenMember_Units(asset.address, acc1))).to.equal('1000');
   });
   it("Should add asset2", async function() {
     let tx = await router.addLiquidity(usdv.address, '999', asset2.address, '999', {from:acc1})
-    expect(BN2Str(await vault.mapToken_Units(asset2.address))).to.equal('999');
-    expect(BN2Str(await vault.mapToken_baseAmount(asset2.address))).to.equal('999');
-    expect(BN2Str(await vault.mapToken_tokenAmount(asset2.address))).to.equal('999');
-    expect(BN2Str(await vault.mapTokenMember_Units(asset2.address, acc1))).to.equal('999');
+    expect(BN2Str(await pools.mapToken_Units(asset2.address))).to.equal('999');
+    expect(BN2Str(await pools.mapToken_baseAmount(asset2.address))).to.equal('999');
+    expect(BN2Str(await pools.mapToken_tokenAmount(asset2.address))).to.equal('999');
+    expect(BN2Str(await pools.mapTokenMember_Units(asset2.address, acc1))).to.equal('999');
   });
   it("Should add asset3", async function() {
     await router.addLiquidity(usdv.address, '999', asset3.address, '999', {from:acc1})
-    expect(BN2Str(await vault.mapToken_Units(asset3.address))).to.equal('999');
-    expect(BN2Str(await vault.mapToken_baseAmount(asset3.address))).to.equal('999');
-    expect(BN2Str(await vault.mapToken_tokenAmount(asset3.address))).to.equal('999');
-    expect(BN2Str(await vault.mapTokenMember_Units(asset3.address, acc1))).to.equal('999');
+    expect(BN2Str(await pools.mapToken_Units(asset3.address))).to.equal('999');
+    expect(BN2Str(await pools.mapToken_baseAmount(asset3.address))).to.equal('999');
+    expect(BN2Str(await pools.mapToken_tokenAmount(asset3.address))).to.equal('999');
+    expect(BN2Str(await pools.mapTokenMember_Units(asset3.address, acc1))).to.equal('999');
   });
 });
 
 describe("Should Curate", function() {
   it("Curate first pool", async function() {
-    expect(await vault.isAsset(asset.address)).to.equal(true);
+    expect(await pools.isAsset(asset.address)).to.equal(true);
     expect(await router.isCurated(asset.address)).to.equal(false);
     expect(BN2Str(await router.curatedPoolLimit())).to.equal('1');
     expect(BN2Str(await router.curatedPoolCount())).to.equal('0');
