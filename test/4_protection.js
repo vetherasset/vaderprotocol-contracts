@@ -5,6 +5,7 @@ var Vader = artifacts.require('./Vader')
 var USDV = artifacts.require('./USDV')
 var Vault = artifacts.require('./Vault')
 var Router = artifacts.require('./Router')
+var Factory = artifacts.require('./Factory')
 var Asset = artifacts.require('./Token1')
 var Anchor = artifacts.require('./Token2')
 
@@ -19,7 +20,7 @@ function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-var utils; var vader; var vether; var usdv; var vault; var anchor; var asset; var router;
+var utils; var vader; var vether; var usdv; var vault; var anchor; var asset; var router; var factory;
 var anchor0; var anchor1; var anchor2; var anchor3; var anchor4;  var anchor5; 
 var acc0; var acc1; var acc2; var acc3; var acc0; var acc5;
 const one = 10**18
@@ -37,7 +38,7 @@ before(async function() {
   usdv = await USDV.new();
   router = await Router.new();
   vault = await Vault.new();
-
+  factory = await Factory.new();
   
 })
 // acc  | VTH | VADER  | USDV | Anr  |  Ass |
@@ -51,14 +52,14 @@ describe("Deploy Protection", function() {
     await vader.init(vether.address, usdv.address, utils.address)
     await usdv.init(vader.address, router.address, vault.address)
     await router.init(vader.address, usdv.address, vault.address);
-    await vault.init(vader.address, usdv.address, router.address, router.address);
+    await vault.init(vader.address, usdv.address, router.address, factory.address);
+    await factory.init(vault.address);
 
     anchor = await Anchor.new();
 
     await vether.transfer(acc1, BN2Str(7407)) 
     await anchor.transfer(acc1, BN2Str(2000))
     await anchor.approve(router.address, BN2Str(one), {from:acc1})
-
     await vether.approve(vader.address, '7400', {from:acc1})
     await vader.upgrade(BN2Str(7400), {from:acc1}) 
 
@@ -69,10 +70,10 @@ describe("Deploy Protection", function() {
     await vader.transfer(acc0, '100', {from:acc1})
     await usdv.transfer(acc0, '100', {from:acc1})
     expect(BN2Str(await vader.getDailyEmission())).to.equal('7');
-    expect(BN2Str(await usdv.reserveUSDV())).to.equal('5');
-    expect(BN2Str(await router.reserveUSDV())).to.equal('4');
-    expect(BN2Str(await router.reserveVADER())).to.equal('5');
-    
+    expect(BN2Str(await usdv.reserveUSDV())).to.equal('7');
+    expect(BN2Str(await router.reserveUSDV())).to.equal('7');
+    expect(BN2Str(await router.reserveVADER())).to.equal('8');
+    await vader.stopEmissions()
   });
 });
 
@@ -85,15 +86,15 @@ describe("Should do IL Protection", function() {
     expect(BN2Str(await utils.calcCoverage('100', '1000', '20', '2000'))).to.equal('70');
   });
   it("Small swap, need protection", async function() {
-    expect(BN2Str(await usdv.balanceOf(acc1))).to.equal('908');
+    expect(BN2Str(await usdv.balanceOf(acc1))).to.equal('900');
     for(let i = 0; i<9; i++){
       await router.swap('100', anchor.address, vader.address, {from:acc1})
     }
     expect(BN2Str(await router.mapMemberToken_depositBase(acc1, anchor.address))).to.equal('1000');
     expect(BN2Str(await router.mapMemberToken_depositToken(acc1, anchor.address))).to.equal('1000');
     let coverage = await router.getCoverage(acc1, anchor.address)
-    expect(BN2Str(coverage)).to.equal('177');
-    expect(BN2Str(await router.getProtection(acc1, anchor.address, "10000", coverage))).to.equal('177');
+    expect(BN2Str(coverage)).to.equal('183');
+    expect(BN2Str(await router.getProtection(acc1, anchor.address, "10000", coverage))).to.equal('183');
     let reserveVADER = BN2Str(await router.reserveVADER())
     expect(BN2Str(await router.getILProtection(acc1, vader.address, anchor.address, '10000'))).to.equal(reserveVADER);
 
@@ -107,7 +108,7 @@ describe("Should do IL Protection", function() {
     await router.addLiquidity(vader.address, '1000', asset.address, '1000', {from:acc1})
 
 
-    expect(BN2Str(await usdv.balanceOf(acc1))).to.equal('908');
+    expect(BN2Str(await usdv.balanceOf(acc1))).to.equal('900');
     for(let i = 0; i<9; i++){
       await router.swap('100', asset.address, usdv.address, {from:acc1})
     }

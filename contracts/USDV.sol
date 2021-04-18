@@ -37,11 +37,10 @@ contract USDV is iERC20 {
     uint public totalWeight;
     uint public totalRewards;
 
-    mapping(address => bool) private _isMember; // Is Member
     mapping(address => uint) private mapToken_totalFunds;
+    mapping(address => uint) private mapMember_weight;
     mapping(address => mapping(address => uint)) private mapMemberToken_deposit;
     mapping(address => mapping(address => uint)) private mapMemberToken_reward;
-    mapping(address => mapping(address => uint)) private mapMemberToken_weight;
     mapping(address => mapping(address => uint)) private mapMemberToken_lastTime;
     mapping(address => uint) public lastBlock;
 
@@ -217,15 +216,8 @@ contract USDV is iERC20 {
     }
 
     //======================================DEPOSITS========================================//
-    // Users deposit USDV or SYNTHS
-    // Work out weight in USDV
-    // When harvest, allocate them rewards, deduct from reserve (but do not send funds)
-    // When withdraw, do a final harvest, then:
-    // 1) Add rewards to principle, if SYNTH, swap to synth first
-    // 2) send them all
 
-
-    // USDV holders to deposit for Interest Payments
+    // Holders to deposit for Interest Payments
     function deposit(address token, uint amount) public {
         depositForMember(token, msg.sender, amount);
     }
@@ -236,9 +228,6 @@ contract USDV is iERC20 {
         _deposit(token, member, amount);
     }
     function _deposit(address _token, address _member, uint _amount) internal {
-        if (!isMember(_member)) {
-            _isMember[_member] = true;
-        }
         mapMemberToken_lastTime[_member][_token] = block.timestamp;
         mapMemberToken_deposit[_member][_token] += _amount; // Record balance for member
         uint _weight;
@@ -247,13 +236,13 @@ contract USDV is iERC20 {
         } else {
             _weight = iUTILS(UTILS()).calcValueInBase(iSYNTH(_token).TOKEN(), _amount);
         }
-        mapMemberToken_weight[_member][_token] += _weight;
         mapToken_totalFunds[_token] += _amount;
+        mapMember_weight[_member] += _weight;
         totalWeight += _weight;
         emit MemberDeposits(_token, _member, _amount, mapToken_totalFunds[_token], _weight, totalWeight);
     }
 
-    //======================================HARVEST & WITHDRAW========================================//
+    //====================================== HARVEST ========================================//
 
     // Harvest, get payment, allocate, increase weight
     function harvest(address token) public {
@@ -268,7 +257,7 @@ contract USDV is iERC20 {
         } else {
             _weight = iUTILS(UTILS()).calcValueInBase(iSYNTH(token).TOKEN(), _payment);
         }
-        mapMemberToken_weight[_member][token] += _weight;
+        mapMember_weight[_member] += _weight;
         totalWeight += _weight;
         emit MemberHarvests(token, _member, _payment, _weight, totalWeight);
     }
@@ -276,7 +265,7 @@ contract USDV is iERC20 {
     // Get the payment owed for a member
     function calcCurrentPayment(address token, address member) public view returns(uint){
         uint _secondsSinceClaim = block.timestamp - mapMemberToken_lastTime[member][token];        // Get time since last claim
-        uint _share = calcPayment(token, member);                                              // Get share of rewards for member
+        uint _share = calcPayment(member);                                              // Get share of rewards for member
         uint _reward = (_share * _secondsSinceClaim) / iVADER(VADER).secondsPerEra();   // Get owed amount, based on per-day rates
         uint _reserve = reserveUSDV();
         if(_reward >= _reserve) {
@@ -285,11 +274,13 @@ contract USDV is iERC20 {
         return _reward;
     }
 
-    function calcPayment(address token, address member) public view returns(uint){
-        uint _weight = mapMemberToken_weight[member][token];
-        uint _reserve = (reserveUSDV() / erasToEarn);                          // Deplete reserve over a number of days
+    function calcPayment(address member) public view returns(uint){
+        uint _weight = mapMember_weight[member];
+        uint _reserve = reserveUSDV() / erasToEarn;                               // Deplete reserve over a number of eras
         return iUTILS(UTILS()).calcShare(_weight, totalWeight, _reserve);         // Get member's share of that
     }
+
+//====================================== WITHDRAW ========================================//
 
     // Members to withdraw
     function withdraw(address token, uint basisPoints) public returns(uint redeemedAmount) {
@@ -300,14 +291,14 @@ contract USDV is iERC20 {
     }
     function _processWithdraw(address _token, address _member, uint _basisPoints) internal returns(uint _amount) {
         require((block.timestamp - mapMemberToken_lastTime[_member][_token]) >= minimumDepositTime, "DepositTime");    // stops attacks
-        uint _reward = ((mapMemberToken_reward[_member][_token] * _basisPoints)) / 10000; 
+        uint _reward = (mapMemberToken_reward[_member][_token] * _basisPoints) / 10000; // share of reward
         mapMemberToken_reward[_member][_token] -= _reward;
         totalRewards -= _reward;
         if(_token!=address(this)){
             iERC20(_token).transfer(VAULT, _reward);
             _reward = iVAULT(VAULT).mintSynth(address(this), iSYNTH(_token).TOKEN(), address(this));
         }
-        uint _principle = ((mapMemberToken_deposit[_member][_token] * _basisPoints)) / 10000; 
+        uint _principle = (mapMemberToken_deposit[_member][_token] * _basisPoints) / 10000; // share of deposits
         mapMemberToken_deposit[_member][_token] -= _principle;                                   
         mapToken_totalFunds[_token] -= _principle;
         uint _weight;
@@ -316,7 +307,8 @@ contract USDV is iERC20 {
         } else {
             _weight = iUTILS(UTILS()).calcValueInBase(iSYNTH(_token).TOKEN(), _principle + _reward);
         }
-        totalWeight -= iUTILS(UTILS()).calcShare(_weight, totalWeight, totalWeight);                                                           // reduce for total
+        mapMember_weight[_member] -= iUTILS(UTILS()).calcShare(_weight, mapMember_weight[_member], mapMember_weight[_member]); 
+        totalWeight -= iUTILS(UTILS()).calcShare(_weight, totalWeight, totalWeight);       // reduce for total
         emit MemberWithdraws(_token, _member, _amount, _weight, totalWeight);
         return _principle + _reward;
     }
@@ -345,20 +337,26 @@ contract USDV is iERC20 {
     //============================== HELPERS ================================//
 
     function reserveUSDV() public view returns(uint){
-        return balanceOf(address(this)) - mapToken_totalFunds[address(this)];
+        return balanceOf(address(this)) - mapToken_totalFunds[address(this)] - totalRewards; // Balance - deposits - rewards
     }
 
     function _twothirds(uint _amount) internal pure returns(uint){
         return (_amount * 2) / 3;
     }
-    function getMemberDeposit(address token, address member) public view returns(uint){
+    function getTokenDeposits(address token) external view returns(uint){
+        return mapToken_totalFunds[token];
+    }
+    function getMemberDeposit(address token, address member) external view returns(uint){
         return mapMemberToken_deposit[member][token];
     }
-    function getMemberLastTime(address token, address member) public view returns(uint){
-        return mapMemberToken_lastTime[member][token];
+    function getMemberReward(address token, address member) external view returns(uint){
+        return mapMemberToken_reward[member][token];
     }
-    function isMember(address member) public view returns(bool){
-        return _isMember[member];
+    function getMemberWeight(address member) external view returns(uint){
+        return mapMember_weight[member];
+    }
+    function getMemberLastTime(address token, address member) external view returns(uint){
+        return mapMemberToken_lastTime[member][token];
     }
     function UTILS() public view returns(address){
         return iVADER(VADER).UTILS();

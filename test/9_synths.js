@@ -21,7 +21,7 @@ function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-var utils; var vader; var vether; var usdv; var vault; var anchor; var asset; var factory;
+var utils; var vader; var vether; var usdv; var vault; var anchor; var asset; var factory; var router;
 var anchor0; var anchor1; var anchor2; var anchor3; var anchor4;  var anchor5; 
 var acc0; var acc1; var acc2; var acc3; var acc0; var acc5;
 const one = 10**18

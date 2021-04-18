@@ -8,7 +8,12 @@ interface iUSDV {
     function convertForMember(address, uint) external returns(uint);
     function redeem(uint) external returns(uint);
     function redeemForMember(address, uint) external returns(uint);
-    function totalFunds() external view returns(uint);
-    function getMemberDeposit(address) external view returns(uint);
+    function totalWeight() external view returns(uint);
+    function totalRewards() external view returns(uint);
+    function getTokenDeposits(address) external view returns(uint);
+    function getMemberReward(address, address) external view returns(uint);
+    function getMemberWeight(address) external view returns(uint);
+    function getMemberDeposit(address, address) external view returns(uint);
+    function getMemberLastTime(address, address) external view returns(uint);
     function grant(address, uint) external;
 }
