@@ -21,7 +21,6 @@ contract Factory {
         _;
     }
     
-    // Minting event
     constructor(){
     }
     function init(address _pool) public {
