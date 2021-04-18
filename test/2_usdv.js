@@ -191,13 +191,13 @@ describe("Member should deposit USDV for rewards", function() {
     expect(BN2Str(await usdv.reserveUSDV())).to.equal(BN2Str(400));
     expect(BN2Str(await usdv.balanceOf(usdv.address))).to.equal(BN2Str(600));
     expect(BN2Str(await vader.balanceOf(usdv.address))).to.equal(BN2Str(1400));
-    expect(BN2Str(await usdv.calcPayment(acc1))).to.equal(BN2Str(4)); // 666/100
-    expect(BN2Str(await usdv.calcCurrentPayment(usdv.address, acc1))).to.equal(BN2Str(16)); // * by seconds
+    expect(BN2Str(await usdv.calcReward(acc1))).to.equal(BN2Str(4)); // 666/100
+    expect(BN2Str(await usdv.calcCurrentReward(usdv.address, acc1))).to.equal(BN2Str(16)); // * by seconds
   });
   it("Should harvest", async function() {
     expect(BN2Str(await usdv.balanceOf(acc1))).to.equal(BN2Str(500));
-    expect(BN2Str(await usdv.calcCurrentPayment(usdv.address, acc1))).to.equal(BN2Str(16)); // * by seconds
-    expect(BN2Str(await usdv.calcPayment(acc1))).to.equal(BN2Str(4)); // * by seconds
+    expect(BN2Str(await usdv.calcCurrentReward(usdv.address, acc1))).to.equal(BN2Str(16)); // * by seconds
+    expect(BN2Str(await usdv.calcReward(acc1))).to.equal(BN2Str(4)); // * by seconds
 
     expect(BN2Str(await usdv.balanceOf(usdv.address))).to.equal(BN2Str(600));
     expect(BN2Str(await usdv.reserveUSDV())).to.equal(BN2Str(400));

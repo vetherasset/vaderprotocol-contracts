@@ -132,6 +132,15 @@ contract Utils {
         return (amount * _tokenAmt) / _baseAmt;
     }
 
+    function calcSwapValueInBase(address token, uint amount) public view returns (uint){
+        (uint _baseAmt, uint _tokenAmt) = iVAULT(VAULT).getPoolAmounts(token);
+        return calcSwapOutput(amount, _tokenAmt, _baseAmt);
+    }
+    function calcSwapValueInToken(address token, uint amount) public view returns (uint){
+        (uint _baseAmt, uint _tokenAmt) = iVAULT(VAULT).getPoolAmounts(token);
+        return calcSwapOutput(amount, _baseAmt, _tokenAmt);
+    }
+
 //     function calcTokenPPinBase(address token, uint amount) public view returns (uint _output){
 //         address payable pool = getPool(token);
 //         return  calcTokenPPinBaseWithPool(pool, amount);

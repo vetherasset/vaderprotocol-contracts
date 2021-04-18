@@ -9,6 +9,8 @@ import "./iROUTER.sol";
 import "./iVAULT.sol";
 import "./iSYNTH.sol";
 
+import "hardhat/console.sol";
+
     //======================================VADER=========================================//
 contract USDV is iERC20 {
 
@@ -223,7 +225,7 @@ contract USDV is iERC20 {
     }
     // Wrapper for contracts
     function depositForMember(address token, address member, uint amount) public {
-        require(token==address(this) || iVAULT(VAULT).isSynth(token));
+        require(token==address(this) || (iVAULT(VAULT).isSynth(token) && iVAULT(VAULT).isAsset(iSYNTH(token).TOKEN())));
         getFunds(token, amount);
         _deposit(token, member, amount);
     }
@@ -245,28 +247,29 @@ contract USDV is iERC20 {
     //====================================== HARVEST ========================================//
 
     // Harvest, get payment, allocate, increase weight
-    function harvest(address token) public {
+    function harvest(address token) public returns(uint reward){
         address _member = msg.sender;
-        uint _payment = calcCurrentPayment(token, _member);
+        reward = calcCurrentReward(token, _member);
         mapMemberToken_lastTime[_member][token] = block.timestamp;
-        mapMemberToken_reward[_member][token] += _payment;
-        totalRewards += _payment;
+        mapMemberToken_reward[_member][token] += reward;
+        totalRewards += reward;
         uint _weight;
         if(token==address(this)){
-            _weight = _payment;
+            _weight = reward;
         } else {
-            _weight = iUTILS(UTILS()).calcValueInBase(iSYNTH(token).TOKEN(), _payment);
+            _weight = iUTILS(UTILS()).calcValueInBase(iSYNTH(token).TOKEN(), reward);
         }
         mapMember_weight[_member] += _weight;
         totalWeight += _weight;
-        emit MemberHarvests(token, _member, _payment, _weight, totalWeight);
+        emit MemberHarvests(token, _member, reward, _weight, totalWeight);
+        return reward;
     }
 
     // Get the payment owed for a member
-    function calcCurrentPayment(address token, address member) public view returns(uint){
+    function calcCurrentReward(address token, address member) public view returns(uint _reward){
         uint _secondsSinceClaim = block.timestamp - mapMemberToken_lastTime[member][token];        // Get time since last claim
-        uint _share = calcPayment(member);                                              // Get share of rewards for member
-        uint _reward = (_share * _secondsSinceClaim) / iVADER(VADER).secondsPerEra();   // Get owed amount, based on per-day rates
+        uint _share = calcReward(member);                                              // Get share of rewards for member
+        _reward = (_share * _secondsSinceClaim) / iVADER(VADER).secondsPerEra();   // Get owed amount, based on per-day rates
         uint _reserve = reserveUSDV();
         if(_reward >= _reserve) {
             _reward = _reserve;                                                         // Send full reserve if the last
@@ -274,7 +277,7 @@ contract USDV is iERC20 {
         return _reward;
     }
 
-    function calcPayment(address member) public view returns(uint){
+    function calcReward(address member) public view returns(uint){
         uint _weight = mapMember_weight[member];
         uint _reserve = reserveUSDV() / erasToEarn;                               // Deplete reserve over a number of eras
         return iUTILS(UTILS()).calcShare(_weight, totalWeight, _reserve);         // Get member's share of that
@@ -291,26 +294,22 @@ contract USDV is iERC20 {
     }
     function _processWithdraw(address _token, address _member, uint _basisPoints) internal returns(uint _amount) {
         require((block.timestamp - mapMemberToken_lastTime[_member][_token]) >= minimumDepositTime, "DepositTime");    // stops attacks
-        uint _reward = (mapMemberToken_reward[_member][_token] * _basisPoints) / 10000; // share of reward
+        uint _reward = iUTILS(UTILS()).calcPart(_basisPoints, mapMemberToken_reward[_member][_token]); // share of reward
         mapMemberToken_reward[_member][_token] -= _reward;
         totalRewards -= _reward;
         if(_token!=address(this)){
-            iERC20(_token).transfer(VAULT, _reward);
+            _reward = iUTILS(UTILS()).calcSwapValueInToken(iSYNTH(_token).TOKEN(), _reward);
+            _transfer(address(this), VAULT, _reward);
             _reward = iVAULT(VAULT).mintSynth(address(this), iSYNTH(_token).TOKEN(), address(this));
         }
-        uint _principle = (mapMemberToken_deposit[_member][_token] * _basisPoints) / 10000; // share of deposits
+        uint _principle = iUTILS(UTILS()).calcPart(_basisPoints, mapMemberToken_deposit[_member][_token]); // share of deposits
         mapMemberToken_deposit[_member][_token] -= _principle;                                   
         mapToken_totalFunds[_token] -= _principle;
-        uint _weight;
-        if(_token==address(this)){
-            _weight = _principle + _reward;
-        } else {
-            _weight = iUTILS(UTILS()).calcValueInBase(iSYNTH(_token).TOKEN(), _principle + _reward);
-        }
-        mapMember_weight[_member] -= iUTILS(UTILS()).calcShare(_weight, mapMember_weight[_member], mapMember_weight[_member]); 
-        totalWeight -= iUTILS(UTILS()).calcShare(_weight, totalWeight, totalWeight);       // reduce for total
+        uint _weight = iUTILS(UTILS()).calcPart(_basisPoints, mapMember_weight[_member]);
+        mapMember_weight[_member] -= _weight; 
+        totalWeight -= _weight;                                                     // reduce for total
         emit MemberWithdraws(_token, _member, _amount, _weight, totalWeight);
-        return _principle + _reward;
+        return (_principle + _reward);
     }
 
     //============================== ASSETS ================================//
