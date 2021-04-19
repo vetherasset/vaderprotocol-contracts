@@ -82,7 +82,7 @@ contract Synth is iERC20 {
         emit Transfer(sender, recipient, amount);
     }
     // Only FACTORY can mint
-    function mint(address account, uint amount) public virtual onlyFACTORY {
+    function mint(address account, uint amount) external virtual onlyFACTORY {
         require(account != address(0), "recipient");
         totalSupply += amount;
         _balances[account] += amount;

@@ -74,9 +74,9 @@ contract Vader is iERC20 {
         DAO = msg.sender;
         burnAddress = 0x0111011001100001011011000111010101100101;
     }
-    function init(address _vether, address _USDV, address _utils) public {
+    function init(address _vether, address _USDV, address _utils) external {
         require(inited == false);
-inited = true;
+        inited = true;
         VETHER = _vether;
         USDV = _USDV;
         UTILS = _utils;
@@ -84,19 +84,19 @@ inited = true;
     }
 
     //========================================iERC20=========================================//
-    function balanceOf(address account) public view override returns (uint) {
+    function balanceOf(address account) external view override returns (uint) {
         return _balances[account];
     }
     function allowance(address owner, address spender) public view virtual override returns (uint) {
         return _allowances[owner][spender];
     }
     // iERC20 Transfer function
-    function transfer(address recipient, uint amount) public virtual override returns (bool) {
+    function transfer(address recipient, uint amount) external virtual override returns (bool) {
         _transfer(msg.sender, recipient, amount);
         return true;
     }
     // iERC20 Approve, change allowance functions
-    function approve(address spender, uint amount) public virtual override returns (bool) {
+    function approve(address spender, uint amount) external virtual override returns (bool) {
         _approve(msg.sender, spender, amount);
         return true;
     }
@@ -108,14 +108,14 @@ inited = true;
     }
     
     // iERC20 TransferFrom function
-    function transferFrom(address sender, address recipient, uint amount) public virtual override returns (bool) {
+    function transferFrom(address sender, address recipient, uint amount) external virtual override returns (bool) {
         _transfer(sender, recipient, amount);
         _approve(sender, msg.sender, _allowances[sender][msg.sender] - amount);
         return true;
     }
 
     // TransferTo function
-    function transferTo(address recipient, uint amount) public virtual override returns (bool) {
+    function transferTo(address recipient, uint amount) external virtual override returns (bool) {
         _transfer(tx.origin, recipient, amount);
         return true;
     }
@@ -146,7 +146,7 @@ inited = true;
     function burn(uint amount) public virtual override {
         _burn(msg.sender, amount);
     }
-    function burnFrom(address account, uint amount) public virtual override {
+    function burnFrom(address account, uint amount) external virtual override {
         uint decreasedAllowance = allowance(account, msg.sender) - amount;
         _approve(account, msg.sender, decreasedAllowance);
         _burn(account, amount);
@@ -160,35 +160,35 @@ inited = true;
 
     //=========================================DAO=========================================//
     // Can start
-    function startEmissions() public onlyDAO{
+    function startEmissions() external onlyDAO{
         emitting = true;
     }
     // Can stop
-    function stopEmissions() public onlyDAO{
+    function stopEmissions() external onlyDAO{
         emitting = false;
     }
     // Can set params
-    function setParams(uint _one, uint _two, uint _three) public onlyDAO {
-        secondsPerEra = _one;
-        emissionCurve = _two;
-        excludeFee = _three;
+    function setParams(uint one, uint two, uint three) external onlyDAO {
+        secondsPerEra = one;
+        emissionCurve = two;
+        excludeFee = three;
     }
     // Can set params
-    function setRewardAddress(address _address) public onlyDAO {
-        rewardAddress = _address;
-    }
-    // Can change DAO
-    function changeDAO(address newDAO) public onlyDAO{
-        require(newDAO != address(0), "address err");
-        DAO = newDAO;
+    function setRewardAddress(address newAddress) external onlyDAO {
+        rewardAddress = newAddress;
     }
     // Can change UTILS
-    function changeUTILS(address newUTILS) public onlyDAO{
+    function changeUTILS(address newUTILS) external onlyDAO {
         require(newUTILS != address(0), "address err");
         UTILS = newUTILS;
     }
+    // Can change DAO
+    function changeDAO(address newDAO) external onlyDAO {
+        require(newDAO != address(0), "address err");
+        DAO = newDAO;
+    }
     // Can purge DAO
-    function purgeDAO() public onlyDAO{
+    function purgeDAO() external onlyDAO{
         DAO = address(0);
     }
 
@@ -225,20 +225,20 @@ inited = true;
 
     //======================================ASSET MINTING========================================//
     // VETHER Owners to Upgrade
-    function upgrade(uint amount) public {
+    function upgrade(uint amount) external {
         require(iERC20(VETHER).transferFrom(msg.sender, burnAddress, amount));
         _mint(msg.sender, amount);
     }
     // Directly redeem back to VADER (must have sent USDV first)
-    function redeem() public returns (uint redeemAmount){
+    function redeem() external returns (uint redeemAmount){
         return redeemToMember(tx.origin);
     }
     // Redeem on behalf of member (must have sent USDV first)
-    function redeemToMember(address _member) public flashProof returns (uint redeemAmount){
+    function redeemToMember(address member) public flashProof returns (uint redeemAmount){
         uint _amount = iERC20(USDV).balanceOf(address(this)); 
         iERC20(USDV).burn(_amount);
         redeemAmount = iROUTER(iUSDV(USDV).ROUTER()).getVADERAmount(_amount);
-        _mint(_member, redeemAmount);
+        _mint(member, redeemAmount);
         return redeemAmount;
     }
 
