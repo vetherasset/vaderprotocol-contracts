@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.3;
+pragma solidity 0.8.3;
 
 // Interfaces
 import "./iERC20.sol";
@@ -167,8 +167,9 @@ contract USDV is iERC20 {
         blockDelay = three;
         minGrantTime = four;
     }
-    // Can set params
-    function grant(address recipient, uint amount) external onlyDAO {
+
+    // Can issue grants
+    function grant(address recipient, uint amount) public onlyDAO {
         require(amount <= (reserveUSDV() / 10), "not more than 10%");
         require((block.timestamp - lastGranted) >= minGrantTime, "not too fast");
         lastGranted = block.timestamp;
