@@ -11,8 +11,8 @@ contract Router {
 
     // Parameters
     bool private inited;
-    uint one = 10**18;
-    uint _10k = 10000;
+    uint constant one = 10**18;
+    uint constant _10k = 10000;
     uint public rewardReductionFactor;
     uint public timeForFullProtection;
 

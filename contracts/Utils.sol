@@ -7,7 +7,7 @@ import "./iPOOLS.sol";
 
 contract Utils {
 
-    uint private one = 10**18;
+    uint constant private one = 10**18;
     address public POOLS;
 
     constructor () {}
