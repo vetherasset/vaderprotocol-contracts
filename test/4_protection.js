@@ -47,7 +47,7 @@ before(async function() {
 
 describe("Deploy Protection", function() {
   it("Should have right reserves", async function() {
-    await vader.startEmissions()
+    await vader.flipEmissions()
 
     await vader.init(vether.address, usdv.address, utils.address)
     await usdv.init(vader.address, router.address, pools.address)
@@ -56,24 +56,30 @@ describe("Deploy Protection", function() {
     await factory.init(pools.address);
 
     anchor = await Anchor.new();
+    asset = await Asset.new();
 
     await vether.transfer(acc1, BN2Str(7407)) 
     await anchor.transfer(acc1, BN2Str(2000))
     await anchor.approve(router.address, BN2Str(one), {from:acc1})
     await vether.approve(vader.address, '7400', {from:acc1})
     await vader.upgrade(BN2Str(7400), {from:acc1}) 
-
-    await usdv.convert(BN2Str(1000), {from:acc1})
-
     await router.addLiquidity(vader.address, '1000', anchor.address, '1000', {from:acc1})
+
+    await vader.flipMinting()
+    await usdv.convert('2000', {from:acc1})
+
+    await asset.transfer(acc1, '2000')
+    await asset.approve(router.address, BN2Str(one), {from:acc1})
+    await router.addLiquidity(usdv.address, '1000', asset.address, '1000', {from:acc1})
 
     await vader.transfer(acc0, '100', {from:acc1})
     await usdv.transfer(acc0, '100', {from:acc1})
-    expect(BN2Str(await vader.getDailyEmission())).to.equal('7');
-    expect(BN2Str(await usdv.reserveUSDV())).to.equal('7');
-    expect(BN2Str(await router.reserveUSDV())).to.equal('7');
-    expect(BN2Str(await router.reserveVADER())).to.equal('8');
-    await vader.stopEmissions()
+
+    expect(Number(await vader.getDailyEmission())).to.be.greaterThan(0);
+    expect(Number(await usdv.reserveUSDV())).to.be.greaterThan(0);
+    expect(Number(await router.reserveUSDV())).to.be.greaterThan(0);
+    expect(Number(await router.reserveVADER())).to.be.greaterThan(0);
+    await vader.flipEmissions()
   });
 });
 
@@ -86,10 +92,20 @@ describe("Should do IL Protection", function() {
     expect(BN2Str(await utils.calcCoverage('100', '1000', '20', '2000'))).to.equal('70');
   });
   it("Small swap, need protection", async function() {
-    expect(BN2Str(await usdv.balanceOf(acc1))).to.equal('900');
+    await router.curatePool(anchor.address)
+    expect(BN2Str(await anchor.balanceOf(acc1))).to.equal('1000');
+    expect(BN2Str(await pools.getBaseAmount(anchor.address))).to.equal('1000');
+    expect(BN2Str(await pools.getTokenAmount(anchor.address))).to.equal('1000');
+    expect(BN2Str(await vader.balanceOf(acc1))).to.equal('4300');
+
     for(let i = 0; i<9; i++){
       await router.swap('100', anchor.address, vader.address, {from:acc1})
     }
+    expect(BN2Str(await anchor.balanceOf(acc1))).to.equal('100');
+    expect(BN2Str(await pools.getTokenAmount(anchor.address))).to.equal('1900');
+    expect(BN2Str(await pools.getBaseAmount(anchor.address))).to.equal('554');
+    expect(BN2Str(await vader.balanceOf(acc1))).to.equal('4746');
+
     expect(BN2Str(await router.mapMemberToken_depositBase(acc1, anchor.address))).to.equal('1000');
     expect(BN2Str(await router.mapMemberToken_depositToken(acc1, anchor.address))).to.equal('1000');
     let coverage = await router.getCoverage(acc1, anchor.address)
@@ -102,25 +118,20 @@ describe("Should do IL Protection", function() {
   });
 
   it("Small swap, need protection on Asset", async function() {
-    asset = await Asset.new();
-    await asset.transfer(acc1, BN2Str(2000))
-    await asset.approve(router.address, BN2Str(one), {from:acc1})
-    await router.addLiquidity(vader.address, '1000', asset.address, '1000', {from:acc1})
-
-
+    expect(await pools.isAsset(asset.address)).to.equal(true);
+    await router.curatePool(asset.address)
+    expect(await router.isCurated(asset.address)).to.equal(true);
     expect(BN2Str(await usdv.balanceOf(acc1))).to.equal('900');
     for(let i = 0; i<9; i++){
       await router.swap('100', asset.address, usdv.address, {from:acc1})
     }
+
     expect(BN2Str(await router.mapMemberToken_depositBase(acc1, asset.address))).to.equal('1000');
     expect(BN2Str(await router.mapMemberToken_depositToken(acc1, asset.address))).to.equal('1000');
     let coverage = await router.getCoverage(acc1, asset.address)
     expect(BN2Str(coverage)).to.equal('183');
     expect(BN2Str(await router.getProtection(acc1, asset.address, "10000", coverage))).to.equal('183');
-    let reserveVADER = BN2Str(await router.reserveVADER())
-    expect(BN2Str(await router.getILProtection(acc1, vader.address, asset.address, '10000'))).to.equal(reserveVADER);
-
-
+    expect(Number(await router.getILProtection(acc1, usdv.address, asset.address, '10000'))).to.be.lessThanOrEqual(Number(await router.reserveVADER()));
   });
 
 });

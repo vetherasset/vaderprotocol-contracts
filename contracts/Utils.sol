@@ -57,7 +57,6 @@ contract Utils {
         if(total > 0){
             share = (amount * part) / total;
         }
-        return share;
     }
 
     function calcSwapOutput(uint x, uint X, uint Y) public pure returns (uint){
@@ -134,7 +133,6 @@ contract Utils {
                 coverage = (_depositValue - _redemptionValue);
             }
         }
-        return coverage;
     }
 
 }

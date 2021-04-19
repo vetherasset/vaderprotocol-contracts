@@ -51,34 +51,33 @@ contract Pools {
     //====================================LIQUIDITY=========================================//
 
     function addLiquidity(address base, address token, address member) external returns(uint liquidityUnits) {
-        require(token != USDV);
+        require(token != USDV && token != VADER); // Prohibited
         uint _actualInputBase;
         if(base == VADER){
-            if(!isAnchor(token)){
+            if(!isAnchor(token)){               // If new Anchor
                 _isAnchor[token] = true;
             }
             _actualInputBase = getAddedAmount(VADER, token);
         } else if (base == USDV) {
-            if(!isAsset(token)){
+            if(!isAsset(token)){               // If new Asset
                 _isAsset[token] = true;
             }
             _actualInputBase = getAddedAmount(USDV, token);
         }
         uint _actualInputToken = getAddedAmount(token, token);
         liquidityUnits = iUTILS(UTILS()).calcLiquidityUnits(_actualInputBase, mapToken_baseAmount[token], _actualInputToken, mapToken_tokenAmount[token], mapToken_Units[token]);
-        mapTokenMember_Units[token][member] += liquidityUnits;
-        mapToken_Units[token] += liquidityUnits;
-        mapToken_baseAmount[token] += _actualInputBase;
-        mapToken_tokenAmount[token] += _actualInputToken;      
+        mapTokenMember_Units[token][member] += liquidityUnits;  // Add units to member
+        mapToken_Units[token] += liquidityUnits;                // Add in total
+        mapToken_baseAmount[token] += _actualInputBase;         // Add BASE
+        mapToken_tokenAmount[token] += _actualInputToken;       // Add token
         emit AddLiquidity(member, base, _actualInputBase, token, _actualInputToken, liquidityUnits);
-        return liquidityUnits;
     }
 
     function removeLiquidity(address base, address token, uint basisPoints) external returns (uint outputBase, uint outputToken) {
-        return _removeLiquidity(base, token, basisPoints, tx.origin);
+        return _removeLiquidity(base, token, basisPoints, tx.origin); // Because this contract is wrapped by a router
     }
     function removeLiquidityDirectly(address base, address token, uint basisPoints) external returns (uint outputBase, uint outputToken) {
-        return _removeLiquidity(base, token, basisPoints, msg.sender);
+        return _removeLiquidity(base, token, basisPoints, msg.sender); // If want to interact directly
     }
     function _removeLiquidity(address base, address token, uint basisPoints, address member) internal returns (uint outputBase, uint outputToken) {
         require(base == USDV || base == VADER);
@@ -96,6 +95,7 @@ contract Pools {
     }
     
     //=======================================SWAP===========================================//
+    // Add to balances directly (must send first)
     function sync(address token, address pool) external {
         uint _actualInput = getAddedAmount(token, pool);
         if (token == VADER || token == USDV){
@@ -106,6 +106,7 @@ contract Pools {
         emit Sync(token, pool, _actualInput);
     }
     
+    // Designed to be called by a router, but can be called directly
     function swap(address base, address token, address member, bool toBase) external returns (uint outputAmount) {
         if(toBase){
             uint _actualInput = getAddedAmount(token, token);
@@ -124,39 +125,39 @@ contract Pools {
             emit Swap(member, base, _actualInput, token, outputAmount, _swapFee);
             transferOut(token, outputAmount, member);
         }
-        return outputAmount;
     }
 
     //======================================SYNTH=========================================//
 
+    // Should be done with intention, is gas-intensive
     function deploySynth(address token) external {
         require(token != VADER || token != USDV);
         iFACTORY(FACTORY).deploySynth(token);
     }
 
+    // Designed to be called by a router, but can be called directly
     function mintSynth(address base, address token, address member) external returns (uint outputAmount) {
         require(iFACTORY(FACTORY).isSynth(getSynth(token)), "!synth");
-        uint _actualInputBase = getAddedAmount(base, token);
-        uint _synthUnits = iUTILS(UTILS()).calcSynthUnits(_actualInputBase, mapToken_baseAmount[token], mapToken_Units[token]);
-        outputAmount = iUTILS(UTILS()).calcSwapOutput(_actualInputBase, mapToken_baseAmount[token], mapToken_tokenAmount[token]);
-        mapTokenMember_Units[token][address(this)] += _synthUnits;
-        mapToken_Units[token] += _synthUnits;
-        mapToken_baseAmount[token] += _actualInputBase;
-        emit AddLiquidity(member, base, _actualInputBase, token, 0, _synthUnits);
-        iFACTORY(FACTORY).mintSynth(getSynth(token), member, outputAmount);
-        return outputAmount;
+        uint _actualInputBase = getAddedAmount(base, token);                    // Get input
+        uint _synthUnits = iUTILS(UTILS()).calcSynthUnits(_actualInputBase, mapToken_baseAmount[token], mapToken_Units[token]);     // Get Units
+        outputAmount = iUTILS(UTILS()).calcSwapOutput(_actualInputBase, mapToken_baseAmount[token], mapToken_tokenAmount[token]);   // Get output
+        mapTokenMember_Units[token][address(this)] += _synthUnits;                  // Add units for self
+        mapToken_Units[token] += _synthUnits;                                       // Add supply
+        mapToken_baseAmount[token] += _actualInputBase;                             // Add BASE 
+        emit AddLiquidity(member, base, _actualInputBase, token, 0, _synthUnits);   // Add Liquidity Event
+        iFACTORY(FACTORY).mintSynth(getSynth(token), member, outputAmount);         // Ask factory to mint to member
     }
+    // Designed to be called by a router, but can be called directly
     function burnSynth(address base, address token, address member) external returns (uint outputBase) {
-        uint _actualInputSynth = iERC20(getSynth(token)).balanceOf(address(this));
-        uint _unitsToDelete = iUTILS(UTILS()).calcShare(_actualInputSynth, iERC20(getSynth(token)).totalSupply(), mapTokenMember_Units[token][address(this)]);
-        iERC20(getSynth(token)).burn(_actualInputSynth);
-        mapTokenMember_Units[token][address(this)] -= _unitsToDelete;
-        mapToken_Units[token] -= _unitsToDelete;
-        outputBase = iUTILS(UTILS()).calcSwapOutput(_actualInputSynth, mapToken_tokenAmount[token], mapToken_baseAmount[token]);
-        emit RemoveLiquidity(member, base, outputBase, token, 0, _unitsToDelete, mapToken_Units[token]);
-        mapToken_baseAmount[token] -= outputBase;
-        transferOut(base, outputBase, member);
-        return outputBase;
+        uint _actualInputSynth = iERC20(getSynth(token)).balanceOf(address(this));  // Get input
+        uint _unitsToDelete = iUTILS(UTILS()).calcShare(_actualInputSynth, iERC20(getSynth(token)).totalSupply(), mapTokenMember_Units[token][address(this)]); // Pro rata
+        iERC20(getSynth(token)).burn(_actualInputSynth);                            // Burn it
+        mapTokenMember_Units[token][address(this)] -= _unitsToDelete;               // Delete units for self
+        mapToken_Units[token] -= _unitsToDelete;                                    // Delete units
+        outputBase = iUTILS(UTILS()).calcSwapOutput(_actualInputSynth, mapToken_tokenAmount[token], mapToken_baseAmount[token]);    // Get output
+        mapToken_baseAmount[token] -= outputBase;                                   // Remove BASE
+        emit RemoveLiquidity(member, base, outputBase, token, 0, _unitsToDelete, mapToken_Units[token]);        // Remove liquidity event
+        transferOut(base, outputBase, member);                                      // Send BASE to member
     }
 
     function getSynth(address token) public returns (address) {
@@ -166,44 +167,33 @@ contract Pools {
         return iFACTORY(FACTORY).isSynth(token);
     }
 
-    
     //======================================LENDING=========================================//
     
 
     //======================================HELPERS=========================================//
 
-    // Safe
+    // Safe adds
     function getAddedAmount(address _token, address _pool) internal returns(uint addedAmount) {
-        if(_token == VADER && _pool == VADER){
-            addedAmount = iERC20(_token).balanceOf(address(this)) - pooledVADER;
+        uint _balance = iERC20(_token).balanceOf(address(this));
+        if(_token == VADER && _pool != VADER){  // Want to know added VADER
+            addedAmount = _balance - pooledVADER;
             pooledVADER = pooledVADER + addedAmount;
-        } else if(_token == VADER && _pool != VADER){
-            addedAmount = iERC20(_token).balanceOf(address(this)) - pooledVADER;
-            pooledVADER = pooledVADER + addedAmount;
-        } else if(_token == USDV) {
-            addedAmount = iERC20(_token).balanceOf(address(this)) - pooledUSDV;
+        } else if(_token == USDV) {             // Want to know added USDV
+            addedAmount = _balance - pooledUSDV;
             pooledUSDV = pooledUSDV + addedAmount;
-        } else {
-            addedAmount = iERC20(_token).balanceOf(address(this)) - mapToken_tokenAmount[_pool];
+        } else {                                // Want to know added Asset/Anchor
+            addedAmount = _balance - mapToken_tokenAmount[_pool];
         }
     }
     function transferOut(address _token, uint _amount, address _recipient) internal {
         if(_token == VADER){
-            pooledVADER = pooledVADER - _amount;
-            if(_recipient != address(this)){
-                iERC20(_token).transfer(_recipient, _amount);
-            }
+            pooledVADER = pooledVADER - _amount; // Accounting
         } else if(_token == USDV) {
-            pooledUSDV = pooledUSDV - _amount;
-            if(_recipient != address(this)){
-                iERC20(_token).transfer(_recipient, _amount);
-            }
-        } else {
-            if(_recipient != address(this)){
-                iERC20(_token).transfer(_recipient, _amount);
-            }
+            pooledUSDV = pooledUSDV - _amount;  // Accounting
         }
-        
+        if(_recipient != address(this)){
+            iERC20(_token).transfer(_recipient, _amount);
+        }
     }
 
     function isMember(address member) public view returns(bool) {

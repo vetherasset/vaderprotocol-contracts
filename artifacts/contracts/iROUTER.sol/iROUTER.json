@@ -266,24 +266,6 @@
     {
       "inputs": [
         {
-          "internalType": "uint256",
-          "name": "shareVADER",
-          "type": "uint256"
-        },
-        {
-          "internalType": "uint256",
-          "name": "shareUSDV",
-          "type": "uint256"
-        }
-      ],
-      "name": "pullIncentives",
-      "outputs": [],
-      "stateMutability": "nonpayable",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
           "internalType": "address",
           "name": "base",
           "type": "address"

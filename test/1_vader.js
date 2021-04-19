@@ -121,7 +121,7 @@ describe("Be a valid ERC-20", function() {
 
 describe("DAO Functions", function() {
   it("Non-DAO fails", async function() {
-    await truffleAssert.reverts(vader.startEmissions({from:acc1}))
+    await truffleAssert.reverts(vader.flipEmissions({from:acc1}))
   });
   it("DAO changeEmissionCurve", async function() {
     await vader.setParams('1', '1', '200')
@@ -137,12 +137,12 @@ describe("DAO Functions", function() {
     expect(await vader.DAO()).to.equal(acc2);
   });
   it("DAO start emitting", async function() {
-    await vader.startEmissions({from:acc2})
+    await vader.flipEmissions({from:acc2})
     expect(await vader.emitting()).to.equal(true);
   });
   
   it("Old DAO fails", async function() {
-    await truffleAssert.reverts(vader.startEmissions())
+    await truffleAssert.reverts(vader.flipEmissions())
   });
 });
 

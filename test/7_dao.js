@@ -64,6 +64,7 @@ describe("Deploy DAO", function() {
     await vether.approve(vader.address, '6000', {from:acc1})
     await vader.upgrade('1000', {from:acc1}) 
 
+    await vader.flipMinting()
     await usdv.convert('1000', {from:acc0})
     await usdv.convert('1000', {from:acc1})
 
