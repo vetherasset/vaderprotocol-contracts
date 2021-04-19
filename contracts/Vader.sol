@@ -29,7 +29,6 @@ contract Vader is iERC20 {
     uint public currentEra;
     uint public nextEraTime;
     uint public feeOnTransfer;
-    uint public excludeFee;
 
     address public VETHER;
     address public USDV;
@@ -37,8 +36,6 @@ contract Vader is iERC20 {
     address public burnAddress;
     address public rewardAddress;
     address public DAO;
-
-    mapping(address => bool) private _isExcluded;
 
     event NewEra(uint currentEra, uint nextEraTime, uint emission);
 
@@ -70,7 +67,6 @@ contract Vader is iERC20 {
         secondsPerEra = 1; //86400;
         nextEraTime = block.timestamp + secondsPerEra;
         emissionCurve = 900;
-        excludeFee = 256;
         DAO = msg.sender;
         burnAddress = 0x0111011001100001011011000111010101100101;
     }
@@ -127,12 +123,10 @@ contract Vader is iERC20 {
         require(sender != address(0), "sender");
         require(recipient != address(this), "recipient");
         _balances[sender] -= amount;
-        if(!isExcluded(sender) && !isExcluded(recipient)){
-            uint _fee = iUTILS(UTILS).calcPart(feeOnTransfer, amount);  // Critical functionality
-            if(_fee >= 0 && _fee <= amount){                            // Stops reverts if UTILS corrupted
-                amount -= _fee;
-                _burn(msg.sender, _fee);
-            }
+        uint _fee = iUTILS(UTILS).calcPart(feeOnTransfer, amount);  // Critical functionality
+        if(_fee >= 0 && _fee <= amount){                            // Stops reverts if UTILS corrupted
+            amount -= _fee;
+            _burn(msg.sender, _fee);
         }
         _balances[recipient] += amount;
         emit Transfer(sender, recipient, amount);
@@ -142,7 +136,7 @@ contract Vader is iERC20 {
     function _mint(address account, uint amount) internal virtual {
         require(account != address(0), "recipient");
         if((totalSupply + amount) >= maxSupply){
-            amount = maxSupply - totalSupply;       // Safety, can't mint about maxSupply
+            amount = maxSupply - totalSupply;       // Safety, can't mint above maxSupply
         }
         totalSupply += amount;
         _balances[account] += amount;
@@ -182,10 +176,9 @@ contract Vader is iERC20 {
         }
     }
     // Can set params
-    function setParams(uint newEra, uint newCurve, uint newFee) external onlyDAO {
+    function setParams(uint newEra, uint newCurve) external onlyDAO {
         secondsPerEra = newEra;
         emissionCurve = newCurve;
-        excludeFee = newFee;
     }
     // Can set reward address
     function setRewardAddress(address newAddress) external onlyDAO {
@@ -228,14 +221,6 @@ contract Vader is iERC20 {
             _adjustedMax = maxSupply;  // 2m
         }
         return (_adjustedMax - totalSupply) / (emissionCurve); // outstanding / curve 
-    }
-
-    function isExcluded(address member) public view returns(bool) {
-        return _isExcluded[member];
-    }
-    function exclude(address member) external {
-        _burn(msg.sender, excludeFee);
-        _isExcluded[member] = true;
     }
 
     //======================================ASSET MINTING========================================//
