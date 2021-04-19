@@ -69,7 +69,7 @@ describe("Deploy USDV", function() {
 describe("Convert and redeem", function() {
 
   it("Should convert acc1", async function() {
-    // await vader.approve(usdv.address, '1000', {from:acc1}) 
+    await vader.flipMinting()
     await usdv.convert('250', {from:acc1})
     expect(BN2Str(await vader.totalSupply())).to.equal('3150');
     expect(BN2Str(await vader.balanceOf(acc1))).to.equal('3150');
@@ -177,7 +177,7 @@ describe("Member should deposit USDV for rewards", function() {
   });
 
   it("Should calc rewards", async function() {
-    await vader.startEmissions()
+    await vader.flipEmissions()
     await vader.setParams('1', '2', '200')
     
     let balanceStart = await vader.balanceOf(usdv.address)
@@ -218,7 +218,7 @@ describe("Member should deposit USDV for rewards", function() {
     expect(BN2Str(await usdv.getMemberWeight(acc1))).to.equal('220');
     expect(BN2Str(await usdv.getMemberReward(usdv.address, acc1))).to.equal('20');
 
-    await vader.stopEmissions()
+    await vader.flipEmissions()
     let tx = await usdv.withdraw(usdv.address, "10000",{from:acc1})
     expect(BN2Str(await usdv.getMemberDeposit(usdv.address, acc1))).to.equal('0');
     expect(BN2Str(await usdv.getMemberWeight(acc1))).to.equal('0');

@@ -65,6 +65,7 @@ describe("Deploy Router", function() {
     await asset.transfer(acc1, BN2Str(2000))
     await asset.approve(router.address, BN2Str(one), {from:acc1})
 
+    await vader.flipMinting()
     await usdv.convert(BN2Str(3000), {from:acc1})
 
     expect(await router.DAO()).to.equal(acc0);
@@ -195,7 +196,7 @@ describe("Member should deposit Synths for rewards", function() {
   });
 
   it("Should calc rewards", async function() {
-    await vader.startEmissions()
+    await vader.flipEmissions()
     await vader.setParams('1', '2', '200')
     let synth = await Synth.at(await factory.getSynth(asset.address));
     
@@ -234,13 +235,13 @@ describe("Member should deposit Synths for rewards", function() {
     expect(BN2Str(await usdv.getMemberReward(synth.address, acc1))).to.equal('35');
     expect(BN2Str(await usdv.totalRewards())).to.equal('35');
     expect(BN2Str(await usdv.getTokenDeposits(synth.address))).to.equal('20');
-    await vader.stopEmissions()
+    await vader.flipEmissions()
     let tx = await usdv.withdraw(synth.address, "10000",{from:acc1})
     expect(BN2Str(await usdv.getMemberDeposit(synth.address, acc1))).to.equal('0');
     expect(BN2Str(await usdv.getMemberWeight(acc1))).to.equal('0');
     expect(BN2Str(await usdv.totalWeight())).to.equal('0');
     expect(BN2Str(await usdv.getMemberReward(synth.address, acc1))).to.equal('0');
     expect(BN2Str(await synth.balanceOf(usdv.address))).to.equal('0');
-    expect(BN2Str(await synth.balanceOf(acc1))).to.equal('112');
+    expect(BN2Str(await synth.balanceOf(acc1))).to.equal('116');
   });
 });

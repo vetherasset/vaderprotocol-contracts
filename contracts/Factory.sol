@@ -38,7 +38,6 @@ contract Factory {
         synth = address(newSynth);
         _addSynth(token, synth);
         emit CreateSynth(token, synth);
-        return synth;
     }
 
     function mintSynth(address synth, address member, uint amount) external onlyPOOLS returns(bool) {

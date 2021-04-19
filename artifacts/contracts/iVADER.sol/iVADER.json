@@ -69,6 +69,65 @@
       "type": "function"
     },
     {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "member",
+          "type": "address"
+        }
+      ],
+      "name": "exclude",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "flipEmissions",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "flipMinting",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "member",
+          "type": "address"
+        }
+      ],
+      "name": "isExcluded",
+      "outputs": [
+        {
+          "internalType": "bool",
+          "name": "",
+          "type": "bool"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "minting",
+      "outputs": [
+        {
+          "internalType": "bool",
+          "name": "",
+          "type": "bool"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
       "inputs": [],
       "name": "purgeDAO",
       "outputs": [],
@@ -124,17 +183,17 @@
       "inputs": [
         {
           "internalType": "uint256",
-          "name": "one",
+          "name": "newEra",
           "type": "uint256"
         },
         {
           "internalType": "uint256",
-          "name": "two",
+          "name": "newCurve",
           "type": "uint256"
         },
         {
           "internalType": "uint256",
-          "name": "three",
+          "name": "newFee",
           "type": "uint256"
         }
       ],
@@ -152,20 +211,6 @@
         }
       ],
       "name": "setRewardAddress",
-      "outputs": [],
-      "stateMutability": "nonpayable",
-      "type": "function"
-    },
-    {
-      "inputs": [],
-      "name": "startEmissions",
-      "outputs": [],
-      "stateMutability": "nonpayable",
-      "type": "function"
-    },
-    {
-      "inputs": [],
-      "name": "stopEmissions",
       "outputs": [],
       "stateMutability": "nonpayable",
       "type": "function"

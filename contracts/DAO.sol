@@ -52,7 +52,7 @@ contract DAO {
 
     //============================== CREATE PROPOSALS ================================//
     // Action with funding
-    function newGrantProposal(address recipient, uint amount) public returns(uint) {
+    function newGrantProposal(address recipient, uint amount) public {
         string memory typeStr = "GRANT";
         proposalCount += 1;
         mapPID_type[proposalCount] = typeStr;
@@ -61,16 +61,14 @@ contract DAO {
         grant.amount = amount;
         mapPID_grant[proposalCount] = grant;
         emit NewProposal(msg.sender, proposalCount, typeStr);
-        return proposalCount;
     }
 
     // Action with address parameter
-    function newAddressProposal(address proposedAddress, string memory typeStr) public returns(uint) {
+    function newAddressProposal(address proposedAddress, string memory typeStr) public {
         proposalCount += 1;
         mapPID_address[proposalCount] = proposedAddress;
         mapPID_type[proposalCount] = typeStr;
         emit NewProposal(msg.sender, proposalCount, typeStr);
-        return proposalCount;
     }
 
 //============================== VOTE && FINALISE ================================//
@@ -159,7 +157,6 @@ contract DAO {
         voteWeight = iUSDV(USDV).getMemberWeight(msg.sender);
         mapPID_votes[_proposalID] += voteWeight;
         mapPIDMember_votes[_proposalID][msg.sender] = voteWeight;
-        return voteWeight;
     }
 
     function hasMajority(uint _proposalID) public view returns(bool){

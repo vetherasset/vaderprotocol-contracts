@@ -6,7 +6,7 @@ interface iUSDV {
     function totalWeight() external view returns(uint);
     function totalRewards() external view returns(uint);
     function isMature() external view returns (bool);
-    function setParams(uint one, uint two, uint three, uint four) external;
+    function setParams(uint newEra, uint newDepositTime, uint newDelay, uint newGrantTime) external;
     function grant(address recipient, uint amount) external;
     function convert(uint amount) external returns(uint convertAmount);
     function convertForMember(address member, uint amount) external returns(uint convertAmount);

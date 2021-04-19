@@ -11,7 +11,7 @@ interface iROUTER {
     function swapWithSynthsWithLimit(uint inputAmount, address inputToken, bool inSynth, address outputToken, bool outSynth, uint slipLimit) external returns (uint outputAmount);
     function getRewardShare(address token) external view returns (uint rewardShare);
     function getReducedShare(uint amount) external view returns(uint);
-    function pullIncentives(uint shareVADER, uint shareUSDV) external;
+    // function pullIncentives(uint shareVADER, uint shareUSDV) external;
     function getILProtection(address member, address base, address token, uint basisPoints) external view returns(uint protection);
     function getProtection(address member, address token, uint basisPoints, uint coverage) external view returns(uint protection);
     function getCoverage(address member, address token) external view returns (uint);

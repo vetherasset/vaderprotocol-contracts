@@ -69,6 +69,7 @@ describe("Deploy Router", function() {
     await asset2.transfer(acc1, BN2Str(2000))
     await asset2.approve(router.address, BN2Str(one), {from:acc1})
 
+    await vader.flipMinting()
     await usdv.convert(BN2Str(3000), {from:acc1})
     // await usdv.withdrawToUSDV('10000', {from:acc1})
 
@@ -175,7 +176,8 @@ describe("Should Swap Above Limit", function() {
 });
 
 describe("Should remove liquidity", function() {
-  it("REmove Anchor", async function() {
+  it("Remove Anchor", async function() {
+    expect(BN2Str(await pools.getUnits(anchor.address))).to.equal('1000');
     await router.removeLiquidity(vader.address, anchor.address, '5000', {from:acc1})
     expect(BN2Str(await pools.getUnits(anchor.address))).to.equal('500');
     expect(BN2Str(await pools.getMemberUnits(anchor.address, acc1))).to.equal('500');

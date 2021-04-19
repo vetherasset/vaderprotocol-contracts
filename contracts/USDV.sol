@@ -11,7 +11,6 @@ import "./iSYNTH.sol";
 
 import "hardhat/console.sol";
 
-    //======================================VADER=========================================//
 contract USDV is iERC20 {
 
     // ERC-20 Parameters
@@ -62,7 +61,7 @@ contract USDV is iERC20 {
         _;
     }
     function isMature() public view returns(bool isMatured){
-        if(lastBlock[tx.origin] + blockDelay <= block.number){
+        if(lastBlock[tx.origin] + blockDelay <= block.number){ // Stops an EOA doing a flash attack in same block
             return true;
         }
     }
@@ -123,6 +122,7 @@ contract USDV is iERC20 {
     }
 
     // TransferTo function
+    // Risks: User can be phished, or tx.origin may be deprecated, optionality should exist in the system. 
     function transferTo(address recipient, uint amount) external virtual override returns (bool) {
         _transfer(tx.origin, recipient, amount);
         return true;
@@ -130,18 +130,22 @@ contract USDV is iERC20 {
 
     // Internal transfer function
     function _transfer(address sender, address recipient, uint amount) internal virtual {
-        require(sender != address(0), "sender");
-        _balances[sender] -= amount;
-        _balances[recipient] += amount;
-        emit Transfer(sender, recipient, amount);
-        _checkIncentives();
+        if(amount > 0){                                     // Due to design, this function may be called with 0
+            require(sender != address(0), "sender");
+            _balances[sender] -= amount;
+            _balances[recipient] += amount;
+            emit Transfer(sender, recipient, amount);
+            _checkIncentives();
+        }
     }
     // Internal mint (upgrading and daily emissions)
     function _mint(address account, uint amount) internal virtual {
-        require(account != address(0), "recipient");
-        totalSupply += amount;
-        _balances[account] += amount;
-        emit Transfer(address(0), account, amount);
+        if(amount > 0){                                     // Due to design, this function may be called with 0
+            require(account != address(0), "recipient");
+            totalSupply += amount;
+            _balances[account] += amount;
+            emit Transfer(address(0), account, amount);
+        }
     }
     // Burn supply
     function burn(uint amount) external virtual override {
@@ -153,19 +157,21 @@ contract USDV is iERC20 {
         _burn(account, amount);
     }
     function _burn(address account, uint amount) internal virtual {
-        require(account != address(0), "address err");
-        _balances[account] -= amount;
-        totalSupply -= amount;
-        emit Transfer(account, address(0), amount);
+        if(amount > 0){                                     // Due to design, this function may be called with 0
+            require(account != address(0), "address err");
+            _balances[account] -= amount;
+            totalSupply -= amount;
+            emit Transfer(account, address(0), amount);
+        }
     }
 
     //=========================================DAO=========================================//
     // Can set params
-    function setParams(uint one, uint two, uint three, uint four) external onlyDAO {
-        erasToEarn = one;
-        minimumDepositTime = two;
-        blockDelay = three;
-        minGrantTime = four;
+    function setParams(uint newEra, uint newDepositTime, uint newDelay, uint newGrantTime) external onlyDAO {
+        erasToEarn = newEra;
+        minimumDepositTime = newDepositTime;
+        blockDelay = newDelay;
+        minGrantTime = newGrantTime;
     }
 
     // Can issue grants
@@ -179,70 +185,71 @@ contract USDV is iERC20 {
    //======================================INCENTIVES========================================//
     // Internal - Update incentives function
     function _checkIncentives() private {
-        if (block.timestamp >= nextEraTime && emitting()) {                  // If new Era
-            currentEra += 1;                                        // Increment Era
+        if (block.timestamp >= nextEraTime && emitting()) {                 // If new Era
+            currentEra += 1;                                                // Increment Era
             nextEraTime = block.timestamp + iVADER(VADER).secondsPerEra(); 
-            uint _balance = iERC20(VADER).balanceOf(address(this)); // Get spare VADER
-            uint _USDVShare = _twothirds(_balance);                 // Get 2/3rds
-            _convert(address(this), _USDVShare);                    // Convert it
-            iROUTER(ROUTER).pullIncentives(iERC20(VADER).balanceOf(address(this)), _USDVShare / 2);                         // Pull incentives over
+            uint _balance = iERC20(VADER).balanceOf(address(this));         // Get spare VADER
+            uint _USDVShare = _twothirds(_balance);                         // Get 2/3rds
+            _convert(address(this), _USDVShare);                            // Convert it
+            _transfer(address(this), ROUTER, _USDVShare / 2);                        // Send USDV
+            iERC20(VADER).transfer(ROUTER, iERC20(VADER).balanceOf(address(this)));  // Send VADER
         }
     }
     
     //======================================ASSET MINTING========================================//
-    // Contracts to convert
+    // Convert to USDV
     function convert(uint amount) external returns(uint) {
         return convertForMember(msg.sender, amount);
     }
-    // Contracts to convert for members
+    // Convert for members
     function convertForMember(address member, uint amount) public returns(uint) {
         getFunds(VADER, amount);
         return _convert(member, amount);
     }
     // Internal convert
     function _convert(address _member, uint amount) internal flashProof returns(uint _convertAmount){
-        lastBlock[tx.origin] = block.number;
-        iERC20(VADER).burn(amount);
-        _convertAmount = iROUTER(ROUTER).getUSDVAmount(amount);
-        _mint(_member, _convertAmount);
-        return _convertAmount;
+        if(minting()){
+            lastBlock[tx.origin] = block.number;                    // Record first
+            iERC20(VADER).burn(amount);
+            _convertAmount = iROUTER(ROUTER).getUSDVAmount(amount); // Critical pricing functionality
+            _mint(_member, _convertAmount);
+        }
     }
-    // Contracts to redeem
+    // Redeem to VADER
     function redeem(uint amount) external returns(uint) {
         return redeemForMember(msg.sender, amount);
     }
     // Contracts to redeem for members
     function redeemForMember(address member, uint amount) public returns(uint redeemAmount) {
         _transfer(msg.sender, VADER, amount);                   // Move funds
-        redeemAmount = iVADER(VADER).redeemToMember(member);
-        lastBlock[tx.origin] = block.number;
-        return redeemAmount;
+        redeemAmount = iVADER(VADER).redeemToMember(member);    // Ask VADER to redeem
+        lastBlock[tx.origin] = block.number;                    // Must record block AFTER the tx
     }
 
     //======================================DEPOSITS========================================//
 
-    // Holders to deposit for Interest Payments
+    // Deposit USDV or SYNTHS
     function deposit(address token, uint amount) external {
         depositForMember(token, msg.sender, amount);
     }
     // Wrapper for contracts
     function depositForMember(address token, address member, uint amount) public {
-        require(token==address(this) || (iPOOLS(POOLS).isSynth(token) && iPOOLS(POOLS).isAsset(iSYNTH(token).TOKEN())));
+        require(token==address(this) || (iPOOLS(POOLS).isSynth(token) && iPOOLS(POOLS).isAsset(iSYNTH(token).TOKEN()))); // Only USDV or Asset-Synths
         getFunds(token, amount);
         _deposit(token, member, amount);
     }
     function _deposit(address _token, address _member, uint _amount) internal {
-        mapMemberToken_lastTime[_member][_token] = block.timestamp;
-        mapMemberToken_deposit[_member][_token] += _amount; // Record balance for member
+        mapMemberToken_lastTime[_member][_token] = block.timestamp;         // Time of deposit
+        mapMemberToken_deposit[_member][_token] += _amount;                 // Record deposit
+        mapToken_totalFunds[_token] += _amount;                             // Total balance of that asset
         uint _weight;
         if(_token==address(this)){
             _weight = _amount;
         } else {
-            _weight = iUTILS(UTILS()).calcValueInBase(iSYNTH(_token).TOKEN(), _amount);
+            _weight = iUTILS(UTILS()).calcValueInBase(iSYNTH(_token).TOKEN(), _amount); // Convert synth to USDV value
         }
-        mapToken_totalFunds[_token] += _amount;
-        mapMember_weight[_member] += _weight;
-        totalWeight += _weight;
+        mapMember_weight[_member] += _weight;   // Total member weight (normalised in USDV values)
+        totalWeight += _weight;                 // Total weight (normalised in USDV values)
         emit MemberDeposits(_token, _member, _amount, mapToken_totalFunds[_token], _weight, totalWeight);
     }
 
@@ -251,38 +258,36 @@ contract USDV is iERC20 {
     // Harvest, get payment, allocate, increase weight
     function harvest(address token) external returns(uint reward) {
         address _member = msg.sender;
-        reward = calcCurrentReward(token, _member);
-        mapMemberToken_lastTime[_member][token] = block.timestamp;
-        mapMemberToken_reward[_member][token] += reward;
-        totalRewards += reward;
+        reward = calcCurrentReward(token, _member);                     // In USDV
+        mapMemberToken_lastTime[_member][token] = block.timestamp;      // Reset time
+        mapMemberToken_reward[_member][token] += reward;                // Record separately
+        totalRewards += reward;                                         // Accounting
         uint _weight;
         if(token==address(this)){
             _weight = reward;
         } else {
-            _weight = iUTILS(UTILS()).calcValueInBase(iSYNTH(token).TOKEN(), reward);
+            _weight = iUTILS(UTILS()).calcValueInBase(iSYNTH(token).TOKEN(), reward); // In USDV value
         }
-        mapMember_weight[_member] += _weight;
-        totalWeight += _weight;
+        mapMember_weight[_member] += _weight;   // Increase member's voting weight
+        totalWeight += _weight;                 // Increase total
         emit MemberHarvests(token, _member, reward, _weight, totalWeight);
-        return reward;
     }
 
     // Get the payment owed for a member
     function calcCurrentReward(address token, address member) public view returns(uint reward) {
         uint _secondsSinceClaim = block.timestamp - mapMemberToken_lastTime[member][token];        // Get time since last claim
-        uint _share = calcReward(member);                                              // Get share of rewards for member
-        reward = (_share * _secondsSinceClaim) / iVADER(VADER).secondsPerEra();   // Get owed amount, based on per-day rates
+        uint _share = calcReward(member);                                               // Get share of rewards for member
+        reward = (_share * _secondsSinceClaim) / iVADER(VADER).secondsPerEra();         // Get owed amount, based on per-day rates
         uint _reserve = reserveUSDV();
         if(reward >= _reserve) {
-            reward = _reserve;                                                         // Send full reserve if the last
+            reward = _reserve;                                                          // Send full reserve if the last
         }
-        return reward;
     }
 
     function calcReward(address member) public view returns(uint) {
-        uint _weight = mapMember_weight[member];
-        uint _reserve = reserveUSDV() / erasToEarn;                               // Deplete reserve over a number of eras
-        return iUTILS(UTILS()).calcShare(_weight, totalWeight, _reserve);         // Get member's share of that
+        uint _weight = mapMember_weight[member];                                    // Share of rewards based in USDV value
+        uint _reserve = reserveUSDV() / erasToEarn;                                 // Deplete reserve over a number of eras
+        return iUTILS(UTILS()).calcShare(_weight, totalWeight, _reserve);           // Get member's share of that
     }
 
 //====================================== WITHDRAW ========================================//
@@ -290,28 +295,26 @@ contract USDV is iERC20 {
     // Members to withdraw
     function withdraw(address token, uint basisPoints) external returns(uint redeemedAmount) {
         address _member = msg.sender;
-        redeemedAmount = _processWithdraw(token, _member, basisPoints);                         // get amount to withdraw
+        redeemedAmount = _processWithdraw(token, _member, basisPoints);          // Get amount to withdraw
         sendFunds(token, _member, redeemedAmount);
-        return redeemedAmount;
     }
     function _processWithdraw(address _token, address _member, uint _basisPoints) internal returns(uint _amount) {
         require((block.timestamp - mapMemberToken_lastTime[_member][_token]) >= minimumDepositTime, "DepositTime");    // stops attacks
-        uint _reward = iUTILS(UTILS()).calcPart(_basisPoints, mapMemberToken_reward[_member][_token]); // share of reward
-        mapMemberToken_reward[_member][_token] -= _reward;
-        totalRewards -= _reward;
-        if(_token!=address(this)){
-            _reward = iUTILS(UTILS()).calcSwapValueInToken(iSYNTH(_token).TOKEN(), _reward);
-            _transfer(address(this), POOLS, _reward);
-            _reward = iPOOLS(POOLS).mintSynth(address(this), iSYNTH(_token).TOKEN(), address(this));
+        uint _reward = iUTILS(UTILS()).calcPart(_basisPoints, mapMemberToken_reward[_member][_token]); // Share of reward (USDV)
+        mapMemberToken_reward[_member][_token] -= _reward;                      // Reduce for member
+        totalRewards -= _reward;                                                // Reduce for total
+        if(_token!=address(this)){              // If synth, then need to swap to mint synth
+            _transfer(address(this), POOLS, _reward);                                                   // Send Reward to POOLS
+            _reward = iPOOLS(POOLS).mintSynth(address(this), iSYNTH(_token).TOKEN(), address(this));    // Mint to Synth, send back
         }
-        uint _principle = iUTILS(UTILS()).calcPart(_basisPoints, mapMemberToken_deposit[_member][_token]); // share of deposits
-        mapMemberToken_deposit[_member][_token] -= _principle;                                   
-        mapToken_totalFunds[_token] -= _principle;
-        uint _weight = iUTILS(UTILS()).calcPart(_basisPoints, mapMember_weight[_member]);
-        mapMember_weight[_member] -= _weight; 
-        totalWeight -= _weight;                                                     // reduce for total
-        emit MemberWithdraws(_token, _member, _amount, _weight, totalWeight);
-        return (_principle + _reward);
+        uint _principle = iUTILS(UTILS()).calcPart(_basisPoints, mapMemberToken_deposit[_member][_token]); // Share of deposits
+        mapMemberToken_deposit[_member][_token] -= _principle;                  // Reduce for member                             
+        mapToken_totalFunds[_token] -= _principle;                              // Reduce for total
+        uint _weight = iUTILS(UTILS()).calcPart(_basisPoints, mapMember_weight[_member]);   // Find recorded weight to reduce
+        mapMember_weight[_member] -= _weight;                                   // Reduce for member    
+        totalWeight -= _weight;                                                 // Reduce for total
+        emit MemberWithdraws(_token, _member, _amount, _weight, totalWeight);   // Event
+        return (_principle + _reward);                                          // Total to send to member
     }
 
     //============================== ASSETS ================================//
@@ -367,6 +370,9 @@ contract USDV is iERC20 {
     }
     function emitting() public view returns(bool){
         return iVADER(VADER).emitting();
+    }
+    function minting() public view returns(bool){
+        return iVADER(VADER).minting();
     }
 
 }
