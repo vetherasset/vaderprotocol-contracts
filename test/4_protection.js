@@ -118,6 +118,7 @@ describe("Should do IL Protection", function() {
   });
 
   it("Small swap, need protection on Asset", async function() {
+    await router.setParams('1', '1', '2')
     expect(await pools.isAsset(asset.address)).to.equal(true);
     await router.curatePool(asset.address)
     expect(await router.isCurated(asset.address)).to.equal(true);
