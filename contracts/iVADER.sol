@@ -9,13 +9,11 @@ interface iVADER {
     function secondsPerEra() external view returns (uint);
     function flipEmissions() external;
     function flipMinting() external;
-    function setParams(uint newEra, uint newCurve, uint newFee) external;
+    function setParams(uint newEra, uint newCurve) external;
     function setRewardAddress(address newAddress) external;
     function changeUTILS(address newUTILS) external;
     function changeDAO(address newDAO) external;
     function purgeDAO() external;
-    function isExcluded(address member) external view returns(bool);
-    function exclude(address member) external;
     function upgrade(uint amount) external;
     function redeem() external returns (uint);
     function redeemToMember(address member) external returns (uint);
