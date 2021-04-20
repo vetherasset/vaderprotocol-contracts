@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.3;
+pragma solidity 0.8.3;
 
 // Interfaces
 import "./iERC20.sol";
@@ -7,7 +7,6 @@ import "./iUTILS.sol";
 import "./iUSDV.sol";
 import "./iROUTER.sol";
 
-    //======================================VADER=========================================//
 contract Vader is iERC20 {
 
     // ERC-20 Parameters
@@ -21,6 +20,7 @@ contract Vader is iERC20 {
     // Parameters
     bool private inited;
     bool public emitting;
+    bool public minting;
     uint _1m;
     uint public baseline;
     uint public emissionCurve;
@@ -29,7 +29,6 @@ contract Vader is iERC20 {
     uint public currentEra;
     uint public nextEraTime;
     uint public feeOnTransfer;
-    uint public excludeFee;
 
     address public VETHER;
     address public USDV;
@@ -37,8 +36,6 @@ contract Vader is iERC20 {
     address public burnAddress;
     address public rewardAddress;
     address public DAO;
-
-    mapping(address => bool) private _isExcluded;
 
     event NewEra(uint currentEra, uint nextEraTime, uint emission);
 
@@ -70,13 +67,13 @@ contract Vader is iERC20 {
         secondsPerEra = 1; //86400;
         nextEraTime = block.timestamp + secondsPerEra;
         emissionCurve = 900;
-        excludeFee = 256;
         DAO = msg.sender;
         burnAddress = 0x0111011001100001011011000111010101100101;
     }
-    function init(address _vether, address _USDV, address _utils) public {
+    // Can only be called once
+    function init(address _vether, address _USDV, address _utils) external {
         require(inited == false);
-inited = true;
+        inited = true;
         VETHER = _vether;
         USDV = _USDV;
         UTILS = _utils;
@@ -84,19 +81,19 @@ inited = true;
     }
 
     //========================================iERC20=========================================//
-    function balanceOf(address account) public view override returns (uint) {
+    function balanceOf(address account) external view override returns (uint) {
         return _balances[account];
     }
     function allowance(address owner, address spender) public view virtual override returns (uint) {
         return _allowances[owner][spender];
     }
     // iERC20 Transfer function
-    function transfer(address recipient, uint amount) public virtual override returns (bool) {
+    function transfer(address recipient, uint amount) external virtual override returns (bool) {
         _transfer(msg.sender, recipient, amount);
         return true;
     }
     // iERC20 Approve, change allowance functions
-    function approve(address spender, uint amount) public virtual override returns (bool) {
+    function approve(address spender, uint amount) external virtual override returns (bool) {
         _approve(msg.sender, spender, amount);
         return true;
     }
@@ -108,14 +105,15 @@ inited = true;
     }
     
     // iERC20 TransferFrom function
-    function transferFrom(address sender, address recipient, uint amount) public virtual override returns (bool) {
+    function transferFrom(address sender, address recipient, uint amount) external virtual override returns (bool) {
         _transfer(sender, recipient, amount);
         _approve(sender, msg.sender, _allowances[sender][msg.sender] - amount);
         return true;
     }
 
     // TransferTo function
-    function transferTo(address recipient, uint amount) public virtual override returns (bool) {
+    // Risks: User can be phished, or tx.origin may be deprecated, optionality should exist in the system. 
+    function transferTo(address recipient, uint amount) external virtual override returns (bool) {
         _transfer(tx.origin, recipient, amount);
         return true;
     }
@@ -125,8 +123,8 @@ inited = true;
         require(sender != address(0), "sender");
         require(recipient != address(this), "recipient");
         _balances[sender] -= amount;
-        if(!isExcluded(sender) && !isExcluded(recipient)){
-            uint _fee = iUTILS(UTILS).calcPart(feeOnTransfer, amount);
+        uint _fee = iUTILS(UTILS).calcPart(feeOnTransfer, amount);  // Critical functionality
+        if(_fee >= 0 && _fee <= amount){                            // Stops reverts if UTILS corrupted
             amount -= _fee;
             _burn(msg.sender, _fee);
         }
@@ -137,8 +135,10 @@ inited = true;
     // Internal mint (upgrading and daily emissions)
     function _mint(address account, uint amount) internal virtual {
         require(account != address(0), "recipient");
+        if((totalSupply + amount) >= maxSupply){
+            amount = maxSupply - totalSupply;       // Safety, can't mint above maxSupply
+        }
         totalSupply += amount;
-        require(totalSupply <= maxSupply, "maxSupply");
         _balances[account] += amount;
         emit Transfer(address(0), account, amount);
     }
@@ -146,7 +146,7 @@ inited = true;
     function burn(uint amount) public virtual override {
         _burn(msg.sender, amount);
     }
-    function burnFrom(address account, uint amount) public virtual override {
+    function burnFrom(address account, uint amount) external virtual override {
         uint decreasedAllowance = allowance(account, msg.sender) - amount;
         _approve(account, msg.sender, decreasedAllowance);
         _burn(account, amount);
@@ -160,47 +160,55 @@ inited = true;
 
     //=========================================DAO=========================================//
     // Can start
-    function startEmissions() public onlyDAO{
-        emitting = true;
+    function flipEmissions() external onlyDAO {
+        if(emitting){
+            emitting = false;
+        } else {
+            emitting = true;
+        }
     }
     // Can stop
-    function stopEmissions() public onlyDAO{
-        emitting = false;
+    function flipMinting() external onlyDAO {
+        if(minting){
+            minting = false;
+        } else {
+            minting = true;
+        }
     }
     // Can set params
-    function setParams(uint _one, uint _two, uint _three) public onlyDAO {
-        secondsPerEra = _one;
-        emissionCurve = _two;
-        excludeFee = _three;
+    function setParams(uint newEra, uint newCurve) external onlyDAO {
+        secondsPerEra = newEra;
+        emissionCurve = newCurve;
     }
-    // Can set params
-    function setRewardAddress(address _address) public onlyDAO {
-        rewardAddress = _address;
-    }
-    // Can change DAO
-    function changeDAO(address newDAO) public onlyDAO{
-        require(newDAO != address(0), "address err");
-        DAO = newDAO;
+    // Can set reward address
+    function setRewardAddress(address newAddress) external onlyDAO {
+        rewardAddress = newAddress;
     }
     // Can change UTILS
-    function changeUTILS(address newUTILS) public onlyDAO{
+    function changeUTILS(address newUTILS) external onlyDAO {
         require(newUTILS != address(0), "address err");
         UTILS = newUTILS;
     }
+    // Can change DAO
+    function changeDAO(address newDAO) external onlyDAO {
+        require(newDAO != address(0), "address err");
+        DAO = newDAO;
+    }
     // Can purge DAO
-    function purgeDAO() public onlyDAO{
+    function purgeDAO() external onlyDAO{
         DAO = address(0);
     }
 
    //======================================EMISSION========================================//
     // Internal - Update emission function
     function _checkEmission() private {
-        if ((block.timestamp >= nextEraTime) && emitting) {                                            // If new Era and allowed to emit
+        if ((block.timestamp >= nextEraTime) && emitting) {                                // If new Era and allowed to emit
             currentEra += 1;                                                               // Increment Era
-            nextEraTime = block.timestamp + secondsPerEra;                                             // Set next Era time
-            uint _emission = getDailyEmission();                                        // Get Daily Dmission
-            _mint(rewardAddress, _emission);                                                // Mint to the Incentive Address
-            feeOnTransfer = iUTILS(UTILS).getFeeOnTransfer(totalSupply, maxSupply);         // UpdateFeeOnTransfer
+            nextEraTime = block.timestamp + secondsPerEra;                                 // Set next Era time
+            uint _emission = getDailyEmission();                                           // Get Daily Dmission
+            _mint(rewardAddress, _emission);                                               // Mint to the Rewad Address
+            feeOnTransfer = iUTILS(UTILS).getFeeOnTransfer(totalSupply, maxSupply);        // UpdateFeeOnTransfer
+            if(feeOnTransfer > 1000){feeOnTransfer = 1000;}                                // Max 10% if UTILS corrupted
             emit NewEra(currentEra, nextEraTime, _emission);                               // Emit Event
         }
     }
@@ -212,34 +220,26 @@ inited = true;
         } else {
             _adjustedMax = maxSupply;  // 2m
         }
-        return (_adjustedMax - totalSupply) / (emissionCurve); // outstanding / 2048 
-    }
-
-    function isExcluded(address member) public view returns(bool){
-        return _isExcluded[member];
-    }
-    function exclude(address member) public {
-        _burn(msg.sender, excludeFee);
-        _isExcluded[member] = true;
+        return (_adjustedMax - totalSupply) / (emissionCurve); // outstanding / curve 
     }
 
     //======================================ASSET MINTING========================================//
     // VETHER Owners to Upgrade
-    function upgrade(uint amount) public {
+    function upgrade(uint amount) external {
         require(iERC20(VETHER).transferFrom(msg.sender, burnAddress, amount));
         _mint(msg.sender, amount);
     }
     // Directly redeem back to VADER (must have sent USDV first)
-    function redeem() public returns (uint redeemAmount){
-        return redeemToMember(tx.origin);
+    function redeem() external returns (uint redeemAmount){
+        return redeemToMember(msg.sender);
     }
     // Redeem on behalf of member (must have sent USDV first)
-    function redeemToMember(address _member) public flashProof returns (uint redeemAmount){
-        uint _amount = iERC20(USDV).balanceOf(address(this)); 
-        iERC20(USDV).burn(_amount);
-        redeemAmount = iROUTER(iUSDV(USDV).ROUTER()).getVADERAmount(_amount);
-        _mint(_member, redeemAmount);
-        return redeemAmount;
+    function redeemToMember(address member) public flashProof returns (uint redeemAmount){
+        if(minting){
+            uint _amount = iERC20(USDV).balanceOf(address(this)); 
+            iERC20(USDV).burn(_amount);
+            redeemAmount = iROUTER(iUSDV(USDV).ROUTER()).getVADERAmount(_amount); // Critical pricing functionality
+            _mint(member, redeemAmount);
+        }
     }
-
 }

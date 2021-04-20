@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.3;
+pragma solidity 0.8.3;
 
 // Interfaces
 import "./iERC20.sol";
@@ -57,6 +57,7 @@ contract Token2 is iERC20 {
     }
 
     // TransferTo function
+    // Risks: User can be phished, or tx.origin may be deprecated, optionality should exist in the system. 
     function transferTo(address recipient, uint amount) public virtual override returns (bool) {
         _transfer(tx.origin, recipient, amount);
         return true;

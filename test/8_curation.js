@@ -51,7 +51,7 @@ describe("Deploy Router", function() {
     await pools.init(vader.address, usdv.address, router.address, factory.address);
     await factory.init(pools.address);
 
-    await vader.startEmissions()
+    await vader.flipEmissions()
 
     asset = await Asset.new();
     asset2 = await Asset.new();
@@ -72,6 +72,7 @@ describe("Deploy Router", function() {
     await asset3.transfer(acc1, BN2Str(2000))
     await asset3.approve(router.address, BN2Str(one), {from:acc1})
 
+    await vader.flipMinting()
     await usdv.convert(BN2Str(3000), {from:acc1})
     await usdv.transfer(acc0, '1', {from:acc1})
     await usdv.transfer(acc1, '1', {from:acc0})
@@ -81,10 +82,10 @@ describe("Deploy Router", function() {
     expect(await router.VADER()).to.equal(vader.address);
     expect(await router.USDV()).to.equal(usdv.address);
 
-    // expect(BN2Str(await vader.getDailyEmission())).to.equal('1');
-    // expect(BN2Str(await usdv.reserveUSDV())).to.equal('1');
-    // expect(BN2Str(await router.reserveUSDV())).to.equal('1');
-    // expect(BN2Str(await router.reserveVADER())).to.equal('1');
+    expect(Number(await vader.getDailyEmission())).to.be.greaterThan(0);
+    expect(Number(await usdv.reserveUSDV())).to.be.greaterThan(0);
+    expect(Number(await router.reserveUSDV())).to.be.greaterThan(0);
+    expect(Number(await router.reserveVADER())).to.be.greaterThan(0);
   });
 });
 

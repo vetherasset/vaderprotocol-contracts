@@ -52,7 +52,7 @@ describe("Deploy Rewards", function() {
     await pools.init(vader.address, usdv.address, router.address, factory.address);
     await factory.init(pools.address);
 
-    await vader.startEmissions()
+    await vader.flipEmissions()
 
     anchor = await Anchor.new();
     asset = await Asset.new();
@@ -64,6 +64,7 @@ describe("Deploy Rewards", function() {
     await vether.approve(vader.address, '7400', {from:acc1})
     await vader.upgrade(BN2Str(7400), {from:acc1}) 
 
+    await vader.flipMinting()
     await usdv.convert(BN2Str(1100), {from:acc1})
     // await usdv.withdrawToUSDV('10000', {from:acc1})
     await asset.transfer(acc1, BN2Str(2000))
@@ -72,11 +73,11 @@ describe("Deploy Rewards", function() {
     await router.addLiquidity(vader.address, '1000', anchor.address, '1000', {from:acc1})
     await router.addLiquidity(usdv.address, '1000', asset.address, '1000', {from:acc1})
     
-    expect(BN2Str(await vader.getDailyEmission())).to.equal('7');
-    expect(BN2Str(await usdv.reserveUSDV())).to.equal('5');
-    expect(BN2Str(await router.reserveUSDV())).to.equal('5');
-    expect(BN2Str(await router.reserveVADER())).to.equal('5');
-    // await vader.stopEmissions()
+    expect(Number(await vader.getDailyEmission())).to.be.greaterThan(0);
+    expect(Number(await usdv.reserveUSDV())).to.be.greaterThan(0);
+    expect(Number(await router.reserveUSDV())).to.be.greaterThan(0);
+    expect(Number(await router.reserveVADER())).to.be.greaterThan(0);
+    // await vader.flipEmissions()
   });
 });
 
@@ -84,6 +85,7 @@ describe("Should do pool rewards", function() {
 
   it("Swap anchor, get rewards", async function() {
     let r = '5';
+    await router.curatePool(anchor.address)
     expect(BN2Str(await router.reserveVADER())).to.equal(r);
     expect(await router.emitting()).to.equal(true);
     expect(BN2Str(await vader.balanceOf(router.address))).to.equal(r);
@@ -100,6 +102,7 @@ describe("Should do pool rewards", function() {
 
   it("Swap asset, get rewards", async function() {
     let r = '5';
+    await router.setParams('1', '1', '2')
     await router.curatePool(asset.address, {from:acc1})
     expect(BN2Str(await router.reserveUSDV())).to.equal(r);
     expect(await router.emitting()).to.equal(true);

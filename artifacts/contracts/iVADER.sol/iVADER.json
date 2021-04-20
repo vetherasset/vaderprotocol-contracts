@@ -33,7 +33,20 @@
       "inputs": [
         {
           "internalType": "address",
-          "name": "",
+          "name": "newDAO",
+          "type": "address"
+        }
+      ],
+      "name": "changeDAO",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "newUTILS",
           "type": "address"
         }
       ],
@@ -57,6 +70,40 @@
     },
     {
       "inputs": [],
+      "name": "flipEmissions",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "flipMinting",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "minting",
+      "outputs": [
+        {
+          "internalType": "bool",
+          "name": "",
+          "type": "bool"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "purgeDAO",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [],
       "name": "redeem",
       "outputs": [
         {
@@ -72,7 +119,7 @@
       "inputs": [
         {
           "internalType": "address",
-          "name": "",
+          "name": "member",
           "type": "address"
         }
       ],
@@ -103,12 +150,43 @@
     {
       "inputs": [
         {
+          "internalType": "uint256",
+          "name": "newEra",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "newCurve",
+          "type": "uint256"
+        }
+      ],
+      "name": "setParams",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
           "internalType": "address",
-          "name": "",
+          "name": "newAddress",
           "type": "address"
         }
       ],
       "name": "setRewardAddress",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "amount",
+          "type": "uint256"
+        }
+      ],
+      "name": "upgrade",
       "outputs": [],
       "stateMutability": "nonpayable",
       "type": "function"

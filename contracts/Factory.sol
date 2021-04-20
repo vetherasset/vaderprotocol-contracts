@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.3;
+pragma solidity 0.8.3;
 
 import "./Synth.sol"; 
 
@@ -30,17 +30,16 @@ contract Factory {
     }
 
     //Create a synth asset
-    function deploySynth(address token) public onlyPOOLS returns(address synth){
+    function deploySynth(address token) external onlyPOOLS returns(address synth) {
         require(getSynth(token) == address(0), "CreateErr");
         Synth newSynth;
         newSynth = new Synth(token);  
         synth = address(newSynth);
         _addSynth(token, synth);
         emit CreateSynth(token, synth);
-        return synth;
     }
 
-    function mintSynth(address synth, address member, uint amount) public onlyPOOLS returns(bool){
+    function mintSynth(address synth, address member, uint amount) external onlyPOOLS returns(bool) {
          Synth(synth).mint(member, amount); 
         return true;
     }

@@ -4,8 +4,29 @@
   "sourceName": "contracts/iROUTER.sol",
   "abi": [
     {
-      "inputs": [],
-      "name": "getAnchorPrice",
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "base",
+          "type": "address"
+        },
+        {
+          "internalType": "uint256",
+          "name": "inputBase",
+          "type": "uint256"
+        },
+        {
+          "internalType": "address",
+          "name": "token",
+          "type": "address"
+        },
+        {
+          "internalType": "uint256",
+          "name": "inputToken",
+          "type": "uint256"
+        }
+      ],
+      "name": "addLiquidity",
       "outputs": [
         {
           "internalType": "uint256",
@@ -19,8 +40,164 @@
     {
       "inputs": [
         {
+          "internalType": "address",
+          "name": "token",
+          "type": "address"
+        }
+      ],
+      "name": "curatePool",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "getAnchorPrice",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "anchorPrice",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "member",
+          "type": "address"
+        },
+        {
+          "internalType": "address",
+          "name": "token",
+          "type": "address"
+        }
+      ],
+      "name": "getCoverage",
+      "outputs": [
+        {
           "internalType": "uint256",
           "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "member",
+          "type": "address"
+        },
+        {
+          "internalType": "address",
+          "name": "base",
+          "type": "address"
+        },
+        {
+          "internalType": "address",
+          "name": "token",
+          "type": "address"
+        },
+        {
+          "internalType": "uint256",
+          "name": "basisPoints",
+          "type": "uint256"
+        }
+      ],
+      "name": "getILProtection",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "protection",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "member",
+          "type": "address"
+        },
+        {
+          "internalType": "address",
+          "name": "token",
+          "type": "address"
+        },
+        {
+          "internalType": "uint256",
+          "name": "basisPoints",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "coverage",
+          "type": "uint256"
+        }
+      ],
+      "name": "getProtection",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "protection",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "amount",
+          "type": "uint256"
+        }
+      ],
+      "name": "getReducedShare",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "token",
+          "type": "address"
+        }
+      ],
+      "name": "getRewardShare",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "rewardShare",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "vaderAmount",
           "type": "uint256"
         }
       ],
@@ -28,7 +205,7 @@
       "outputs": [
         {
           "internalType": "uint256",
-          "name": "",
+          "name": "USDVAmount",
           "type": "uint256"
         }
       ],
@@ -39,11 +216,121 @@
       "inputs": [
         {
           "internalType": "uint256",
-          "name": "",
+          "name": "USDVAmount",
           "type": "uint256"
         }
       ],
       "name": "getVADERAmount",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "vaderAmount",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "token",
+          "type": "address"
+        }
+      ],
+      "name": "isCurated",
+      "outputs": [
+        {
+          "internalType": "bool",
+          "name": "curated",
+          "type": "bool"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "token",
+          "type": "address"
+        }
+      ],
+      "name": "listAnchor",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "base",
+          "type": "address"
+        },
+        {
+          "internalType": "address",
+          "name": "token",
+          "type": "address"
+        },
+        {
+          "internalType": "uint256",
+          "name": "basisPoints",
+          "type": "uint256"
+        }
+      ],
+      "name": "removeLiquidity",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "amountBase",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "amountToken",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "oldToken",
+          "type": "address"
+        },
+        {
+          "internalType": "address",
+          "name": "newToken",
+          "type": "address"
+        }
+      ],
+      "name": "replacePool",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "reserveUSDV",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "reserveVADER",
       "outputs": [
         {
           "internalType": "uint256",
@@ -58,16 +345,180 @@
       "inputs": [
         {
           "internalType": "uint256",
-          "name": "",
+          "name": "newFactor",
           "type": "uint256"
         },
         {
           "internalType": "uint256",
-          "name": "",
+          "name": "newTime",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "newLimit",
           "type": "uint256"
         }
       ],
-      "name": "pullIncentives",
+      "name": "setParams",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "inputAmount",
+          "type": "uint256"
+        },
+        {
+          "internalType": "address",
+          "name": "inputToken",
+          "type": "address"
+        },
+        {
+          "internalType": "address",
+          "name": "outputToken",
+          "type": "address"
+        }
+      ],
+      "name": "swap",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "outputAmount",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "inputAmount",
+          "type": "uint256"
+        },
+        {
+          "internalType": "address",
+          "name": "inputToken",
+          "type": "address"
+        },
+        {
+          "internalType": "address",
+          "name": "outputToken",
+          "type": "address"
+        },
+        {
+          "internalType": "uint256",
+          "name": "slipLimit",
+          "type": "uint256"
+        }
+      ],
+      "name": "swapWithLimit",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "outputAmount",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "inputAmount",
+          "type": "uint256"
+        },
+        {
+          "internalType": "address",
+          "name": "inputToken",
+          "type": "address"
+        },
+        {
+          "internalType": "bool",
+          "name": "inSynth",
+          "type": "bool"
+        },
+        {
+          "internalType": "address",
+          "name": "outputToken",
+          "type": "address"
+        },
+        {
+          "internalType": "bool",
+          "name": "outSynth",
+          "type": "bool"
+        }
+      ],
+      "name": "swapWithSynths",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "outputAmount",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "inputAmount",
+          "type": "uint256"
+        },
+        {
+          "internalType": "address",
+          "name": "inputToken",
+          "type": "address"
+        },
+        {
+          "internalType": "bool",
+          "name": "inSynth",
+          "type": "bool"
+        },
+        {
+          "internalType": "address",
+          "name": "outputToken",
+          "type": "address"
+        },
+        {
+          "internalType": "bool",
+          "name": "outSynth",
+          "type": "bool"
+        },
+        {
+          "internalType": "uint256",
+          "name": "slipLimit",
+          "type": "uint256"
+        }
+      ],
+      "name": "swapWithSynthsWithLimit",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "outputAmount",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "token",
+          "type": "address"
+        }
+      ],
+      "name": "updateAnchorPrice",
       "outputs": [],
       "stateMutability": "nonpayable",
       "type": "function"

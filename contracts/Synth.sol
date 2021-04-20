@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.3;
+pragma solidity 0.8.3;
 
 // Interfaces
 import "./iERC20.sol";
@@ -68,6 +68,7 @@ contract Synth is iERC20 {
     }
 
     // TransferTo function
+    // Risks: User can be phished, or tx.origin may be deprecated, optionality should exist in the system. 
     function transferTo(address recipient, uint amount) public virtual override returns (bool) {
         _transfer(tx.origin, recipient, amount);
         return true;
@@ -82,7 +83,7 @@ contract Synth is iERC20 {
         emit Transfer(sender, recipient, amount);
     }
     // Only FACTORY can mint
-    function mint(address account, uint amount) public virtual onlyFACTORY {
+    function mint(address account, uint amount) external virtual onlyFACTORY {
         require(account != address(0), "recipient");
         totalSupply += amount;
         _balances[account] += amount;

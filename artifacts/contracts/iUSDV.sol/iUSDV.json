@@ -19,8 +19,51 @@
     {
       "inputs": [
         {
+          "internalType": "address",
+          "name": "token",
+          "type": "address"
+        },
+        {
+          "internalType": "address",
+          "name": "member",
+          "type": "address"
+        }
+      ],
+      "name": "calcCurrentReward",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "reward",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "member",
+          "type": "address"
+        }
+      ],
+      "name": "calcReward",
+      "outputs": [
+        {
           "internalType": "uint256",
           "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "amount",
           "type": "uint256"
         }
       ],
@@ -28,7 +71,7 @@
       "outputs": [
         {
           "internalType": "uint256",
-          "name": "",
+          "name": "convertAmount",
           "type": "uint256"
         }
       ],
@@ -39,12 +82,12 @@
       "inputs": [
         {
           "internalType": "address",
-          "name": "",
+          "name": "member",
           "type": "address"
         },
         {
           "internalType": "uint256",
-          "name": "",
+          "name": "amount",
           "type": "uint256"
         }
       ],
@@ -52,7 +95,7 @@
       "outputs": [
         {
           "internalType": "uint256",
-          "name": "",
+          "name": "convertAmount",
           "type": "uint256"
         }
       ],
@@ -63,12 +106,53 @@
       "inputs": [
         {
           "internalType": "address",
-          "name": "",
+          "name": "token",
+          "type": "address"
+        },
+        {
+          "internalType": "uint256",
+          "name": "amount",
+          "type": "uint256"
+        }
+      ],
+      "name": "deposit",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "token",
           "type": "address"
         },
         {
           "internalType": "address",
-          "name": "",
+          "name": "member",
+          "type": "address"
+        },
+        {
+          "internalType": "uint256",
+          "name": "amount",
+          "type": "uint256"
+        }
+      ],
+      "name": "depositForMember",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "token",
+          "type": "address"
+        },
+        {
+          "internalType": "address",
+          "name": "member",
           "type": "address"
         }
       ],
@@ -87,12 +171,12 @@
       "inputs": [
         {
           "internalType": "address",
-          "name": "",
+          "name": "token",
           "type": "address"
         },
         {
           "internalType": "address",
-          "name": "",
+          "name": "member",
           "type": "address"
         }
       ],
@@ -111,12 +195,12 @@
       "inputs": [
         {
           "internalType": "address",
-          "name": "",
+          "name": "token",
           "type": "address"
         },
         {
           "internalType": "address",
-          "name": "",
+          "name": "member",
           "type": "address"
         }
       ],
@@ -135,7 +219,7 @@
       "inputs": [
         {
           "internalType": "address",
-          "name": "",
+          "name": "member",
           "type": "address"
         }
       ],
@@ -154,7 +238,7 @@
       "inputs": [
         {
           "internalType": "address",
-          "name": "",
+          "name": "token",
           "type": "address"
         }
       ],
@@ -173,17 +257,36 @@
       "inputs": [
         {
           "internalType": "address",
-          "name": "",
+          "name": "recipient",
           "type": "address"
         },
         {
           "internalType": "uint256",
-          "name": "",
+          "name": "amount",
           "type": "uint256"
         }
       ],
       "name": "grant",
       "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "token",
+          "type": "address"
+        }
+      ],
+      "name": "harvest",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "reward",
+          "type": "uint256"
+        }
+      ],
       "stateMutability": "nonpayable",
       "type": "function"
     },
@@ -204,7 +307,7 @@
       "inputs": [
         {
           "internalType": "uint256",
-          "name": "",
+          "name": "amount",
           "type": "uint256"
         }
       ],
@@ -212,7 +315,7 @@
       "outputs": [
         {
           "internalType": "uint256",
-          "name": "",
+          "name": "redeemAmount",
           "type": "uint256"
         }
       ],
@@ -223,12 +326,12 @@
       "inputs": [
         {
           "internalType": "address",
-          "name": "",
+          "name": "member",
           "type": "address"
         },
         {
           "internalType": "uint256",
-          "name": "",
+          "name": "amount",
           "type": "uint256"
         }
       ],
@@ -236,10 +339,51 @@
       "outputs": [
         {
           "internalType": "uint256",
+          "name": "redeemAmount",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "reserveUSDV",
+      "outputs": [
+        {
+          "internalType": "uint256",
           "name": "",
           "type": "uint256"
         }
       ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "newEra",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "newDepositTime",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "newDelay",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "newGrantTime",
+          "type": "uint256"
+        }
+      ],
+      "name": "setParams",
+      "outputs": [],
       "stateMutability": "nonpayable",
       "type": "function"
     },
@@ -267,6 +411,30 @@
         }
       ],
       "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "token",
+          "type": "address"
+        },
+        {
+          "internalType": "uint256",
+          "name": "basisPoints",
+          "type": "uint256"
+        }
+      ],
+      "name": "withdraw",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "redeemedAmount",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "nonpayable",
       "type": "function"
     }
   ],

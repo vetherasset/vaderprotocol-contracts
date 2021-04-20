@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.3;
+pragma solidity 0.8.3;
 
 // Interfaces
 import "./iERC20.sol";
@@ -10,31 +10,8 @@ contract Utils {
     uint private one = 10**18;
     address public POOLS;
 
-    // struct GlobalDetails {
-    //     uint totalStaked;
-    //     uint totalVolume;
-    //     uint totalFees;
-    //     uint unstakeTx;
-    //     uint stakeTx;
-    //     uint swapTx;
-    // }
-
-    // struct PoolDataStruct {
-    //     address tokenAddress;
-    //     address poolAddress;
-    //     uint genesis;
-    //     uint baseAmt;
-    //     uint tokenAmt;
-    //     uint baseAmtStaked;
-    //     uint tokenAmtStaked;
-    //     uint fees;
-    //     uint volume;
-    //     uint txCount;
-    //     uint poolUnits;
-    // }
-
     constructor () {}
-        // Can set pool
+
     function init(address _pool) public {
         if(POOLS == address(0)){
             POOLS = _pool;
@@ -42,130 +19,34 @@ contract Utils {
     }
     //====================================SYSTEM FUNCTIONS====================================//
     // VADER FeeOnTransfer
-    function getFeeOnTransfer(uint totalSupply, uint maxSupply) public pure returns(uint){
+    function getFeeOnTransfer(uint totalSupply, uint maxSupply) external pure returns(uint){
         return calcShare(totalSupply, maxSupply, 100); // 0->100BP
     }
 
-    // function getMemberShare(address token, address member) public view returns(uint baseAmt, uint tokenAmt){
-    //     address pools = getPool(token);
-    //     uint units = iERC20(pool).balanceOf(member);
-    //     return getPoolShare(token, units);
-    // }
-
-    // function getPoolShare(address token, uint units) public view returns(uint baseAmt, uint tokenAmt){
-    //     address payable pools = getPool(token);
-    //     baseAmt = calcShare(units, iERC20(pool).totalSupply(), iPOOLS(pool).baseAmt());
-    //     tokenAmt = calcShare(units, iERC20(pool).totalSupply(), iPOOLS(pool).tokenAmt());
-    //     return (baseAmt, tokenAmt);
-    // }
-
-    // function getShareOfBaseAmount(address token, address member) public view returns(uint baseAmt){
-    //     address payable pools = getPool(token);
-    //     uint units = iERC20(pool).balanceOf(member);
-    //     return calcShare(units, iERC20(pool).totalSupply(), iPOOLS(pool).baseAmt());
-    // }
-    // function getShareOfTokenAmount(address token, address member) public view returns(uint baseAmt){
-    //     address payable pools = getPool(token);
-    //     uint units = iERC20(pool).balanceOf(member);
-    //     return calcShare(units, iERC20(pool).totalSupply(), iPOOLS(pool).tokenAmt());
-    // }
-
-    // function getPoolShareAssym(address token, uint units, bool toBase) public view returns(uint baseAmt, uint tokenAmt, uint outputAmt){
-    //     address payable pools = getPool(token);
-    //     if(toBase){
-    //         baseAmt = calcAsymmetricShare(units, iERC20(pool).totalSupply(), iPOOLS(pool).baseAmt());
-    //         tokenAmt = 0;
-    //         outputAmt = baseAmt;
-    //     } else {
-    //         baseAmt = 0;
-    //         tokenAmt = calcAsymmetricShare(units, iERC20(pool).totalSupply(), iPOOLS(pool).tokenAmt());
-    //         outputAmt = tokenAmt;
-    //     }
-    //     return (baseAmt, tokenAmt, outputAmt);
-    // }
-
-//     function getPoolAge(address token) public view returns (uint daysSinceGenesis){
-//         address payable pools = getPool(token);
-//         uint genesis = iPOOLS(pool).genesis();
-//         if(now < genesis + 86400)){
-//             return 1;
-//         } else {
-//             return (now - genesis)) / 86400);
-//         }
-//     }
-
-//     function getPoolROI(address token) public view returns (uint roi){
-//         address payable pools = getPool(token);
-//         uint _baseStart = iPOOLS(pool).baseAmtStaked() * 2);
-//         uint _baseEnd = iPOOLS(pool).baseAmt() * 2);
-//         uint _ROIS = (_baseEnd * 10000)) / _baseStart);
-//         uint _tokenStart = iPOOLS(pool).tokenAmtStaked() * 2);
-//         uint _tokenEnd = iPOOLS(pool).tokenAmt() * 2);
-//         uint _ROIA = (_tokenEnd * 10000)) / _tokenStart);
-//         return (_ROIS + _ROIA) / 2);
-//    }
-
-//    function getPoolAPY(address token) public view returns (uint apy){
-//         uint avgROI = getPoolROI(token);
-//         uint poolAge = getPoolAge(token);
-//         return (avgROI * 365)) / poolAge);
-//    }
-
-//     function isMember(address token, address member) public view returns(bool){
-//         address payable pools = getPool(token);
-//         if (iERC20(pool).balanceOf(member) > 0){
-//             return true;
-//         } else {
-//             return false;
-//         }
-//     }
-
     //====================================PRICING====================================//
 
-    function calcValueInBase(address token, uint amount) public view returns (uint){
+    function calcValueInBase(address token, uint amount) external view returns (uint){
        (uint _baseAmt, uint _tokenAmt) = iPOOLS(POOLS).getPoolAmounts(token);
        return (amount * _baseAmt) / _tokenAmt;
     }
 
-    function calcValueInToken(address token, uint amount) public view returns (uint){
+    function calcValueInToken(address token, uint amount) external view returns (uint){
         (uint _baseAmt, uint _tokenAmt) = iPOOLS(POOLS).getPoolAmounts(token);
         return (amount * _tokenAmt) / _baseAmt;
     }
 
-    function calcSwapValueInBase(address token, uint amount) public view returns (uint){
+    function calcSwapValueInBase(address token, uint amount) external view returns (uint){
         (uint _baseAmt, uint _tokenAmt) = iPOOLS(POOLS).getPoolAmounts(token);
         return calcSwapOutput(amount, _tokenAmt, _baseAmt);
     }
-    function calcSwapValueInToken(address token, uint amount) public view returns (uint){
+    function calcSwapValueInToken(address token, uint amount) external view returns (uint){
         (uint _baseAmt, uint _tokenAmt) = iPOOLS(POOLS).getPoolAmounts(token);
         return calcSwapOutput(amount, _baseAmt, _tokenAmt);
     }
 
-//     function calcTokenPPinBase(address token, uint amount) public view returns (uint _output){
-//         address payable pools = getPool(token);
-//         return  calcTokenPPinBaseWithPool(pool, amount);
-//    }
-
-//     function calcBasePPinToken(address token, uint amount) public view returns (uint _output){
-//         address payable pools = getPool(token);
-//         return  calcValueInBaseWithPool(pool, amount);
-//     }
-
-//     function calcTokenPPinBaseWithPool(address payable pool, uint amount) public view returns (uint _output){
-//         uint _baseAmt = iPOOLS(pool).baseAmt();
-//         uint _tokenAmt = iPOOLS(pool).tokenAmt();
-//         return  calcSwapOutput(amount, _tokenAmt, _baseAmt);
-//    }
-
-//     function calcBasePPinTokenWithPool(address payable pool, uint amount) public view returns (uint _output){
-//         uint _baseAmt = iPOOLS(pool).baseAmt();
-//         uint _tokenAmt = iPOOLS(pool).tokenAmt();
-//         return  calcSwapOutput(amount, _baseAmt, _tokenAmt);
-//     }
-
     //====================================CORE-MATH====================================//
 
-    function calcPart(uint bp, uint total) public pure returns (uint){
+    function calcPart(uint bp, uint total) external pure returns (uint){
         // 10,000 basis points = 100.00%
         require((bp <= 10000) && (bp >= 0), "Must be correct BP");
         return calcShare(bp, 10000, total);
@@ -176,7 +57,6 @@ contract Utils {
         if(total > 0){
             share = (amount * part) / total;
         }
-        return share;
     }
 
     function calcSwapOutput(uint x, uint X, uint Y) public pure returns (uint){
@@ -186,18 +66,18 @@ contract Utils {
         return (numerator / denominator);
     }
 
-    function calcSwapFee(uint x, uint X, uint Y) public pure returns (uint){
+    function calcSwapFee(uint x, uint X, uint Y) external pure returns (uint){
         // fee = (x * x * Y) / (x + X)^2
         uint numerator = (x * x * Y);
         uint denominator = (x + X) * (x + X);
         return (numerator / denominator);
     }
-    function calcSwapSlip(uint x, uint X) public pure returns (uint){
+    function calcSwapSlip(uint x, uint X) external pure returns (uint){
         // slip = (x) / (x + X)
         return (x*10000) / (x + X);
     }
 
-    function calcLiquidityUnits(uint b, uint B, uint t, uint T, uint P) public view returns (uint){
+    function calcLiquidityUnits(uint b, uint B, uint t, uint T, uint P) external view returns (uint){
         if(P == 0){
             return b;
         } else {
@@ -229,12 +109,12 @@ contract Utils {
         return one - (numerator * one) / denominator; // Multiply by 10**18
     }
 
-    function calcSynthUnits(uint b, uint B, uint P) public pure returns(uint){
+    function calcSynthUnits(uint b, uint B, uint P) external pure returns(uint){
         // (P * b)/(2*(b + B))
         return (P * b) / (2 * (b + B));
     }
 
-    function calcAsymmetricShare(uint u, uint U, uint A) public pure returns (uint){
+    function calcAsymmetricShare(uint u, uint U, uint A) external pure returns (uint){
         // share = (u * U * (2 * A^2 - 2 * U * u + U^2))/U^3
         // (part1 * (part2 - part3 + part4)) / part5
         uint part1 = (u * A);
@@ -245,15 +125,14 @@ contract Utils {
         uint part5 = ((U * U) * U);
         return (numerator / part5);
     }
-    function calcCoverage(uint _B0, uint _T0, uint _B1, uint _T1) public pure returns(uint coverage){
-        if(_B1 > 0 && _T1 > 0){
-            uint _depositValue = _B0 + (_T0 * _B1) / _T1; // B0+(T0*B1/T1)
-            uint _redemptionValue = _B1 + (_T1 * _B1) / _T1; // B1+(T1*B1/T1)
+    function calcCoverage(uint B0, uint T0, uint B1, uint T1) external pure returns(uint coverage){
+        if(B0 > 0 && T1 > 0){
+            uint _depositValue = B0 + (T0 * B1) / T1; // B0+(T0*B1/T1)
+            uint _redemptionValue = B1 + (T1 * B1) / T1; // B1+(T1*B1/T1)
             if(_redemptionValue <= _depositValue){
                 coverage = (_depositValue - _redemptionValue);
             }
         }
-        return coverage;
     }
 
 }
