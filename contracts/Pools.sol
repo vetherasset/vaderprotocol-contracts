@@ -169,6 +169,17 @@ contract Pools {
     
     //======================================LENDING=========================================//
     
+    // Assign units to callee (ie, a LendingRouter)
+    function lockUnits(uint basisPoints, address token, address member) external returns(uint units) {
+        // units = iUTILS(UTILS()).calcPart(basisPoints, mapTokenMember_Units[token][member]); // Get units for member
+        mapTokenMember_Units[token][member] -= units;
+        mapTokenMember_Units[token][msg.sender] += units;       // Assign to protocol
+    }
+    // Assign units to callee (ie, a LendingRouter)
+    function unlockUnits(uint units, address token, address member) external {
+        mapTokenMember_Units[token][msg.sender] -= units;      
+        mapTokenMember_Units[token][member] += units;
+    }
 
     //======================================HELPERS=========================================//
 

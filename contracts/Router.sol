@@ -327,43 +327,45 @@ contract Router {
     
     //======================================LENDING=========================================//
     // Draw debt for self
-    function borrow(uint amount, address collateralAsset, address debtAsset) public payable returns (uint) {
+    function borrow(uint amount, address collateralAsset, address debtAsset) public returns (uint) {
         return borrowForMember(amount, collateralAsset, debtAsset, msg.sender);;
     }
 
     function borrowForMember(uint amount, address collateralAsset, address debtAsset, address member) public returns(uint debt) {
-        (uint _collateral, uint _baseBorrow) = _handleTransferInCol(amount, collateralAsset);
-        reserve -= _baseBorrow;
-        debt = iUTILS(UTILS()).calcValueInToken(debtAsset, _baseBorrow);
-        totalDebt[_collateralAsset][_debtAsset] += debt;
-        totalCollateral[_collateralAsset][_debtAsset] += _collateral;
-        _addDebtToMember(_collateral, collateralAsset, debt, debtAsset, member); //update member details
-        iPOOLS(POOLS).swap(_baseBorrow, base, debtAsset, member);
-        emit AddCollateral(amount, collateralAsset, debt, debtAsset);
-        return debt;
+        (uint _collateral, uint _baseBorrow) = _handleTransferIn(amount, collateralAsset); // get collateral and valueinBase
+        totalCollateral[_collateralAsset][_debtAsset] += _collateral;               // Record collateral 
+        reserve -= _baseBorrow;                                                     // deduct from reserve
+        debt = iUTILS(UTILS()).calcSwapValueInToken(debtAsset, _baseBorrow);        // get debt output
+        totalDebt[_collateralAsset][_debtAsset] += debt;                            // Record debt
+        _addDebtToMember(_collateral, collateralAsset, debt, debtAsset, member);    // Update member details
+        iPOOLS(POOLS).swap(_baseBorrow, base, debtAsset, member);                   // Execute
+        emit AddCollateral(amount, collateralAsset, debt, debtAsset);               // Event
     }
 
-    // // Repay for self
-    // function repay(uint amount, address collateralAsset, address debtAsset) public returns (uint){
-    //     return repayForMember(amount, collateralAsset, debtAsset, msg.sender);;
-    // }
-    //  // Repay for member
-    // function repayForMember(uint amount, address collateralAsset, address debtAsset, address member) public returns (uint assetCollateralRemoved){
-    //      require(block.timestamp >= mapMember_Details[member].mapMember_Debt[collateralAsset].timeBorrowed[debtAsset] + repayDelay;   // min 1hr withdraw period 
-    //      require(totalCollateral[collateralAsset][debtAsset] > 0, 'PURGED');
-    //      require(totalDebt[collateralAsset][debtAsset] >= _amount, 'INPUTERR');
-    //      uint _actualInputAssetD = _handleTransferInDebt(debtAsset, _amount, _member); 
-    //      reserve += iPOOLS(POOLS).swap();
-    //       _assetCollateralRemoved = iUTILS(_DAO().UTILS()).calcShare(totalCollateral[collateralAsset][debtAsset], totalDebt[collateralAsset][debtAsset], actualInputAssetD);
-    //       _decrCDP(_assetCollateralRemoved,collateralAsset, actualInputAssetD, debtAsset);
-    //      _decrMemberDetails(_assetCollateralRemoved, collateralAsset, _member, actualInputAssetD, debtAsset);
-    //      iBEP20(collateralAsset).transfer(_member, _assetCollateralRemoved);
-    //     if(totalDebt[collateralAsset][debtAsset] == 0){
-    //         TimeLoaned[collateralAsset][debtAsset] = 0;
-    //     }
-    //     emit RemoveCollateral(_assetCollateralRemoved, debtAsset, actualInputAssetD);
-    //     return (_assetCollateralRemoved);
-    // }
+    // Repay for self
+    function repay(uint amount, address collateralAsset, address debtAsset) public returns (uint){
+        return repayForMember(amount, collateralAsset, debtAsset, msg.sender);;
+    }
+     // Repay for member
+    function repayForMember(uint amount, address collateralAsset, address debtAsset, address member) public returns (uint collateralUnlocked){
+        require(block.timestamp >= mapMember_Details[member].mapMember_Debt[collateralAsset].timeBorrowed[debtAsset] + repayDelay;   // min 1hr withdraw period 
+        require(totalCollateral[collateralAsset][debtAsset] > 0, 'PURGED');
+        require(totalDebt[collateralAsset][debtAsset] >= _amount, 'INPUTERR');
+        uint _actualInputDebt = _handleTransferInDebt(debtAsset, _amount, _member);  // Get Debt
+        totalDebt[_collateralAsset][_debtAsset] -= _actualInputDebt;                   // Update debt 
+        reserve += iPOOLS(POOLS).swap();                                               // Swap Debt to Base back here
+        uint _debtMember = mapMember_Details[member].mapCollateral_Debt[collateralAsset].debt[debtAsset]; // Outstanding Debt
+        uint _collateralMember = mapMember_Details[member].mapCollateral_Debt[collateralAsset].collateral[debtAsset]; // Collateral
+        collateralUnlocked = iUTILS(_DAO().UTILS()).calcShare(_actualInputDebt, _debtMember, _collateralMember); // Unlock collateral that is pro-rata to re-paid debt ($50/$100 = 50%)
+        totalCollateral[_collateralAsset][_debtAsset] -= collateralUnlocked;               // Update collateral 
+        _removeDebtForMember(collateralUnlocked, collateralAsset, _actualInputDebt, debtAsset, _member);  // Remove
+        emit RemoveCollateral(_assetCollateralRemoved, debtAsset, actualInputAssetD);
+        _sendFunds(_member, collateralAsset, collateralUnlocked);
+        // if(totalDebt[collateralAsset][debtAsset] == 0){
+        //     TimeLoaned[collateralAsset][debtAsset] = 0;
+        // }
+        emit RemoveCollateral(_assetCollateralRemoved, debtAsset, actualInputAssetD);
+    }
 
     // function purgeMember() public {
 
@@ -377,31 +379,54 @@ contract Router {
         
     // }
 
+    function _handleTransferIn(uint256 _amount, address _collateralAsset) internal returns(uint256 _actual, uint _borrowedBase){
+        uint _collateralAdjusted = _amount.mul(6666).div(10000); // 150% collateral Ratio
+        if(_collateralAsset == BASE){
+            _borrowedBase = _collateralAdjusted;
+            _amount = getFunds(_collateralAsset, _amount); // Get funds
+        }else if(isPool(_collateralAsset)){
+             _borrowedBase = iUTILS(UTILS()).calcLiquidityValueBase(_collateralAsset, _collateralAdjusted); // calc units to BASE
+             _amount = iPOOLS(POOLS).lockUnits(_amount, _collateralAsset, msg.sender); // Lock units to protocol
+        }else if(isSynth()){
+            _borrowedBase = iUTILS(UTILS()).calcSwapValueInBase(_collateralAsset, _collateralAdjusted); // Calc swap value
+            _amount = getFunds(_collateralAsset, _amount); // Get synths
+        }
+        return (_amount, _borrowedBase);
+    }
+    function _handleTransferOut(address _collateralAsset, address _member, uint256 _amount) internal returns(uint256 _actual){
+        if(_collateralAsset == BASE || isSynth()){
+            sendFunds(_collateralAsset, _amount); // Send Base
+        }else if(isPool(_collateralAsset)){
+             iPOOLS(POOLS).unlockUnits(_amount, _collateralAsset, msg.sender); // Unlock units to protocol
+        }
+    }
+
+    // #TODO: make FoT-safe
+    function _getFunds(address _token, uint _amount) internal returns(uint _amount) {
+        if(tx.origin==msg.sender){
+            require(iERC20(_token).transferTo(address(this), _amount));
+        }else{
+            require(iERC20(_token).transferFrom(msg.sender, address(this), _amount));
+        }
+    }
+    function sendFunds(address _token, address _member, uint _amount) internal {
+        require(iERC20(_token).transfer(_member, _amount));
+    }
+
     function _addDebtToMember(uint _collateral, address _collateralAsset, uint _debt, address _debtAsset, address _member) internal {
         mapMember_Details[_member].mapCollateral_Debt[_collateralAsset].debt[_debtAsset] += _debt;
         mapMember_Details[_member].mapCollateral_Debt[_collateralAsset].collateral[_debtAsset] += _collateral;
         mapMember_Details[_member].mapCollateral_Debt[_collateralAsset].timeBorrowed[_debtAsset] = block.timestamp;
         mapMember_Details[_member].mapCollateral_Debt[_collateralAsset].collateralDeposited[_debtAsset] += _collateral;
     }
-
-    function _handleTransferInCol( uint256 _amount, address _collateralAsset) internal returns(uint256 _actual, uint _borrowedBase){
-        if(_amount > 0) {
-                uint _collateralAdjusted = _amount.mul(6666).div(10000); // 150% collateral Ratio
-            if(_collateralAsset == BASE){
-                _borrowedBase = _collateralAdjusted;
-                getFunds(_collateralAsset, _amount);
-            // }else if(isUnits()){
-            //      _borrowedBase = iUTILS(UTILS()).calcAsymmetricValueBase(_collateralAsset, _collateralAdjusted);// calc units to BASE
-            //     getFunds(_collateralAsset, _amount);
-            // }else if(isSynth()){
-            //     _borrowedBase = iUTILS(UTILS()).calcSwapValueInBaseWithSYNTH(_collateralAsset, _collateralAdjusted);
-            //     getFunds(_collateralAsset, _amount);
-            // }else{
-            //      return (0,0);
-            }
-        }
-        return (_amount, _borrowedBase);
+    function _removeDebtFromMember(uint _collateral, address _collateralAsset, uint _debt, address _debtAsset, address _member) internal {
+        mapMember_Details[_member].mapCollateral_Debt[_collateralAsset].debt[_debtAsset] += _debt;
+        mapMember_Details[_member].mapCollateral_Debt[_collateralAsset].collateral[_debtAsset] += _collateral;
+        mapMember_Details[_member].mapCollateral_Debt[_collateralAsset].timeBorrowed[_debtAsset] = block.timestamp;
+        mapMember_Details[_member].mapCollateral_Debt[_collateralAsset].collateralDeposited[_debtAsset] += _collateral;
     }
+
+
 
     //======================================HELPERS=========================================//
 
