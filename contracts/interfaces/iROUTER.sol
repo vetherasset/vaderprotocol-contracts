@@ -9,12 +9,9 @@ interface iROUTER {
     function swapWithLimit(uint inputAmount, address inputToken, address outputToken, uint slipLimit) external returns (uint outputAmount);
     function swapWithSynths(uint inputAmount, address inputToken, bool inSynth, address outputToken, bool outSynth) external returns (uint outputAmount);
     function swapWithSynthsWithLimit(uint inputAmount, address inputToken, bool inSynth, address outputToken, bool outSynth, uint slipLimit) external returns (uint outputAmount);
-    function getRewardShare(address token) external view returns (uint rewardShare);
-    function getReducedShare(uint amount) external view returns(uint);
-    // function pullIncentives(uint shareVADER, uint shareUSDV) external;
+    
     function getILProtection(address member, address base, address token, uint basisPoints) external view returns(uint protection);
-    function getProtection(address member, address token, uint basisPoints, uint coverage) external view returns(uint protection);
-    function getCoverage(address member, address token) external view returns (uint);
+    
     function curatePool(address token) external;
     function listAnchor(address token) external;
     function replacePool(address oldToken, address newToken) external;
@@ -22,7 +19,17 @@ interface iROUTER {
     function getAnchorPrice() external view returns (uint anchorPrice);
     function getVADERAmount(uint USDVAmount) external view returns (uint vaderAmount);
     function getUSDVAmount(uint vaderAmount) external view returns (uint USDVAmount);
-    function reserveVADER() external view returns(uint);
-    function reserveUSDV() external view returns(uint);
     function isCurated(address token) external view returns(bool curated);
+
+    function reserveUSDV() external view returns(uint);
+    function reserveVADER() external view returns(uint);
+
+    function getMemberBaseDeposit(address member, address token) external view returns(uint);
+    function getMemberTokenDeposit(address member, address token) external view returns(uint);
+    function getMemberLastDeposit(address member, address token) external view returns(uint);
+    function getMemberCollateral(address member, address collateralAsset, address debtAsset) external view returns(uint);
+    function getMemberDebt(address member, address collateralAsset, address debtAsset) external view returns(uint);
+    function getSystemCollateral(address collateralAsset, address debtAsset) external view returns(uint);
+    function getSystemDebt(address collateralAsset, address debtAsset) external view returns(uint);
+    function getSystemInterestPaid(address collateralAsset, address debtAsset) external view returns(uint);
 }

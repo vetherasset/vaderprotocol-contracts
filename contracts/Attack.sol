@@ -2,10 +2,10 @@
 pragma solidity 0.8.3;
 
 // Interfaces
-import "./iERC20.sol";
-import "./iVADER.sol";
-import "./iUSDV.sol";
-import "./iROUTER.sol";
+import "./interfaces/iERC20.sol";
+import "./interfaces/iVADER.sol";
+import "./interfaces/iUSDV.sol";
+import "./interfaces/iROUTER.sol";
 
     //======================================VADER=========================================//
 contract Attack {

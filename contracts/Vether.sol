@@ -2,7 +2,7 @@
 pragma solidity 0.8.3;
 
 // Interfaces
-import "./iVETHER.sol";
+import "./interfaces/iVETHER.sol";
 
 // Token Contract
 contract Vether is iVETHER {

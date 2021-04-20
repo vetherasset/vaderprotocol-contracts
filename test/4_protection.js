@@ -49,6 +49,7 @@ describe("Deploy Protection", function() {
   it("Should have right reserves", async function() {
     await vader.flipEmissions()
 
+    await utils.init(vader.address, usdv.address, router.address, pools.address)
     await vader.init(vether.address, usdv.address, utils.address)
     await usdv.init(vader.address, router.address, pools.address)
     await router.init(vader.address, usdv.address, pools.address);
@@ -108,9 +109,9 @@ describe("Should do IL Protection", function() {
 
     expect(BN2Str(await router.mapMemberToken_depositBase(acc1, anchor.address))).to.equal('1000');
     expect(BN2Str(await router.mapMemberToken_depositToken(acc1, anchor.address))).to.equal('1000');
-    let coverage = await router.getCoverage(acc1, anchor.address)
+    let coverage = await utils.getCoverage(acc1, anchor.address)
     expect(BN2Str(coverage)).to.equal('183');
-    expect(BN2Str(await router.getProtection(acc1, anchor.address, "10000", coverage))).to.equal('183');
+    expect(BN2Str(await utils.getProtection(acc1, anchor.address, "10000", '1'))).to.equal('183');
     let reserveVADER = BN2Str(await router.reserveVADER())
     expect(BN2Str(await router.getILProtection(acc1, vader.address, anchor.address, '10000'))).to.equal(reserveVADER);
 
@@ -129,9 +130,9 @@ describe("Should do IL Protection", function() {
 
     expect(BN2Str(await router.mapMemberToken_depositBase(acc1, asset.address))).to.equal('1000');
     expect(BN2Str(await router.mapMemberToken_depositToken(acc1, asset.address))).to.equal('1000');
-    let coverage = await router.getCoverage(acc1, asset.address)
+    let coverage = await utils.getCoverage(acc1, asset.address)
     expect(BN2Str(coverage)).to.equal('183');
-    expect(BN2Str(await router.getProtection(acc1, asset.address, "10000", coverage))).to.equal('183');
+    expect(BN2Str(await utils.getProtection(acc1, asset.address, "10000", '1'))).to.equal('183');
     expect(Number(await router.getILProtection(acc1, usdv.address, asset.address, '10000'))).to.be.lessThanOrEqual(Number(await router.reserveVADER()));
   });
 
