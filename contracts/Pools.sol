@@ -102,6 +102,8 @@ contract Pools {
             mapToken_baseAmount[pool] += _actualInput;
         } else {
             mapToken_tokenAmount[pool] += _actualInput;
+        // } else if(isSynth()){
+        //     //burnSynth && deleteUnits
         }
         emit Sync(token, pool, _actualInput);
     }
@@ -160,18 +162,10 @@ contract Pools {
         transferOut(base, outputBase, member);                                      // Send BASE to member
     }
 
-    function getSynth(address token) public returns (address) {
-        return iFACTORY(FACTORY).getSynth(token);
-    }
-    function isSynth(address token) public returns (bool) {
-        return iFACTORY(FACTORY).isSynth(token);
-    }
-
     //======================================LENDING=========================================//
     
     // Assign units to callee (ie, a LendingRouter)
-    function lockUnits(uint basisPoints, address token, address member) external returns(uint units) {
-        // units = iUTILS(UTILS()).calcPart(basisPoints, mapTokenMember_Units[token][member]); // Get units for member
+    function lockUnits(uint units, address token, address member) external {
         mapTokenMember_Units[token][member] -= units;
         mapTokenMember_Units[token][msg.sender] += units;       // Assign to protocol
     }
@@ -230,6 +224,12 @@ contract Pools {
     }
     function getMemberUnits(address token, address member) external view returns(uint) {
         return mapTokenMember_Units[token][member];
+    }
+    function getSynth(address token) public returns (address) {
+        return iFACTORY(FACTORY).getSynth(token);
+    }
+    function isSynth(address token) public returns (bool) {
+        return iFACTORY(FACTORY).isSynth(token);
     }
     function UTILS() public view returns(address){
         return iVADER(VADER).UTILS();

@@ -11,8 +11,8 @@ interface iPOOLS{
     function deploySynth(address token) external;
     function mintSynth(address base, address token, address member) external returns (uint outputAmount);
     function burnSynth(address base, address token, address member) external returns (uint outputBase);
-    function getSynth(address token) external returns (address);
-    function isSynth(address token) external returns (bool);
+    function lockUnits(uint units, address token, address member) external;
+    function unlockUnits(uint units, address token, address member) external;
     function isMember(address member) external view returns(bool);
     function isAsset(address token) external view returns(bool);
     function isAnchor(address token) external view returns(bool);
@@ -21,4 +21,6 @@ interface iPOOLS{
     function getTokenAmount(address token) external view returns(uint);
     function getUnits(address token) external view returns(uint);
     function getMemberUnits(address token, address member) external view returns(uint);
+    function getSynth(address token) external returns (address);
+    function isSynth(address token) external returns (bool);
 }
