@@ -416,7 +416,7 @@ contract Router {
     function _payInterest(address collateralAsset, address debtAsset) internal {
         uint _interestOwed = getInterestOwed(collateralAsset, debtAsset);
         mapCollateralDebt_interestPaid[collateralAsset][debtAsset] += _interestOwed;
-        _removeFromCollateral(_interestOwed, collateralAsset, debtAsset);
+        _removeCollateral(_interestOwed, collateralAsset, debtAsset);
         if(isBase(collateralAsset)){
             iERC20(collateralAsset).transfer(POOLS, _interestOwed);
             iPOOLS(POOLS).sync(collateralAsset, debtAsset);

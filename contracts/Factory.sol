@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.3;
 
-import "./interfaces/Synth.sol"; 
+import "./Synth.sol"; 
 
 // Factory Contract
 contract Factory {
