@@ -236,10 +236,10 @@ contract Pools {
     function getMemberUnits(address token, address member) external view returns(uint) {
         return mapTokenMember_Units[token][member];
     }
-    function getSynth(address token) public returns (address) {
+    function getSynth(address token) public view returns (address) {
         return iFACTORY(FACTORY).getSynth(token);
     }
-    function isSynth(address token) public returns (bool) {
+    function isSynth(address token) public view returns (bool) {
         return iFACTORY(FACTORY).isSynth(token);
     }
     function UTILS() public view returns(address){

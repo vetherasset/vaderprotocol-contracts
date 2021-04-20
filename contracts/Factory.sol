@@ -12,8 +12,9 @@ contract Factory {
     address public POOLS;
 
     address[] public arraySynths;
-    mapping(address => address) private mapToken_Synth;
+    mapping(address => address) public getSynth;
     mapping(address => bool) public isSynth;
+
     event CreateSynth(address indexed token, address indexed pool);
 
     modifier onlyPOOLS() {
@@ -31,7 +32,7 @@ contract Factory {
 
     //Create a synth asset
     function deploySynth(address token) external onlyPOOLS returns(address synth) {
-        require(getSynth(token) == address(0), "CreateErr");
+        require(getSynth[token] == address(0), "CreateErr");
         Synth newSynth;
         newSynth = new Synth(token);  
         synth = address(newSynth);
@@ -44,11 +45,17 @@ contract Factory {
         return true;
     }
 
-    function getSynth(address token) public view returns (address synth){
-        return mapToken_Synth[token];
-    }
+    // function getSynth(address token) public view returns (address synth){
+    //     return mapToken_Synth[token];
+    // }
+    // function isSynth(address token) public view returns (bool _isSynth){
+    //     if(_isListedSynth[token] == true){
+    //         return true;
+    //     }
+    // }
+
     function _addSynth(address _token, address _synth) internal {
-        mapToken_Synth[_token] = _synth;
+        getSynth[_token] = _synth;
         arraySynths.push(_synth); 
         isSynth[_synth] = true;
     }

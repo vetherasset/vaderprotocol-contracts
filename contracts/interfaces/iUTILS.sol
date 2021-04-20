@@ -20,7 +20,7 @@ interface iUTILS {
     function getCoverage(address member, address token) external view returns (uint);
     
     function getCollateralValueInBase(address member, uint collateral, address collateralAsset, address debtAsset) external returns (uint debt, uint baseValue);
-    function getDebtValueInCollateral(address member, uint debt, address collateralAsset, address debtAsset) external view returns(uint);
+    function getDebtValueInCollateral(address member, uint debt, address collateralAsset, address debtAsset) external view returns(uint, uint);
     function getInterestOwed(address collateralAsset, address debtAsset) external returns(uint interestOwed);
     function getInterestPayment(address collateralAsset, address debtAsset) external view returns(uint);
     function getDebtLoading(address collateralAsset, address debtAsset) external view returns(uint);

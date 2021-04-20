@@ -6,6 +6,7 @@ import "./interfaces/iERC20.sol";
 import "./interfaces/iVADER.sol";
 import "./interfaces/iROUTER.sol";
 import "./interfaces/iPOOLS.sol";
+import "./interfaces/iFACTORY.sol";
 import "./interfaces/iSYNTH.sol";
 
 import "hardhat/console.sol";
@@ -21,16 +22,18 @@ contract Utils {
     address public USDV;
     address public ROUTER;
     address public POOLS;
+    address public FACTORY;
 
     constructor () {}
 
-    function init(address _vader, address _usdv, address _router, address _pools) public {
+    function init(address _vader, address _usdv, address _router, address _pools, address _factory) public {
         require(inited == false,  "inited");
         inited = true;
         VADER = _vader;
         USDV = _usdv;
         ROUTER = _router;
         POOLS = _pools;
+        FACTORY = _factory;
     }
     //====================================SYSTEM FUNCTIONS====================================//
     // VADER FeeOnTransfer
@@ -150,27 +153,28 @@ contract Utils {
             baseValue = _collateralAdjusted;
         }else if(isPool(collateralAsset)){
             baseValue = calcAsymmetricShare(_collateralAdjusted, iPOOLS(POOLS).getMemberUnits(collateralAsset, member), iPOOLS(POOLS).getBaseAmount(collateralAsset)); // calc units to BASE
-        }else if(iPOOLS(POOLS).isSynth(collateralAsset)){
+        }else if(iFACTORY(FACTORY).isSynth(collateralAsset)){
             baseValue = calcSwapValueInBase(iSYNTH(collateralAsset).TOKEN(), _collateralAdjusted); // Calc swap value
         }
         debt = calcSwapValueInToken(debtAsset, baseValue);        // get debt output
         return (debt, baseValue);
     }
 
-    function getDebtValueInCollateral(address member, uint debt, address collateralAsset, address debtAsset) external view returns(uint) {
+    function getDebtValueInCollateral(address member, uint debt, address collateralAsset, address debtAsset) external view returns(uint, uint) {
         uint _memberDebt = iROUTER(ROUTER).getMemberDebt(member, collateralAsset, debtAsset); // Outstanding Debt
         uint _memberCollateral = iROUTER(ROUTER).getMemberCollateral(member, collateralAsset, debtAsset); // Collateral
-        return calcShare(debt, _memberDebt, _memberCollateral); 
+        uint _collateral = iROUTER(ROUTER).getSystemCollateral(collateralAsset, debtAsset);
+        uint _interestPaid = iROUTER(ROUTER).getSystemInterestPaid(collateralAsset, debtAsset);
+        uint _memberInterestShare = calcShare(_memberCollateral, _collateral, _interestPaid); // Share of interest based on collateral
+        uint _collateralUnlocked = calcShare(debt, _memberDebt, _memberCollateral); 
+        return (_collateralUnlocked, _memberInterestShare);
     }
 
-    function getInterestOwed(address collateralAsset, address debtAsset) external returns(uint interestOwed) {
+    function getInterestOwed(address collateralAsset, address debtAsset) external view returns(uint interestOwed) {
         uint _interestPayment = getInterestPayment(collateralAsset, debtAsset);
-        console.log(_interestPayment);
         if(isBase(collateralAsset)){
-            console.log('true');
             interestOwed = calcValueInBase(debtAsset, _interestPayment); // Back to base
-            console.log(interestOwed);
-        } else if(iPOOLS(POOLS).isSynth(collateralAsset)) {
+        } else if(iFACTORY(FACTORY).isSynth(collateralAsset)) {
             interestOwed = calcValueOfTokenInToken(debtAsset, _interestPayment, collateralAsset); // Get value of Synth in debtAsset (doubleSwap)
         }
     }
