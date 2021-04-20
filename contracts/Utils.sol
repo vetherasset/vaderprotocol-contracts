@@ -2,8 +2,8 @@
 pragma solidity 0.8.3;
 
 // Interfaces
-import "./iERC20.sol";
-import "./iPOOLS.sol";
+import "./interfaces/iERC20.sol";
+import "./interfaces/iPOOLS.sol";
 
 contract Utils {
 

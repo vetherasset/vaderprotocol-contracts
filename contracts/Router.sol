@@ -2,11 +2,11 @@
 pragma solidity 0.8.3;
 
 // Interfaces
-import "./iERC20.sol";
-import "./iUTILS.sol";
-import "./iVADER.sol";
-import "./iPOOLS.sol";
-import "./iSYNTH.sol";
+import "./interfaces/iERC20.sol";
+import "./interfaces/iUTILS.sol";
+import "./interfaces/iVADER.sol";
+import "./interfaces/iPOOLS.sol";
+import "./interfaces/iSYNTH.sol";
 
 contract Router {
 
@@ -416,7 +416,7 @@ contract Router {
     function _payInterest(address collateralAsset, address debtAsset) internal {
         uint _interestOwed = getInterestOwed(collateralAsset, debtAsset);
         mapCollateralDebt_interestPaid[collateralAsset][debtAsset] += _interestOwed;
-        // _removeFromCollateral();
+        _removeFromCollateral(_interestOwed, collateralAsset, debtAsset);
         if(isBase(collateralAsset)){
             iERC20(collateralAsset).transfer(POOLS, _interestOwed);
             iPOOLS(POOLS).sync(collateralAsset, debtAsset);
@@ -532,6 +532,9 @@ contract Router {
         mapMember_Collateral[_member].mapCollateral_Debt[_collateralAsset].collateral[_debtAsset] -= _collateral;
         // mapMember_Collateral[_member].mapCollateral_Debt[_collateralAsset].timeBorrowed[_debtAsset] = block.timestamp;
         // mapMember_Collateral[_member].mapCollateral_Debt[_collateralAsset].collateralDeposited[_debtAsset] += _collateral;
+    }
+    function _removeCollateral(uint _collateral, address _collateralAsset, address _debtAsset) internal {
+        mapCollateralDebt_Collateral[_collateralAsset][_debtAsset] -= _collateral;               // Record collateral 
     }
 
 

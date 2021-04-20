@@ -2,7 +2,7 @@
 pragma solidity 0.8.3;
 
 // Interfaces
-import "./iERC20.sol";
+import "./interfaces/iERC20.sol";
 
 // Synth Contract
 contract Synth is iERC20 {

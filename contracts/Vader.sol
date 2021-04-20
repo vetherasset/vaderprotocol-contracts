@@ -2,10 +2,10 @@
 pragma solidity 0.8.3;
 
 // Interfaces
-import "./iERC20.sol";
-import "./iUTILS.sol";
-import "./iUSDV.sol";
-import "./iROUTER.sol";
+import "./interfaces/iERC20.sol";
+import "./interfaces/iUTILS.sol";
+import "./interfaces/iUSDV.sol";
+import "./interfaces/iROUTER.sol";
 
 contract Vader is iERC20 {
 

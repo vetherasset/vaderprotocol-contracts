@@ -2,7 +2,7 @@
 pragma solidity 0.8.3;
 
 // Interfaces
-import "./iERC20.sol";
+import "./interfaces/iERC20.sol";
 
 // Token Contract
 contract Token2 is iERC20 {

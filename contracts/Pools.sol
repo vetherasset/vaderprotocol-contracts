@@ -2,10 +2,10 @@
 pragma solidity 0.8.3;
 
 // Interfaces
-import "./iERC20.sol";
-import "./iUTILS.sol";
-import "./iVADER.sol";
-import "./iFACTORY.sol";
+import "./interfaces/iERC20.sol";
+import "./interfaces/iUTILS.sol";
+import "./interfaces/iVADER.sol";
+import "./interfaces/iFACTORY.sol";
 
 contract Pools {
 
