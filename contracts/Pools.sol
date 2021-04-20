@@ -33,6 +33,7 @@ contract Pools {
     event RemoveLiquidity(address indexed member, address indexed base, uint baseAmount, address indexed token, uint tokenAmount, uint liquidityUnits, uint totalUnits);
     event Swap(address indexed member, address indexed inputToken, uint inputAmount, address indexed outputToken, uint outputAmount, uint swapFee);
     event Sync(address indexed token, address indexed pool, uint addedAmount);
+    event SynthSync(address indexed token, uint burntSynth, uint deletedUnits);
 
     //=====================================CREATION=========================================//
     // Constructor
@@ -95,18 +96,6 @@ contract Pools {
     }
     
     //=======================================SWAP===========================================//
-    // Add to balances directly (must send first)
-    function sync(address token, address pool) external {
-        uint _actualInput = getAddedAmount(token, pool);
-        if (token == VADER || token == USDV){
-            mapToken_baseAmount[pool] += _actualInput;
-        } else {
-            mapToken_tokenAmount[pool] += _actualInput;
-        // } else if(isSynth()){
-        //     //burnSynth && deleteUnits
-        }
-        emit Sync(token, pool, _actualInput);
-    }
     
     // Designed to be called by a router, but can be called directly
     function swap(address base, address token, address member, bool toBase) external returns (uint outputAmount) {
@@ -129,6 +118,19 @@ contract Pools {
         }
     }
 
+    // Add to balances directly (must send first)
+    function sync(address token, address pool) external {
+        uint _actualInput = getAddedAmount(token, pool);
+        if (token == VADER || token == USDV){
+            mapToken_baseAmount[pool] += _actualInput;
+        } else {
+            mapToken_tokenAmount[pool] += _actualInput;
+        // } else if(isSynth()){
+        //     //burnSynth && deleteUnits
+        }
+        emit Sync(token, pool, _actualInput);
+    }
+
     //======================================SYNTH=========================================//
 
     // Should be done with intention, is gas-intensive
@@ -137,7 +139,7 @@ contract Pools {
         iFACTORY(FACTORY).deploySynth(token);
     }
 
-    // Designed to be called by a router, but can be called directly
+    // Mint a Synth against its own pool
     function mintSynth(address base, address token, address member) external returns (uint outputAmount) {
         require(iFACTORY(FACTORY).isSynth(getSynth(token)), "!synth");
         uint _actualInputBase = getAddedAmount(base, token);                    // Get input
@@ -149,7 +151,7 @@ contract Pools {
         emit AddLiquidity(member, base, _actualInputBase, token, 0, _synthUnits);   // Add Liquidity Event
         iFACTORY(FACTORY).mintSynth(getSynth(token), member, outputAmount);         // Ask factory to mint to member
     }
-    // Designed to be called by a router, but can be called directly
+    // Burn a Synth to get out BASE
     function burnSynth(address base, address token, address member) external returns (uint outputBase) {
         uint _actualInputSynth = iERC20(getSynth(token)).balanceOf(address(this));  // Get input
         uint _unitsToDelete = iUTILS(UTILS()).calcShare(_actualInputSynth, iERC20(getSynth(token)).totalSupply(), mapTokenMember_Units[token][address(this)]); // Pro rata
@@ -160,6 +162,15 @@ contract Pools {
         mapToken_baseAmount[token] -= outputBase;                                   // Remove BASE
         emit RemoveLiquidity(member, base, outputBase, token, 0, _unitsToDelete, mapToken_Units[token]);        // Remove liquidity event
         transferOut(base, outputBase, member);                                      // Send BASE to member
+    }
+    // Remove a synth, make other LPs richer
+    function syncSynth(address token) external {
+        uint _actualInputSynth = iERC20(getSynth(token)).balanceOf(address(this));  // Get input
+        uint _unitsToDelete = iUTILS(UTILS()).calcShare(_actualInputSynth, iERC20(getSynth(token)).totalSupply(), mapTokenMember_Units[token][address(this)]); // Pro rata
+        iERC20(getSynth(token)).burn(_actualInputSynth);                            // Burn it
+        mapTokenMember_Units[token][address(this)] -= _unitsToDelete;               // Delete units for self
+        mapToken_Units[token] -= _unitsToDelete;                                    // Delete units
+        emit SynthSync(token, _actualInputSynth, _unitsToDelete);
     }
 
     //======================================LENDING=========================================//

@@ -34,6 +34,12 @@ contract Utils {
         (uint _baseAmt, uint _tokenAmt) = iPOOLS(POOLS).getPoolAmounts(token);
         return (amount * _tokenAmt) / _baseAmt;
     }
+    function calcValueOfTokenInToken(address token1, uint amount, address token2) external view returns (uint){
+        (uint _baseAmt1, uint _tokenAmt1) = iPOOLS(POOLS).getPoolAmounts(token1);
+        uint _amount2 = (amount * _baseAmt1) / _tokenAmt1;
+        (uint _baseAmt2, uint _tokenAmt2) = iPOOLS(POOLS).getPoolAmounts(token2);
+        return (_amount2 * _tokenAmt2) / _baseAmt2;
+    }
 
     function calcSwapValueInBase(address token, uint amount) external view returns (uint){
         (uint _baseAmt, uint _tokenAmt) = iPOOLS(POOLS).getPoolAmounts(token);

@@ -5,6 +5,7 @@ interface iUTILS {
     function getFeeOnTransfer(uint totalSupply, uint maxSupply) external pure returns (uint);
     function calcValueInBase(address token, uint amount) external view returns (uint);
     function calcValueInToken(address token, uint amount) external view returns (uint);
+    function calcValueOfTokenInToken(address token1, uint amount, address token2) external view returns (uint);
     function calcSwapValueInBase(address token, uint amount) external view returns (uint);
     function calcSwapValueInToken(address token, uint amount) external view returns (uint);
     function calcPart(uint bp, uint total) external pure returns (uint);

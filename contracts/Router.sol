@@ -40,6 +40,7 @@ contract Router {
     mapping(address => CollateralDetails) private mapMember_Collateral;
     mapping(address => mapping(address => uint)) public mapCollateralDebt_Collateral;
     mapping(address => mapping(address => uint)) public mapCollateralDebt_Debt;
+    mapping(address => mapping(address => uint)) public mapCollateralDebt_interestPaid;
 
     struct CollateralDetails {
         uint ID;
@@ -411,12 +412,36 @@ contract Router {
         // }
     }
 
-    function getInterestPayment() public {
-        // every cycle, calc debtIssued/debtDepth, ie interestRate
-        // interestRate * totalDebt = interestPayment
-        // calcValueInCollateral(interestPayment)
-        // deduct from collateral
-        // sync to pools
+    // Called once a day to pay interest
+    function _payInterest(address collateralAsset, address debtAsset) internal {
+        uint _interestOwed = getInterestOwed(collateralAsset, debtAsset);
+        mapCollateralDebt_interestPaid[collateralAsset][debtAsset] += _interestOwed;
+        // _removeFromCollateral();
+        if(isBase(collateralAsset)){
+            iERC20(collateralAsset).transfer(POOLS, _interestOwed);
+            iPOOLS(POOLS).sync(collateralAsset, debtAsset);
+        } else if(iPOOLS(POOLS).isSynth(collateralAsset)){
+            iERC20(collateralAsset).transfer(POOLS, _interestOwed);
+            iPOOLS(POOLS).syncSynth(iSYNTH(collateralAsset).TOKEN());
+        }
+    }
+    // Gets in
+    function getInterestOwed(address collateralAsset, address debtAsset) public returns(uint interestOwed) {
+        uint _interestPayment = getInterestPayment(collateralAsset, debtAsset);
+        if(isBase(collateralAsset)){
+            interestOwed = iUTILS(UTILS()).calcValueInBase(debtAsset, _interestPayment); // Back to base
+        } else if(iPOOLS(POOLS).isSynth(collateralAsset)) {
+            interestOwed = iUTILS(UTILS()).calcValueOfTokenInToken(debtAsset, _interestPayment, collateralAsset); // Get value of Synth in debtAsset (doubleSwap)
+        }
+    }
+    function getInterestPayment(address collateralAsset, address debtAsset) public view returns(uint) {
+        uint _debtLoading = getDebtLoading(collateralAsset, debtAsset);
+        return _debtLoading * mapCollateralDebt_Debt[collateralAsset][debtAsset]; 
+    }
+    function getDebtLoading(address collateralAsset, address debtAsset) public view returns(uint) {
+        uint _debtIssued = mapCollateralDebt_Debt[collateralAsset][debtAsset];
+        uint _debtDepth = iPOOLS(POOLS).getTokenAmount(debtAsset);
+        return (_debtIssued * 10000) / _debtDepth; 
     }
 
     function checkLiquidate() public {
