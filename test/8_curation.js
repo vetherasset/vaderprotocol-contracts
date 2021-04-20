@@ -45,6 +45,8 @@ before(async function() {
 
 describe("Deploy Router", function() {
   it("Should deploy", async function() {
+    
+    await utils.init(vader.address, usdv.address, router.address, pools.address)
     await vader.init(vether.address, usdv.address, utils.address)
     await usdv.init(vader.address, router.address, pools.address)
     await router.init(vader.address, usdv.address, pools.address);
@@ -161,25 +163,25 @@ describe("Should Do Rewards and Protection", function() {
   it("Not curated, No rewards", async function() {
     expect(await router.isCurated(asset2.address)).to.equal(false);
     // expect(await router.reserveUSDV()).to.be.greaterThan(getBN(1));
-    expect(BN2Str(await router.getRewardShare(asset2.address))).to.equal('0');
+    expect(BN2Str(await utils.getRewardShare(asset2.address, '1'))).to.equal('0');
   });
   it("Curated, Rewards", async function() {
     await router.curatePool(asset.address, {from:acc1})
     // expect(await router.reserveUSDV()).to.be.greaterThan(getBN(1));
-    expect(BN2Str(await router.getRewardShare(asset.address))).to.equal('2');
+    expect(BN2Str(await utils.getRewardShare(asset.address, '1'))).to.equal('2');
   });
   it("Not curated, No Protection", async function() {
     for(let i = 0; i<9; i++){
       await router.swap('100', asset2.address, usdv.address, {from:acc1})
     }
-    let coverage = await router.getCoverage(acc1, asset2.address)
-    expect(BN2Str(await router.getProtection(acc1, asset2.address, "10000", coverage))).to.equal('0');
+    let coverage = await utils.getCoverage(acc1, asset2.address)
+    expect(BN2Str(await utils.getProtection(acc1, asset2.address, "10000", '1'))).to.equal('0');
   });
   it("Curated, Protection", async function() {
     for(let i = 0; i<9; i++){
       await router.swap('100', asset.address, usdv.address, {from:acc1})
     }
-    let coverage = await router.getCoverage(acc1, asset2.address)
-    expect(BN2Str(await router.getProtection(acc1, asset2.address, "10000", coverage))).to.equal('0');
+    let coverage = await utils.getCoverage(acc1, asset2.address)
+    expect(BN2Str(await utils.getProtection(acc1, asset2.address, "10000", '1'))).to.equal('0');
   });
 });

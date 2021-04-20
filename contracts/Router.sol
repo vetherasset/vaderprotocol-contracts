@@ -8,12 +8,13 @@ import "./interfaces/iVADER.sol";
 import "./interfaces/iPOOLS.sol";
 import "./interfaces/iSYNTH.sol";
 
+import "hardhat/console.sol";
+
 contract Router {
 
     // Parameters
     bool private inited;
     uint one = 10**18;
-    uint _10k = 10000;
     uint public rewardReductionFactor;
     uint public timeForFullProtection;
 
@@ -38,9 +39,9 @@ contract Router {
     mapping(address => mapping(address => uint)) public mapMemberToken_lastDeposited;
 
     mapping(address => CollateralDetails) private mapMember_Collateral;
-    mapping(address => mapping(address => uint)) public mapCollateralDebt_Collateral;
-    mapping(address => mapping(address => uint)) public mapCollateralDebt_Debt;
-    mapping(address => mapping(address => uint)) public mapCollateralDebt_interestPaid;
+    mapping(address => mapping(address => uint)) private mapCollateralDebt_Collateral;
+    mapping(address => mapping(address => uint)) private mapCollateralDebt_Debt;
+    mapping(address => mapping(address => uint)) private mapCollateralDebt_interestPaid;
 
     struct CollateralDetails {
         uint ID;
@@ -178,28 +179,11 @@ contract Router {
         _handleAnchorPriceUpdate(outputToken); 
     }
 
-        //====================================INCENTIVES========================================//
-    
-    function getRewardShare(address token) public view returns (uint rewardShare) {
-        if(emitting() && isCurated(token)){
-            uint _baseAmount = iPOOLS(POOLS).getBaseAmount(token);
-            if (iPOOLS(POOLS).isAsset(token)) {
-                uint _share = iUTILS(UTILS()).calcShare(_baseAmount, iPOOLS(POOLS).pooledUSDV(), reserveUSDV());
-                rewardShare = getReducedShare(_share);
-            } else if(iPOOLS(POOLS).isAnchor(token)) {
-                uint _share = iUTILS(UTILS()).calcShare(_baseAmount, iPOOLS(POOLS).pooledVADER(), reserveVADER());
-                rewardShare = getReducedShare(_share);
-            }
-        }
-    }
-
-    function getReducedShare(uint amount) public view returns(uint) {
-        return iUTILS(UTILS()).calcShare(1, rewardReductionFactor, amount); // Reduce to stop depleting fast
-    }
+    //====================================INCENTIVES========================================//
 
     function _handlePoolReward(address _base, address _token) internal{
         if(!isBase(_token)){                        // USDV or VADER is never a pool
-            uint _reward = getRewardShare(_token);
+            uint _reward = iUTILS(UTILS()).getRewardShare(_token, rewardReductionFactor);
             iERC20(_base).transfer(POOLS, _reward);
             iPOOLS(POOLS).sync(_base, _token);
             emit PoolReward(_base, _token, _reward);
@@ -222,7 +206,7 @@ contract Router {
     }
 
     function getILProtection(address member, address base, address token, uint basisPoints) public view returns(uint protection) {
-        protection = getProtection(member, token, basisPoints, getCoverage(member, token));
+        protection = iUTILS(UTILS()).getProtection(member, token, basisPoints, timeForFullProtection);
         if(base == VADER){
             if(protection >= reserveVADER()){
                 protection = reserveVADER(); // In case reserve is running out
@@ -234,27 +218,6 @@ contract Router {
         }
     }
     
-    // Actual protection with 100 day rule and Reserve balance
-    function getProtection(address member, address token, uint basisPoints, uint coverage) public view returns(uint protection) {
-        if(isCurated(token)){
-            uint _duration = block.timestamp - mapMemberToken_lastDeposited[member][token];
-            if(_duration <= timeForFullProtection) {
-                protection = iUTILS(UTILS()).calcShare(_duration, timeForFullProtection, coverage); // Apply 100 day rule
-            } else {
-                protection = coverage;
-            }
-        }
-        return iUTILS(UTILS()).calcPart(basisPoints, protection);
-    }
-    // Theoretical coverage based on deposit/redemption values
-    function getCoverage(address member, address token) public view returns (uint) {
-        uint _B0 = mapMemberToken_depositBase[member][token]; uint _T0 = mapMemberToken_depositToken[member][token];
-        uint _units = iPOOLS(POOLS).getMemberUnits(token, member);
-        uint _B1 = iUTILS(UTILS()).calcShare(_units, iPOOLS(POOLS).getUnits(token), iPOOLS(POOLS).getBaseAmount(token));
-        uint _T1 = iUTILS(UTILS()).calcShare(_units, iPOOLS(POOLS).getUnits(token), iPOOLS(POOLS).getTokenAmount(token));
-        return iUTILS(UTILS()).calcCoverage(_B0, _T0, _B1, _T1);
-    }
-
     //=====================================CURATION==========================================//
 
     function curatePool(address token) external {
@@ -290,8 +253,8 @@ contract Router {
     function replaceAnchor(address oldToken, address newToken) external {
         require(iPOOLS(POOLS).isAnchor(newToken), "Not anchor");
         require((iPOOLS(POOLS).getBaseAmount(newToken) > iPOOLS(POOLS).getBaseAmount(oldToken)), "Not deeper");
-        _requirePriceBounds(oldToken, outsidePriceLimit, false);                             // if price oldToken >5%
-        _requirePriceBounds(newToken, insidePriceLimit, true);                               // if price newToken <2%
+        iUTILS(UTILS()).requirePriceBounds(oldToken, outsidePriceLimit, false, getAnchorPrice());                             // if price oldToken >5%
+        iUTILS(UTILS()).requirePriceBounds(newToken, insidePriceLimit, true, getAnchorPrice());                               // if price newToken <2%
         _isCurated[oldToken] = false; 
         _isCurated[newToken] = true; 
         for(uint i = 0; i<arrayAnchors.length; i++){
@@ -300,18 +263,6 @@ contract Router {
             }
         }
         updateAnchorPrice(newToken);
-    }
-
-    function _requirePriceBounds(address token, uint bound, bool inside) internal view {
-        uint _targetPrice = getAnchorPrice();
-        uint _testingPrice = iUTILS(UTILS()).calcValueInBase(token, one);
-        uint _lower = iUTILS(UTILS()).calcPart((_10k - bound), _targetPrice);   // ie 98% of price
-        uint _upper = (_targetPrice * (_10k + bound)) / _10k;                   // ie 105% of price
-        if(inside){
-            require((_testingPrice >= _lower && _testingPrice <= _upper), "Not inside");
-        } else {
-            require((_testingPrice <= _lower || _testingPrice >= _upper), "Not outside");
-        }
     }
 
     // Anyone to update prices
@@ -332,7 +283,7 @@ contract Router {
     // Price of 1 VADER in USD
     function getAnchorPrice() public view returns (uint anchorPrice) {
         if(arrayPrices.length > 0){
-            uint[] memory _sortedAnchorFeed = _sortArray(arrayPrices);  // Sort price array, no need to modify storage
+            uint[] memory _sortedAnchorFeed = iUTILS(UTILS()).sortArray(arrayPrices);  // Sort price array, no need to modify storage
             anchorPrice = _sortedAnchorFeed[2];                         // Return the middle
         } else {
             anchorPrice = one;          // Edge case for first USDV mint
@@ -368,9 +319,9 @@ contract Router {
     }
 
     function borrowForMember(address member, uint amount, address collateralAsset, address debtAsset) public returns(uint) {
-        assetChecks(collateralAsset, debtAsset);
+        iUTILS(UTILS()).assetChecks(collateralAsset, debtAsset);
         uint _collateral = _handleTransferIn(member, collateralAsset, amount);                  // get collateral 
-        (uint _debtIssued, uint _baseBorrowed) = getCollateralValueInBase(member, _collateral, collateralAsset, debtAsset);
+        (uint _debtIssued, uint _baseBorrowed) = iUTILS(UTILS()).getCollateralValueInBase(member, _collateral, collateralAsset, debtAsset);
         mapCollateralDebt_Collateral[collateralAsset][debtAsset] += _collateral;               // Record collateral 
         mapCollateralDebt_Debt[collateralAsset][debtAsset] += _debtIssued;                            // Record debt
         _addDebtToMember(member, _collateral, collateralAsset, _debtIssued, debtAsset);    // Update member details
@@ -401,7 +352,7 @@ contract Router {
         } else if(collateralAsset == USDV || iPOOLS(POOLS).isAsset(debtAsset)) {
             iPOOLS(POOLS).swap(USDV, debtAsset, address(this), true);           // Swap Debt to Base back here
         }
-        collateralUnlocked = getDebtValueInCollateral(member, _debt, collateralAsset, debtAsset); // Unlock collateral that is pro-rata to re-paid debt ($50/$100 = 50%)
+        collateralUnlocked = iUTILS(UTILS()).getDebtValueInCollateral(member, _debt, collateralAsset, debtAsset); // Unlock collateral that is pro-rata to re-paid debt ($50/$100 = 50%)
         mapCollateralDebt_Collateral[collateralAsset][debtAsset] -= collateralUnlocked;               // Update collateral 
         mapCollateralDebt_Debt[collateralAsset][debtAsset] -= _debt;                   // Update debt 
         _removeDebtFromMember(member, collateralUnlocked, collateralAsset, _debt, debtAsset);  // Remove
@@ -413,8 +364,8 @@ contract Router {
     }
 
     // Called once a day to pay interest
-    function _payInterest(address collateralAsset, address debtAsset) internal {
-        uint _interestOwed = getInterestOwed(collateralAsset, debtAsset);
+    function _payInterest(address collateralAsset, address debtAsset) public {
+        uint _interestOwed = iUTILS(UTILS()).getInterestOwed(collateralAsset, debtAsset);
         mapCollateralDebt_interestPaid[collateralAsset][debtAsset] += _interestOwed;
         _removeCollateral(_interestOwed, collateralAsset, debtAsset);
         if(isBase(collateralAsset)){
@@ -425,24 +376,7 @@ contract Router {
             iPOOLS(POOLS).syncSynth(iSYNTH(collateralAsset).TOKEN());
         }
     }
-    // Gets in
-    function getInterestOwed(address collateralAsset, address debtAsset) public returns(uint interestOwed) {
-        uint _interestPayment = getInterestPayment(collateralAsset, debtAsset);
-        if(isBase(collateralAsset)){
-            interestOwed = iUTILS(UTILS()).calcValueInBase(debtAsset, _interestPayment); // Back to base
-        } else if(iPOOLS(POOLS).isSynth(collateralAsset)) {
-            interestOwed = iUTILS(UTILS()).calcValueOfTokenInToken(debtAsset, _interestPayment, collateralAsset); // Get value of Synth in debtAsset (doubleSwap)
-        }
-    }
-    function getInterestPayment(address collateralAsset, address debtAsset) public view returns(uint) {
-        uint _debtLoading = getDebtLoading(collateralAsset, debtAsset);
-        return _debtLoading * mapCollateralDebt_Debt[collateralAsset][debtAsset]; 
-    }
-    function getDebtLoading(address collateralAsset, address debtAsset) public view returns(uint) {
-        uint _debtIssued = mapCollateralDebt_Debt[collateralAsset][debtAsset];
-        uint _debtDepth = iPOOLS(POOLS).getTokenAmount(debtAsset);
-        return (_debtIssued * 10000) / _debtDepth; 
-    }
+
 
     function checkLiquidate() public {
         // get member remaining Collateral: originalDeposit - shareOfInterestPayments
@@ -450,25 +384,9 @@ contract Router {
         // purge, send remaining collateral to liquidator
     }
 
-    // function _addDebtToCDP(uint _collateral, address _collateralAsset, uint _debt, address _debtAsset) internal {
-        
-    // }
-
     // function purgeMember() public {
 
     // }
-
-    function assetChecks(address collateralAsset, address debtAsset) public{
-        if(collateralAsset == VADER){
-            require(iPOOLS(POOLS).isAnchor(debtAsset), "Bad Combo"); // Can borrow Anchor with VADER/ANCHOR-SYNTH
-        } else if(collateralAsset == USDV){
-            require(iPOOLS(POOLS).isAsset(debtAsset), "Bad Combo"); // Can borrow Asset with VADER/ASSET-SYNTH
-        } else if(iPOOLS(POOLS).isSynth(collateralAsset) && iPOOLS(POOLS).isAnchor(iSYNTH(collateralAsset).TOKEN())){
-            require(iPOOLS(POOLS).isAnchor(debtAsset), "Bad Combo"); // Can borrow Anchor with VADER/ANCHOR-SYNTH
-        } else if(iPOOLS(POOLS).isSynth(collateralAsset) && iPOOLS(POOLS).isAsset(iSYNTH(collateralAsset).TOKEN())){
-            require(iPOOLS(POOLS).isAsset(debtAsset), "Bad Combo"); // Can borrow Anchor with VADER/ANCHOR-SYNTH
-        }
-    }
 
     // Get Collateral
     function _handleTransferIn(address _member, address _collateralAsset, uint _amount) internal returns(uint _inputAmount){
@@ -500,25 +418,6 @@ contract Router {
 
     function _sendFunds(address _token, address _member, uint _amount) internal {
         require(iERC20(_token).transfer(_member, _amount));
-    }
-
-    function getCollateralValueInBase(address member, uint collateral, address collateralAsset, address debtAsset) public returns (uint debt, uint baseValue){
-        uint _collateralAdjusted = (collateral * 6666) / 10000; // 150% collateral Ratio
-        if(isBase(collateralAsset)){
-            baseValue = _collateralAdjusted;
-        }else if(isPool(collateralAsset)){
-            baseValue = iUTILS(UTILS()).calcAsymmetricShare(_collateralAdjusted, iPOOLS(POOLS).getMemberUnits(collateralAsset, member), iPOOLS(POOLS).getBaseAmount(collateralAsset)); // calc units to BASE
-        }else if(iPOOLS(POOLS).isSynth(collateralAsset)){
-            baseValue = iUTILS(UTILS()).calcSwapValueInBase(iSYNTH(collateralAsset).TOKEN(), _collateralAdjusted); // Calc swap value
-        }
-        debt = iUTILS(UTILS()).calcSwapValueInToken(debtAsset, baseValue);        // get debt output
-        return (debt, baseValue);
-    }
-
-    function getDebtValueInCollateral(address member, uint debt, address collateralAsset, address debtAsset) public view returns(uint){
-        uint _debtMember = mapMember_Collateral[member].mapCollateral_Debt[collateralAsset].debt[debtAsset]; // Outstanding Debt
-        uint _collateralMember = mapMember_Collateral[member].mapCollateral_Debt[collateralAsset].collateral[debtAsset]; // Collateral
-        return iUTILS(UTILS()).calcShare(debt, _debtMember, _collateralMember); 
     }
 
     function _addDebtToMember(address _member, uint _collateral, address _collateralAsset, uint _debt, address _debtAsset) internal {
@@ -570,20 +469,7 @@ contract Router {
         }
     }
 
-    // Sorts array in memory from low to high, returns in-memory (Does not need to modify storage)
-    function _sortArray(uint[] memory array) internal pure returns (uint[] memory){
-        uint l = array.length;
-        for(uint i = 0; i < l; i++){
-            for(uint j = i+1; j < l; j++){
-                if(array[i] > array[j]){
-                    uint temp = array[i];
-                    array[i] = array[j];
-                    array[j] = temp;
-                }
-            }
-        }
-        return array;
-    }
+    
 
     function UTILS() public view returns(address){
         return iVADER(VADER).UTILS();
@@ -604,11 +490,29 @@ contract Router {
             pool = true;
         }
     }
+
+    function getMemberBaseDeposit(address member, address token) external view returns(uint) {
+        return mapMemberToken_depositBase[member][token];
+    }
+    function getMemberTokenDeposit(address member, address token) external view returns(uint) {
+        return mapMemberToken_depositToken[member][token];
+    }
+    function getMemberLastDeposit(address member, address token) external view returns(uint) {
+        return mapMemberToken_lastDeposited[member][token];
+    }
     function getMemberCollateral(address member, address collateralAsset, address debtAsset) external view returns(uint) {
         return mapMember_Collateral[member].mapCollateral_Debt[collateralAsset].collateral[debtAsset];
     }
     function getMemberDebt(address member, address collateralAsset, address debtAsset) public view returns(uint) {
         return mapMember_Collateral[member].mapCollateral_Debt[collateralAsset].debt[debtAsset];
     }
-    
+    function getSystemCollateral(address collateralAsset, address debtAsset) public view returns(uint) {
+        return mapCollateralDebt_Collateral[collateralAsset][debtAsset];
+    }
+    function getSystemDebt(address collateralAsset, address debtAsset) public view returns(uint) {
+        return mapCollateralDebt_Debt[collateralAsset][debtAsset];
+    }
+    function getSystemInterestPaid(address collateralAsset, address debtAsset) public view returns(uint) {
+        return mapCollateralDebt_interestPaid[collateralAsset][debtAsset];
+    }
 }

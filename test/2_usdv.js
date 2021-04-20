@@ -178,7 +178,7 @@ describe("Member should deposit USDV for rewards", function() {
 
   it("Should calc rewards", async function() {
     await vader.flipEmissions()
-    await vader.setParams('1', '2', '200')
+    await vader.setParams('1', '2')
     
     let balanceStart = await vader.balanceOf(usdv.address)
     expect(BN2Str(balanceStart)).to.equal(BN2Str(0));

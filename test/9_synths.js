@@ -46,7 +46,7 @@ before(async function() {
 
 describe("Deploy Router", function() {
   it("Should deploy", async function() {
-    await utils.init(pools.address)
+    await utils.init(vader.address, usdv.address, router.address, pools.address)
     await vader.init(vether.address, usdv.address, utils.address)
     await usdv.init(vader.address, router.address, pools.address)
     await router.init(vader.address, usdv.address, pools.address);
@@ -197,7 +197,7 @@ describe("Member should deposit Synths for rewards", function() {
 
   it("Should calc rewards", async function() {
     await vader.flipEmissions()
-    await vader.setParams('1', '2', '200')
+    await vader.setParams('1', '2')
     let synth = await Synth.at(await factory.getSynth(asset.address));
     
     let balanceStart = await vader.balanceOf(usdv.address)
