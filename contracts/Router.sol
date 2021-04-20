@@ -394,7 +394,7 @@ contract Router {
         // require(mapCollateralDebt_Collateral[collateralAsset][debtAsset] > 0, 'PURGED');
         // require(mapCollateralDebt_Debt[collateralAsset][debtAsset] >= amount, 'INPUT-ERR');
         uint _amount = iUTILS(UTILS()).calcPart(basisPoints, getMemberDebt(member, collateralAsset, debtAsset));
-        uint _debt = moveTokenToPools(debtAsset, amount);    // Get Debt
+        uint _debt = moveTokenToPools(debtAsset, _amount);    // Get Debt
         if(collateralAsset == VADER || iPOOLS(POOLS).isAnchor(debtAsset)){
             iPOOLS(POOLS).swap(VADER, debtAsset, address(this), true);           // Swap Debt to Base back here
         } else if(collateralAsset == USDV || iPOOLS(POOLS).isAsset(debtAsset)) {
@@ -579,7 +579,7 @@ contract Router {
     function getMemberCollateral(address member, address collateralAsset, address debtAsset) external view returns(uint) {
         return mapMember_Collateral[member].mapCollateral_Debt[collateralAsset].collateral[debtAsset];
     }
-    function getMemberDebt(address member, address collateralAsset, address debtAsset) external view returns(uint) {
+    function getMemberDebt(address member, address collateralAsset, address debtAsset) public view returns(uint) {
         return mapMember_Collateral[member].mapCollateral_Debt[collateralAsset].debt[debtAsset];
     }
     
