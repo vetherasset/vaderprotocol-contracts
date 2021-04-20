@@ -49,7 +49,7 @@ describe("Deploy Protection", function() {
   it("Should have right reserves", async function() {
     await vader.flipEmissions()
 
-    await utils.init(vader.address, usdv.address, router.address, pools.address)
+    await utils.init(vader.address, usdv.address, router.address, pools.address, factory.address)
     await vader.init(vether.address, usdv.address, utils.address)
     await usdv.init(vader.address, router.address, pools.address)
     await router.init(vader.address, usdv.address, pools.address);

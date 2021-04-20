@@ -52,7 +52,7 @@ before(async function() {
 describe("Deploy Anchor", function() {
   it("Should deploy", async function() {
     await sleep(100)
-    await utils.init(vader.address, usdv.address, router.address, pools.address)
+    await utils.init(vader.address, usdv.address, router.address, pools.address, factory.address)
     await vader.init(vether.address, usdv.address, utils.address)
     await usdv.init(vader.address, router.address, pools.address)
     await router.init(vader.address, usdv.address, pools.address);
