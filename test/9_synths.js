@@ -244,4 +244,24 @@ describe("Member should deposit Synths for rewards", function() {
     expect(BN2Str(await synth.balanceOf(usdv.address))).to.equal('0');
     expect(BN2Str(await synth.balanceOf(acc1))).to.equal('116');
   });
+  it("Should deposit Anchor", async function() {
+    expect(BN2Str(await usdv.totalWeight())).to.equal(('0'));
+    await router.swapWithSynths('30', anchor.address, false, anchor.address, true, {from:acc1})
+    let synth = await Synth.at(await factory.getSynth(anchor.address));
+    expect(BN2Str(await synth.balanceOf(acc1))).to.equal('28');
+    await usdv.deposit(synth.address, '20', {from:acc1})
+    expect(BN2Str(await synth.balanceOf(acc1))).to.equal(('8'));
+    expect(BN2Str(await synth.balanceOf(usdv.address))).to.equal(('20'));
+    expect(BN2Str(await usdv.getMemberDeposit(synth.address, acc1))).to.equal(('20'));
+    expect(BN2Str(await usdv.getMemberWeight(acc1))).to.equal(('20'));
+    expect(BN2Str(await usdv.getTokenDeposits(synth.address))).to.equal(('20'));
+    expect(BN2Str(await usdv.totalWeight())).to.equal(('20'));
+    await usdv.withdraw(synth.address, "5000",{from:acc1})
+    expect(BN2Str(await synth.balanceOf(acc1))).to.equal(('18'));
+    expect(BN2Str(await synth.balanceOf(usdv.address))).to.equal(('10'));
+    expect(BN2Str(await usdv.getMemberDeposit(synth.address, acc1))).to.equal(('10'));
+    expect(BN2Str(await usdv.getMemberWeight(acc1))).to.equal(('10'));
+    expect(BN2Str(await usdv.getTokenDeposits(synth.address))).to.equal(('10'));
+    expect(BN2Str(await usdv.totalWeight())).to.equal(('10'));
+  });
 });

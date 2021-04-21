@@ -165,67 +165,12 @@ describe("Be a valid ERC-20", function() {
 
 });
 
-describe("Member should deposit USDV for rewards", function() {
-  it("Should deposit", async function() {
-    await usdv.deposit(usdv.address, '200', {from:acc1})
-    expect(BN2Str(await usdv.balanceOf(acc1))).to.equal(BN2Str(600));
-    expect(BN2Str(await usdv.balanceOf(usdv.address))).to.equal(BN2Str(200));
-    expect(BN2Str(await usdv.getMemberDeposit(usdv.address, acc1))).to.equal(BN2Str(200));
-    expect(BN2Str(await usdv.getMemberWeight(acc1))).to.equal(BN2Str(200));
-    expect(BN2Str(await usdv.getTokenDeposits(usdv.address))).to.equal(BN2Str(200));
-    expect(BN2Str(await usdv.totalWeight())).to.equal(BN2Str(200));
+describe("Should fail deposit USDV for rewards", function() {
+  it("Should fail USDV deposit", async function() {
+    await truffleAssert.reverts(usdv.deposit(usdv.address, '200', {from:acc1})) 
   });
-
-  it("Should calc rewards", async function() {
-    await vader.flipEmissions()
-    await vader.setParams('1', '2')
-    
-    let balanceStart = await vader.balanceOf(usdv.address)
-    expect(BN2Str(balanceStart)).to.equal(BN2Str(0));
-    expect(BN2Str(await vader.getDailyEmission())).to.equal(BN2Str('1200'));
-    await vader.transfer(acc0, BN2Str(100), {from:acc1})
-    expect(BN2Str(await vader.currentEra())).to.equal(BN2Str(2));
-    expect(BN2Str(await vader.getDailyEmission())).to.equal(BN2Str('1800'));
-    expect(BN2Str(await vader.balanceOf(usdv.address))).to.equal(BN2Str(1200));
-    await usdv.transfer(acc0, BN2Str(100), {from:acc1})
-    expect(BN2Str(await usdv.reserveUSDV())).to.equal(BN2Str(400));
-    expect(BN2Str(await usdv.balanceOf(usdv.address))).to.equal(BN2Str(600));
-    expect(BN2Str(await vader.balanceOf(usdv.address))).to.equal(BN2Str(1400));
-    expect(BN2Str(await usdv.calcReward(acc1))).to.equal(BN2Str(4)); // 666/100
-    expect(BN2Str(await usdv.calcCurrentReward(usdv.address, acc1))).to.equal(BN2Str(16)); // * by seconds
-  });
-  it("Should harvest", async function() {
-    expect(BN2Str(await usdv.balanceOf(acc1))).to.equal(BN2Str(500));
-    expect(BN2Str(await usdv.calcCurrentReward(usdv.address, acc1))).to.equal(BN2Str(16)); // * by seconds
-    expect(BN2Str(await usdv.calcReward(acc1))).to.equal(BN2Str(4)); // * by seconds
-
-    expect(BN2Str(await usdv.balanceOf(usdv.address))).to.equal(BN2Str(600));
-    expect(BN2Str(await usdv.reserveUSDV())).to.equal(BN2Str(400));
-    expect(BN2Str(await vader.balanceOf(usdv.address))).to.equal(BN2Str(1400));
-    expect(BN2Str(await router.getAnchorPrice())).to.equal('1000000000000000000')
-    expect(BN2Str(await router.getVADERAmount('100'))).to.equal('100')
-
-    await usdv.harvest(usdv.address, {from:acc1})
-    expect(BN2Str(await usdv.getMemberWeight(acc1))).to.equal(BN2Str(220));
-    expect(BN2Str(await usdv.getMemberReward(usdv.address, acc1))).to.equal(BN2Str(20));
-    expect(BN2Str(await usdv.totalWeight())).to.equal(BN2Str(220));
-    expect(BN2Str(await usdv.totalRewards())).to.equal(BN2Str(20));
-  });
-  it("Should withdraw", async function() {
-    expect(BN2Str(await usdv.balanceOf(acc1))).to.equal('500');
-    expect(BN2Str(await usdv.balanceOf(usdv.address))).to.equal('600');
-    expect(BN2Str(await usdv.getMemberDeposit(usdv.address, acc1))).to.equal('200');
-    expect(BN2Str(await usdv.getMemberWeight(acc1))).to.equal('220');
-    expect(BN2Str(await usdv.getMemberReward(usdv.address, acc1))).to.equal('20');
-
-    await vader.flipEmissions()
-    let tx = await usdv.withdraw(usdv.address, "10000",{from:acc1})
-    expect(BN2Str(await usdv.getMemberDeposit(usdv.address, acc1))).to.equal('0');
-    expect(BN2Str(await usdv.getMemberWeight(acc1))).to.equal('0');
-    expect(BN2Str(await usdv.totalWeight())).to.equal('0');
-    expect(BN2Str(await usdv.getMemberReward(usdv.address, acc1))).to.equal('0');
-    expect(BN2Str(await usdv.balanceOf(acc1))).to.equal('720');
-    expect(BN2Str(await usdv.balanceOf(usdv.address))).to.equal('380');
+  it("Should fail VADER deposit", async function() {
+    await truffleAssert.reverts(usdv.deposit(vader.address, '200', {from:acc1})) 
   });
 });
 
