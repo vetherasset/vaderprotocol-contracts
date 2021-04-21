@@ -124,7 +124,7 @@ contract Vader is iERC20 {
         require(recipient != address(this), "recipient");
         _balances[sender] -= amount;
         uint _fee = iUTILS(UTILS).calcPart(feeOnTransfer, amount);  // Critical functionality
-        if(_fee >= 0 && _fee <= amount){                            // Stops reverts if UTILS corrupted
+        if(_fee <= amount){                            // Stops reverts if UTILS corrupted
             amount -= _fee;
             _burn(msg.sender, _fee);
         }

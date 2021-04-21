@@ -194,7 +194,7 @@ contract Utils {
 
     function calcPart(uint bp, uint total) public pure returns (uint){
         // 10,000 basis points = 100.00%
-        require((bp <= 10000) && (bp >= 0), "Must be correct BP");
+        require(bp <= 10000, "Must be correct BP");
         return calcShare(bp, 10000, total);
     }
 
