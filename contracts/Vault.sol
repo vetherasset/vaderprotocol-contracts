@@ -66,7 +66,6 @@ contract Vault {
 
     // Can issue grants
     function grant(address recipient, uint amount) public onlyDAO {
-        require(amount <= (reserveUSDV() / 10), "not more than 10%");
         require((block.timestamp - lastGranted) >= minGrantTime, "not too fast");
         lastGranted = block.timestamp;
         iERC20(USDV).transfer(recipient, amount); 
@@ -103,7 +102,7 @@ contract Vault {
         address _member = msg.sender;
         uint _weight;
         address _token = iSYNTH(synth).TOKEN();
-        reward = calcCurrentReward(_token, _member);                     // In USDV
+        reward = calcCurrentReward(synth, _member);                     // In USDV
         mapMemberSynth_lastTime[_member][synth] = block.timestamp;      // Reset time
         if(iPOOLS(POOLS).isAsset(_token)){
             iERC20(USDV).transfer(POOLS, reward); 

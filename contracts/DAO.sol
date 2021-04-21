@@ -5,7 +5,7 @@ pragma solidity 0.8.3;
 import "./interfaces/iERC20.sol";
 import "./interfaces/iUTILS.sol";
 import "./interfaces/iVADER.sol";
-import "./interfaces/iUSDV.sol";
+import "./interfaces/iVAULT.sol";
 import "./interfaces/iROUTER.sol";
 
     //======================================VADER=========================================//
@@ -20,6 +20,7 @@ contract DAO {
     uint public proposalCount;
     address public VADER;
     address public USDV;
+    address public VAULT;
     uint public coolOffPeriod;
 
     mapping(uint => GrantDetails) public mapPID_grant;
@@ -42,11 +43,12 @@ contract DAO {
     // Constructor
     constructor() {
     }
-    function init(address _vader, address _usdv) public {
+    function init(address _vader, address _usdv, address _vault) public {
         require(inited == false);
         inited = true;
         VADER = _vader;
         USDV = _usdv;
+        VAULT = _vault;
         coolOffPeriod = 1;
     }
 
@@ -102,7 +104,7 @@ contract DAO {
         require(hasMinority(newProposalID), "Must have minority");
         require(isEqual(bytes(mapPID_type[oldProposalID]), bytes(mapPID_type[newProposalID])), "Must be same");
         mapPID_votes[oldProposalID] = 0;
-        emit CancelProposal(msg.sender, oldProposalID, mapPID_votes[oldProposalID], mapPID_votes[newProposalID], iUSDV(USDV).totalWeight());
+        emit CancelProposal(msg.sender, oldProposalID, mapPID_votes[oldProposalID], mapPID_votes[newProposalID], iVAULT(VAULT).totalWeight());
     }
 
     // Proposal with quorum can finalise after cool off period
@@ -124,7 +126,7 @@ contract DAO {
 
     function completeProposal(uint _proposalID) internal {
         string memory _typeStr = mapPID_type[_proposalID];
-        emit FinalisedProposal(msg.sender, _proposalID, mapPID_votes[_proposalID], iUSDV(USDV).totalWeight(), _typeStr);
+        emit FinalisedProposal(msg.sender, _proposalID, mapPID_votes[_proposalID], iVAULT(VAULT).totalWeight(), _typeStr);
         mapPID_votes[_proposalID] = 0;
         mapPID_finalised[_proposalID] = true;
         mapPID_finalising[_proposalID] = false;
@@ -134,10 +136,11 @@ contract DAO {
 
     function grantFunds(uint _proposalID) internal {
         GrantDetails memory _grant = mapPID_grant[_proposalID];
-        require(_grant.amount <= iERC20(USDV).balanceOf(USDV), "Not more than balance");
+        require(_grant.amount <= iERC20(USDV).balanceOf(VAULT) / 10, "Not more than 10%");
         completeProposal(_proposalID);
-        iUSDV(USDV).grant(_grant.recipient, _grant.amount);
+        iVAULT(VAULT).grant(_grant.recipient, _grant.amount);
     }
+
     function moveUtils(uint _proposalID) internal {
         address _proposedAddress = mapPID_address[_proposalID];
         require(_proposedAddress != address(0), "No address proposed");
@@ -154,14 +157,14 @@ contract DAO {
 
     function countMemberVotes(uint _proposalID) internal returns (uint voteWeight){
         mapPID_votes[_proposalID] -= mapPIDMember_votes[_proposalID][msg.sender];
-        voteWeight = iUSDV(USDV).getMemberWeight(msg.sender);
+        voteWeight = iVAULT(VAULT).getMemberWeight(msg.sender);
         mapPID_votes[_proposalID] += voteWeight;
         mapPIDMember_votes[_proposalID][msg.sender] = voteWeight;
     }
 
     function hasMajority(uint _proposalID) public view returns(bool){
         uint votes = mapPID_votes[_proposalID];
-        uint consensus = iUSDV(USDV).totalWeight() / 2; // >50%
+        uint consensus = iVAULT(VAULT).totalWeight() / 2; // >50%
         if(votes > consensus){
             return true;
         } else {
@@ -170,7 +173,7 @@ contract DAO {
     }
     function hasQuorum(uint _proposalID) public view returns(bool){
         uint votes = mapPID_votes[_proposalID];
-        uint consensus = iUSDV(USDV).totalWeight() / 3; // >33%
+        uint consensus = iVAULT(VAULT).totalWeight() / 3; // >33%
         if(votes > consensus){
             return true;
         } else {
@@ -179,7 +182,7 @@ contract DAO {
     }
     function hasMinority(uint _proposalID) public view returns(bool){
         uint votes = mapPID_votes[_proposalID];
-        uint consensus = iUSDV(USDV).totalWeight() / 6; // >16%
+        uint consensus = iVAULT(VAULT).totalWeight() / 6; // >16%
         if(votes > consensus){
             return true;
         } else {

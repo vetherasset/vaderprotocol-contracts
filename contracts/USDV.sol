@@ -50,7 +50,6 @@ contract USDV is iERC20 {
         symbol = 'USDV';
         decimals = 18;
         totalSupply = 0;
-        nextEraTime = block.timestamp + iVADER(VADER).secondsPerEra();
     }
     function init(address _vader, address _vault, address _router) external {
         require(inited == false);
@@ -58,6 +57,7 @@ contract USDV is iERC20 {
         VADER = _vader;
         VAULT = _vault;
         ROUTER = _router;
+        nextEraTime = block.timestamp + iVADER(VADER).secondsPerEra();
     }
 
     //========================================iERC20=========================================//
