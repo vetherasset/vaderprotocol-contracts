@@ -149,7 +149,7 @@ contract Utils {
 
     //==================================== LENDING ====================================//
 
-    function getCollateralValueInBase(address member, uint collateral, address collateralAsset, address debtAsset) external returns (uint debt, uint baseValue) {
+    function getCollateralValueInBase(address member, uint collateral, address collateralAsset, address debtAsset) external view returns (uint debt, uint baseValue) {
         uint _collateralAdjusted = (collateral * 6666) / 10000; // 150% collateral Ratio
         if(isBase(collateralAsset)){
             baseValue = _collateralAdjusted;
