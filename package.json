@@ -1,4 +1,7 @@
 {
+  "scripts": {
+    "lint": "prettier --write contracts/*.sol contracts/**/*.sol"
+  },
   "dependencies": {
     "@nomiclabs/hardhat-ethers": "^2.0.2",
     "@nomiclabs/hardhat-truffle5": "^2.0.0",
@@ -18,5 +21,9 @@
     "truffle-contract": "^4.0.31",
     "truffle-security": "^1.7.1",
     "web3": "^1.3.5"
+  },
+  "devDependencies": {
+    "prettier": "^2.2.1",
+    "prettier-plugin-solidity": "*"
   }
 }
