@@ -41,7 +41,8 @@ contract Router {
     mapping(address => CollateralDetails) private mapMember_Collateral;
     mapping(address => mapping(address => uint)) private mapCollateralDebt_Collateral;
     mapping(address => mapping(address => uint)) private mapCollateralDebt_Debt;
-    mapping(address => mapping(address => uint)) private mapCollateralDebt_interestPaid;
+    mapping(address => mapping(address => uint)) private mapCollateralDebt_interestPaid; 
+    mapping(address => mapping(address => uint)) private mapCollateralAsset_NextEra;
 
     struct CollateralDetails {
         uint ID;
@@ -325,6 +326,7 @@ contract Router {
             iPOOLS(POOLS).swap(USDV, debtAsset, member, false);                         // Execute swap to member
         }
         emit AddCollateral(member, collateralAsset, amount, debtAsset, _debtIssued);               // Event
+        payInterest(collateralAsset, debtAsset);
         return _debtIssued;
     }
 
@@ -348,23 +350,27 @@ contract Router {
         _removeDebtFromMember(member, _collateralUnlocked, collateralAsset, _debt, debtAsset);  // Remove
         emit RemoveCollateral(member, collateralAsset, _collateralUnlocked, debtAsset, _debt);
         _handleTransferOut(member, collateralAsset, _collateralUnlocked);
+        payInterest(collateralAsset, debtAsset);
         return _collateralUnlocked;
     }
 
     // Called once a day to pay interest
-    function _payInterest(address collateralAsset, address debtAsset) public {
-        uint _interestOwed = iUTILS(UTILS()).getInterestOwed(collateralAsset, debtAsset);
-        mapCollateralDebt_interestPaid[collateralAsset][debtAsset] += _interestOwed;
-        _removeCollateral(_interestOwed, collateralAsset, debtAsset);
-        if(isBase(collateralAsset)){
-            iERC20(collateralAsset).transfer(POOLS, _interestOwed);
-            iPOOLS(POOLS).sync(collateralAsset, debtAsset);
-        } else if(iPOOLS(POOLS).isSynth(collateralAsset)){
-            iERC20(collateralAsset).transfer(POOLS, _interestOwed);
-            iPOOLS(POOLS).syncSynth(iSYNTH(collateralAsset).TOKEN());
+    function payInterest(address collateralAsset, address debtAsset) internal {
+        if (block.timestamp >= getNextEraTime(collateralAsset, debtAsset) && emitting()) {                              // If new Era
+            uint _timeElapsed = block.timestamp - mapCollateralAsset_NextEra[collateralAsset][debtAsset];
+            mapCollateralAsset_NextEra[collateralAsset][debtAsset] = block.timestamp + iVADER(VADER).secondsPerEra(); 
+            uint _interestOwed = iUTILS(UTILS()).getInterestOwed(collateralAsset, debtAsset, _timeElapsed);
+            mapCollateralDebt_interestPaid[collateralAsset][debtAsset] += _interestOwed;
+            _removeCollateral(_interestOwed, collateralAsset, debtAsset);
+            if(isBase(collateralAsset)){
+                iERC20(collateralAsset).transfer(POOLS, _interestOwed);
+                iPOOLS(POOLS).sync(collateralAsset, debtAsset);
+            } else if(iPOOLS(POOLS).isSynth(collateralAsset)){
+                iERC20(collateralAsset).transfer(POOLS, _interestOwed);
+                iPOOLS(POOLS).syncSynth(iSYNTH(collateralAsset).TOKEN());
+            }
         }
     }
-
 
     function checkLiquidate() public {
         // get member remaining Collateral: originalDeposit - shareOfInterestPayments
@@ -498,5 +504,8 @@ contract Router {
     }
     function getSystemInterestPaid(address collateralAsset, address debtAsset) public view returns(uint) {
         return mapCollateralDebt_interestPaid[collateralAsset][debtAsset];
+    }
+    function getNextEraTime(address collateralAsset, address debtAsset) public view returns(uint) {
+        return mapCollateralAsset_NextEra[collateralAsset][debtAsset];
     }
 }

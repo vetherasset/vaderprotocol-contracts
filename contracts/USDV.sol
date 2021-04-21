@@ -23,7 +23,6 @@ contract USDV is iERC20 {
 
     // Parameters
     bool private inited;
-    uint public currentEra;
     uint public nextEraTime;
     uint public erasToEarn;
     uint public minGrantTime;
@@ -82,7 +81,6 @@ contract USDV is iERC20 {
         POOLS = _pool;
         iERC20(VADER).approve(ROUTER, type(uint).max);
         _approve(address(this), ROUTER, type(uint).max);
-        currentEra = 1;
         nextEraTime = block.timestamp + iVADER(VADER).secondsPerEra();
         erasToEarn = 100;
         minimumDepositTime = 1;
@@ -186,7 +184,6 @@ contract USDV is iERC20 {
     // Internal - Update incentives function
     function _checkIncentives() private {
         if (block.timestamp >= nextEraTime && emitting()) {                 // If new Era
-            currentEra += 1;                                                // Increment Era
             nextEraTime = block.timestamp + iVADER(VADER).secondsPerEra(); 
             uint _balance = iERC20(VADER).balanceOf(address(this));         // Get spare VADER
             uint _USDVShare = _twothirds(_balance);                         // Get 2/3rds
