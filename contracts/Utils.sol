@@ -15,6 +15,7 @@ contract Utils {
 
     uint private one = 10**18;
     uint private _10k = 10000;
+    uint private _year = 31536000; // One Year (in seconds)
 
     bool private inited;
 
@@ -66,20 +67,21 @@ contract Utils {
 
     //====================================PRICING====================================//
 
-    function calcValueInBase(address token, uint amount) public view returns (uint){
+    function calcValueInBase(address token, uint amount) public view returns (uint value){
        (uint _baseAmt, uint _tokenAmt) = iPOOLS(POOLS).getPoolAmounts(token);
-       return (amount * _baseAmt) / _tokenAmt;
+       if(_baseAmt > 0 && _tokenAmt > 0){
+            return (amount * _baseAmt) / _tokenAmt;
+       }
     }
 
-    function calcValueInToken(address token, uint amount) public view returns (uint){
+    function calcValueInToken(address token, uint amount) public view returns (uint value){
         (uint _baseAmt, uint _tokenAmt) = iPOOLS(POOLS).getPoolAmounts(token);
-        return (amount * _tokenAmt) / _baseAmt;
+        if(_baseAmt > 0 && _tokenAmt > 0){
+            return (amount * _tokenAmt) / _baseAmt;
+       }
     }
-    function calcValueOfTokenInToken(address token1, uint amount, address token2) public view returns (uint){
-        (uint _baseAmt1, uint _tokenAmt1) = iPOOLS(POOLS).getPoolAmounts(token1);
-        uint _amount2 = (amount * _baseAmt1) / _tokenAmt1;
-        (uint _baseAmt2, uint _tokenAmt2) = iPOOLS(POOLS).getPoolAmounts(token2);
-        return (_amount2 * _tokenAmt2) / _baseAmt2;
+    function calcValueOfTokenInToken(address token1, uint amount, address token2) public view returns (uint value){
+            return calcValueInToken(token2, calcValueInBase(token1, amount));
     }
 
     function calcSwapValueInBase(address token, uint amount) public view returns (uint){
@@ -170,8 +172,8 @@ contract Utils {
         return (_collateralUnlocked, _memberInterestShare);
     }
 
-    function getInterestOwed(address collateralAsset, address debtAsset) external view returns(uint interestOwed) {
-        uint _interestPayment = getInterestPayment(collateralAsset, debtAsset);
+    function getInterestOwed(address collateralAsset, address debtAsset, uint timeElapsed) external view returns(uint interestOwed) {
+        uint _interestPayment = calcShare(timeElapsed, _year, getInterestPayment(collateralAsset, debtAsset)); // Share of the payment over 1 year
         if(isBase(collateralAsset)){
             interestOwed = calcValueInBase(debtAsset, _interestPayment); // Back to base
         } else if(iFACTORY(FACTORY).isSynth(collateralAsset)) {
@@ -198,6 +200,9 @@ contract Utils {
 
     function calcShare(uint part, uint total, uint amount) public pure returns (uint share){
         // share = amount * part/total
+        if(part > total){
+            part = total;
+        }
         if(total > 0){
             share = (amount * part) / total;
         }

@@ -62,6 +62,7 @@ describe("Deploy Router", function() {
 
     await vether.approve(vader.address, '9400', {from:acc1})
     await vader.upgrade('9400', {from:acc1}) 
+    await vader.flipEmissions()
     await vader.flipMinting()
     await usdv.convert('5000', {from:acc1})
 
@@ -103,13 +104,10 @@ describe("Should pay interest", function() {
       expect(BN2Str(await utils.getDebtLoading(vader.address, anchor.address))).to.equal('662');
       expect(BN2Str(await utils.getInterestPayment(vader.address, anchor.address))).to.equal('3');
       expect(BN2Str(await utils.calcValueInBase(anchor.address, '3'))).to.equal('4');
-      expect(BN2Str(await utils.getInterestOwed(vader.address, anchor.address))).to.equal('4');
+      expect(BN2Str(await utils.getInterestOwed(vader.address, anchor.address, '31536000'))).to.equal('4');
 
-      expect(BN2Str(await router.getSystemInterestPaid(vader.address, anchor.address))).to.equal('0');
-      expect(BN2Str(await pools.getBaseAmount(anchor.address))).to.equal('1425');
-      await router._payInterest(vader.address, anchor.address)
-      expect(BN2Str(await pools.getBaseAmount(anchor.address))).to.equal('1429');
-      expect(BN2Str(await router.getSystemInterestPaid(vader.address, anchor.address))).to.equal('4');
+      expect(BN2Str(await router.getSystemInterestPaid(vader.address, anchor.address))).to.equal('3');
+      expect(BN2Str(await pools.getBaseAmount(anchor.address))).to.equal('1428');
     });
 
 });
