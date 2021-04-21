@@ -19,7 +19,6 @@ contract Pools {
     address public ROUTER;
     address public FACTORY;
 
-    mapping(address => bool) _isMember;
     mapping(address => bool) _isAsset;
     mapping(address => bool) _isAnchor;
 
@@ -212,9 +211,6 @@ contract Pools {
         }
     }
 
-    function isMember(address member) public view returns(bool) {
-        return _isMember[member];
-    }
     function isAsset(address token) public view returns(bool) {
         return _isAsset[token];
     }
