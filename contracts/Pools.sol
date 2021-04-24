@@ -5,6 +5,7 @@ pragma solidity 0.8.3;
 import "./interfaces/iERC20.sol";
 import "./interfaces/iUTILS.sol";
 import "./interfaces/iVADER.sol";
+import "./interfaces/iROUTER.sol";
 import "./interfaces/iFACTORY.sol";
 
 contract Pools {
@@ -81,6 +82,7 @@ contract Pools {
         address token,
         address member
     ) external returns (uint256 liquidityUnits) {
+        require(iROUTER(ROUTER).isBase(base), "!Base");
         require(token != USDV && token != VADER); // Prohibited
         uint256 _actualInputBase;
         if (base == VADER) {
@@ -89,7 +91,7 @@ contract Pools {
                 _isAnchor[token] = true;
             }
             _actualInputBase = getAddedAmount(VADER, token);
-        } else if (base == USDV) {
+        } else {
             if (!isAsset(token)) {
                 // If new Asset
                 _isAsset[token] = true;
