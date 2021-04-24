@@ -212,7 +212,8 @@ contract Pools {
         address token,
         address member
     ) external returns (uint256 outputAmount) {
-        require(iFACTORY(FACTORY).isSynth(getSynth(token)), "!synth");
+        address synth = getSynth(token);
+        require(iFACTORY(FACTORY).isSynth(synth), "!synth");
         uint256 _actualInputBase = getAddedAmount(base, token); // Get input
         uint256 _synthUnits =
             iUTILS(UTILS()).calcSynthUnits(_actualInputBase, mapToken_baseAmount[token], mapToken_Units[token]); // Get Units
@@ -225,7 +226,7 @@ contract Pools {
         mapToken_Units[token] += _synthUnits; // Add supply
         mapToken_baseAmount[token] += _actualInputBase; // Add BASE
         emit AddLiquidity(member, base, _actualInputBase, token, 0, _synthUnits); // Add Liquidity Event
-        iFACTORY(FACTORY).mintSynth(getSynth(token), member, outputAmount); // Ask factory to mint to member
+        iFACTORY(FACTORY).mintSynth(synth, member, outputAmount); // Ask factory to mint to member
     }
 
     // Burn a Synth to get out BASE
@@ -234,14 +235,15 @@ contract Pools {
         address token,
         address member
     ) external returns (uint256 outputBase) {
-        uint256 _actualInputSynth = iERC20(getSynth(token)).balanceOf(address(this)); // Get input
+        address synth = getSynth(token);
+        uint256 _actualInputSynth = iERC20(synth).balanceOf(address(this)); // Get input
         uint256 _unitsToDelete =
             iUTILS(UTILS()).calcShare(
                 _actualInputSynth,
-                iERC20(getSynth(token)).totalSupply(),
+                iERC20(synth).totalSupply(),
                 mapTokenMember_Units[token][address(this)]
             ); // Pro rata
-        iERC20(getSynth(token)).burn(_actualInputSynth); // Burn it
+        iERC20(synth).burn(_actualInputSynth); // Burn it
         mapTokenMember_Units[token][address(this)] -= _unitsToDelete; // Delete units for self
         mapToken_Units[token] -= _unitsToDelete; // Delete units
         outputBase = iUTILS(UTILS()).calcSwapOutput(
@@ -256,14 +258,15 @@ contract Pools {
 
     // Remove a synth, make other LPs richer
     function syncSynth(address token) external {
-        uint256 _actualInputSynth = iERC20(getSynth(token)).balanceOf(address(this)); // Get input
+        address synth = getSynth(token);
+        uint256 _actualInputSynth = iERC20(synth).balanceOf(address(this)); // Get input
         uint256 _unitsToDelete =
             iUTILS(UTILS()).calcShare(
                 _actualInputSynth,
-                iERC20(getSynth(token)).totalSupply(),
+                iERC20(synth).totalSupply(),
                 mapTokenMember_Units[token][address(this)]
             ); // Pro rata
-        iERC20(getSynth(token)).burn(_actualInputSynth); // Burn it
+        iERC20(synth).burn(_actualInputSynth); // Burn it
         mapTokenMember_Units[token][address(this)] -= _unitsToDelete; // Delete units for self
         mapToken_Units[token] -= _unitsToDelete; // Delete units
         emit SynthSync(token, _actualInputSynth, _unitsToDelete);
