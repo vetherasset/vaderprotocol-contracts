@@ -67,7 +67,7 @@ describe("Deploy Router", function() {
     await anchor2.approve(router.address, BN2Str(one), {from:acc1})
 
     await vether.approve(vader.address, '7400', {from:acc1})
-    await vader.upgrade(BN2Str(7400), {from:acc1}) 
+    await vader.upgrade('8', {from:acc1}) 
 
     await asset.transfer(acc1, BN2Str(2000))
     await asset.approve(router.address, BN2Str(one), {from:acc1})
@@ -120,7 +120,7 @@ describe("Add liquidity", function() {
 describe("Should Swap VADER Pools", function() {
   it("Swap from Vader to Anchor", async function() {
     await router.swap('250', vader.address, anchor.address, {from:acc1})
-    expect(BN2Str(await vader.balanceOf(acc1))).to.equal('2150');
+    expect(BN2Str(await vader.balanceOf(acc1))).to.equal('2750');
     expect(BN2Str(await pools.getBaseAmount(anchor.address))).to.equal('1250');
     expect(BN2Str(await pools.getTokenAmount(anchor.address))).to.equal('840');
     expect(BN2Str(await anchor.balanceOf(acc1))).to.equal('1160');
@@ -130,7 +130,7 @@ describe("Should Swap VADER Pools", function() {
     expect(BN2Str(await anchor.balanceOf(acc1))).to.equal('1000');
     expect(BN2Str(await pools.getTokenAmount(anchor.address))).to.equal('1000');
     expect(BN2Str(await pools.getBaseAmount(anchor.address))).to.equal('1082');
-    expect(BN2Str(await vader.balanceOf(acc1))).to.equal('2318');
+    expect(BN2Str(await vader.balanceOf(acc1))).to.equal('2918');
   });
 
 it("Swap to Other Anchor", async function() {
@@ -188,7 +188,7 @@ describe("Should remove liquidity", function() {
     expect(BN2Str(await pools.getMemberUnits(anchor.address, acc1))).to.equal('500');
     expect(BN2Str(await pools.getBaseAmount(anchor.address))).to.equal('455');
     expect(BN2Str(await pools.getTokenAmount(anchor.address))).to.equal('625');
-    expect(BN2Str(await vader.balanceOf(acc1))).to.equal('2772');
+    expect(BN2Str(await vader.balanceOf(acc1))).to.equal('3372');
     expect(BN2Str(await anchor.balanceOf(acc1))).to.equal('1375');
   });
   it("REmove Anchor", async function() {
@@ -197,7 +197,7 @@ describe("Should remove liquidity", function() {
     expect(BN2Str(await pools.getMemberUnits(anchor.address, acc1))).to.equal('0');
     expect(BN2Str(await pools.getBaseAmount(anchor.address))).to.equal('0');
     expect(BN2Str(await pools.getTokenAmount(anchor.address))).to.equal('0');
-    expect(BN2Str(await vader.balanceOf(acc1))).to.equal('3227');
+    expect(BN2Str(await vader.balanceOf(acc1))).to.equal('3827');
     expect(BN2Str(await anchor.balanceOf(acc1))).to.equal('2000');
   });
 });

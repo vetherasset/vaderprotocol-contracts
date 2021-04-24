@@ -66,7 +66,7 @@ describe("Deploy Protection", function() {
     await anchor.transfer(acc1, BN2Str(2000))
     await anchor.approve(router.address, BN2Str(one), {from:acc1})
     await vether.approve(vader.address, '7400', {from:acc1})
-    await vader.upgrade(BN2Str(7400), {from:acc1}) 
+    await vader.upgrade('8', {from:acc1}) 
     await router.addLiquidity(vader.address, '1000', anchor.address, '1000', {from:acc1})
 
     await vader.flipMinting()
@@ -102,7 +102,7 @@ describe("Should do IL Protection", function() {
     expect(BN2Str(await anchor.balanceOf(acc1))).to.equal('1000');
     expect(BN2Str(await pools.getBaseAmount(anchor.address))).to.equal('1000');
     expect(BN2Str(await pools.getTokenAmount(anchor.address))).to.equal('1000');
-    expect(BN2Str(await vader.balanceOf(acc1))).to.equal('4300');
+    expect(BN2Str(await vader.balanceOf(acc1))).to.equal('4900');
 
     for(let i = 0; i<9; i++){
       await router.swap('100', anchor.address, vader.address, {from:acc1})
@@ -110,7 +110,7 @@ describe("Should do IL Protection", function() {
     expect(BN2Str(await anchor.balanceOf(acc1))).to.equal('100');
     expect(BN2Str(await pools.getTokenAmount(anchor.address))).to.equal('1900');
     expect(BN2Str(await pools.getBaseAmount(anchor.address))).to.equal('554');
-    expect(BN2Str(await vader.balanceOf(acc1))).to.equal('4746');
+    expect(BN2Str(await vader.balanceOf(acc1))).to.equal('5346');
 
     expect(BN2Str(await router.mapMemberToken_depositBase(acc1, anchor.address))).to.equal('1000');
     expect(BN2Str(await router.mapMemberToken_depositToken(acc1, anchor.address))).to.equal('1000');

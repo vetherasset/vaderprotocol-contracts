@@ -64,7 +64,7 @@ describe("Deploy Anchor", function() {
     
     await vether.transfer(acc1, BN2Str(6006)) 
     await vether.approve(vader.address, '6000', {from:acc1})
-    await vader.upgrade('6000', {from:acc1}) 
+    await vader.upgrade('6', {from:acc1}) 
 
     await anchor0.transfer(acc1, BN2Str(2000))
     await anchor0.approve(router.address, BN2Str(one), {from:acc1})

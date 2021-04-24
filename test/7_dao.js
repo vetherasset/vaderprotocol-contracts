@@ -62,7 +62,7 @@ describe("Deploy DAO", function() {
     await dao.init(vader.address, usdv.address, vault.address);
     
     await vether.approve(vader.address, '6000', {from:acc0})
-    await vader.upgrade('3000', {from:acc0}) 
+    await vader.upgrade('3', {from:acc0}) 
 
     await vader.transfer(acc1, '2000') 
     await anchor.transfer(acc1, '1110') 

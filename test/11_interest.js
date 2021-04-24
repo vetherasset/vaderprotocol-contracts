@@ -64,7 +64,7 @@ describe("Deploy Router", function() {
     await anchor.approve(router.address, BN2Str(one), {from:acc1})
 
     await vether.approve(vader.address, '9400', {from:acc1})
-    await vader.upgrade('9400', {from:acc1}) 
+    await vader.upgrade('10', {from:acc1}) 
     await vader.flipEmissions()
     await vader.flipMinting()
     await usdv.convert('5000', {from:acc1})

@@ -43,7 +43,7 @@ before(async function() {
   await vault.init(vader.address, usdv.address, router.address, factory.address, pools.address)
   await factory.init(pools.address);
 
-  await vether.transfer(acc1, BN2Str(1001))
+  await vether.transfer(acc1, '1')
 // acc  | VTH | VADER  |
 // acc0 |   0 |    0 |
 // acc1 |1001 |    0 |
@@ -56,7 +56,7 @@ describe("Deploy Vader", function() {
     expect(await vader.symbol()).to.equal("VADER");
     expect(BN2Str(await vader.decimals())).to.equal('18');
     expect(BN2Str(await vader.totalSupply())).to.equal('0');
-    expect(BN2Str(await vader.maxSupply())).to.equal(BN2Str(2000000 * one));
+    expect(BN2Str(await vader.maxSupply())).to.equal(BN2Str(2000000000 * one));
     expect(BN2Str(await vader.emissionCurve())).to.equal('900');
     expect(await vader.emitting()).to.equal(false);
     expect(BN2Str(await vader.currentEra())).to.equal('1');
@@ -72,7 +72,7 @@ describe("Upgrade", function() {
 
   it("Should upgrade acc1", async function() {
     await vether.approve(vader.address, '10000000000000000000000', {from:acc1})
-    await vader.upgrade(1000, {from:acc1})
+    await vader.upgrade(1, {from:acc1})
     expect(BN2Str(await vader.totalSupply())).to.equal(BN2Str(1000));
     expect(BN2Str(await vether.balanceOf(acc1))).to.equal(BN2Str(0));
     expect(BN2Str(await vader.balanceOf(acc1))).to.equal(BN2Str(1000));
@@ -182,15 +182,15 @@ describe("FeeOnTransfer", function() {
   it("Should set up fees", async function() {
     expect(BN2Str(await vader.feeOnTransfer())).to.equal('0');
     expect(BN2Str(await vader.totalSupply())).to.equal(BN2Str(6400));
-    expect(BN2Str(await vether.balanceOf(acc0))).to.equal('999999999999999999998999');
-    await vether.approve(vader.address, '999999999999999999998999', {from:acc0})
-    await vader.upgrade('999999999999999999998999', {from:acc0})
+    expect(BN2Str(await vether.balanceOf(acc0))).to.equal('999999999999999999999999');
+    await vether.approve(vader.address, '999999999999999999999999', {from:acc0})
+    await vader.upgrade('999999999999999999999999', {from:acc0})
     await vader.setParams('1', '2024', {from:acc2})
-    expect(BN2Str(await vader.getDailyEmission())).to.equal(BN2Str('494071146245059288534'));
-    expect(BN2Str(await vader.totalSupply())).to.equal('1000000000000000000005399');
+    expect(BN2Str(await vader.getDailyEmission())).to.equal(BN2Str('494071146245059288537546'));
+    expect(BN2Str(await vader.totalSupply())).to.equal('1000000000000000000000005400');
     await vader.transfer(acc1, BN2Str(100), {from:acc0})
-    expect(BN2Str(await vader.totalSupply())).to.equal('1000494071146245059293933');
-    expect(BN2Str(await vader.maxSupply())).to.equal(BN2Str(2 * 10**6 * 10 ** 18));
+    expect(BN2Str(await vader.totalSupply())).to.equal('1000494071146245059288542946');
+    expect(BN2Str(await vader.maxSupply())).to.equal(BN2Str(2 * 10**9 * 10 ** 18));
     expect(BN2Str(await vader.feeOnTransfer())).to.equal('50');
   });
   it("Should charge fees", async function() {

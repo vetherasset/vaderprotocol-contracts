@@ -66,7 +66,7 @@ describe("Deploy Rewards", function() {
     await anchor.approve(router.address, BN2Str(one), {from:acc1})
 
     await vether.approve(vader.address, '7400', {from:acc1})
-    await vader.upgrade(BN2Str(7400), {from:acc1}) 
+    await vader.upgrade('8', {from:acc1}) 
 
     await vader.flipMinting()
     await usdv.convert(BN2Str(1100), {from:acc1})
