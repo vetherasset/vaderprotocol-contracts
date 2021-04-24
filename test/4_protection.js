@@ -3,6 +3,7 @@ var Utils = artifacts.require('./Utils')
 var Vether = artifacts.require('./Vether')
 var Vader = artifacts.require('./Vader')
 var USDV = artifacts.require('./USDV')
+var VAULT = artifacts.require('./Vault')
 var Pools = artifacts.require('./Pools')
 var Router = artifacts.require('./Router')
 var Factory = artifacts.require('./Factory')
@@ -20,7 +21,7 @@ function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-var utils; var vader; var vether; var usdv; var pools; var anchor; var asset; var router; var factory;
+var utils; var vader; var vether; var usdv; var vault; var pools; var anchor; var asset; var router; var factory;
 var anchor0; var anchor1; var anchor2; var anchor3; var anchor4;  var anchor5; 
 var acc0; var acc1; var acc2; var acc3; var acc0; var acc5;
 const one = 10**18
@@ -36,6 +37,7 @@ before(async function() {
   vether = await Vether.new();
   vader = await Vader.new();
   usdv = await USDV.new();
+  vault = await VAULT.new();
   router = await Router.new();
   pools = await Pools.new();
   factory = await Factory.new();
@@ -51,7 +53,8 @@ describe("Deploy Protection", function() {
 
     await utils.init(vader.address, usdv.address, router.address, pools.address, factory.address)
     await vader.init(vether.address, usdv.address, utils.address)
-    await usdv.init(vader.address, router.address, pools.address)
+    await usdv.init(vader.address, vault.address, router.address)
+    await vault.init(vader.address, usdv.address, router.address, factory.address, pools.address)
     await router.init(vader.address, usdv.address, pools.address);
     await pools.init(vader.address, usdv.address, router.address, factory.address);
     await factory.init(pools.address);
@@ -76,8 +79,10 @@ describe("Deploy Protection", function() {
     await vader.transfer(acc0, '100', {from:acc1})
     await usdv.transfer(acc0, '100', {from:acc1})
 
+    // console.log(BN2Str(await vader.getDailyEmission()))
+
     expect(Number(await vader.getDailyEmission())).to.be.greaterThan(0);
-    expect(Number(await usdv.reserveUSDV())).to.be.greaterThan(0);
+    expect(Number(await vault.reserveUSDV())).to.be.greaterThan(0);
     expect(Number(await router.reserveUSDV())).to.be.greaterThan(0);
     expect(Number(await router.reserveVADER())).to.be.greaterThan(0);
     await vader.flipEmissions()

@@ -45,7 +45,8 @@ All contracts need to be initialised for the first time, else the system will no
 ```
 await utils.init(pools.address)
 await vader.init(vether.address, usdv.address, utils.address)
-await usdv.init(vader.address, router.address, pools.address)
+await usdv.init(vader.address, vault.address, router.address)
+    await vault.init(vader.address, usdv.address, router.address, factory.address, pools.address)
 await router.init(vader.address, usdv.address, pools.address);
 await pools.init(vader.address, usdv.address, router.address, factory.address);
 await factory.init(pools.address);
@@ -85,3 +86,16 @@ Or execute individually:
 ```
 npx hardhat test test/1_vader
 ```
+
+## CI Pipeline
+Github Actions are used to perform a number of automated code quality checks. 
+
+#### Executing/Debugging the Pipeline Locally 
+These checks can be run locally by installing the [act](https://github.com/nektos/act) utility.
+The default suggested image (medium) supplied with `act` does not contain the necessary dependencies to run 
+Vader's pipeline.  Instead, use the larger (18GB~) image using:
+
+```act -vP ubuntu-latest=nektos/act-environments-ubuntu:18.04```
+
+This will download a more complete image with the required dependencies, 
+and run the pipeline as defined in [.github/workflows/build.yml](.github/workflows/build.yml).

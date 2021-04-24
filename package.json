@@ -1,4 +1,11 @@
 {
+  "scripts": {
+    "compile": "npx hardhat compile",
+    "test": "npx hardhat test",
+    "format": "prettier --write contracts/*.sol contracts/**/*.sol",
+    "lint": "solhint -f table contracts/*.sol contracts/**/*.sol",
+    "pipeline": "act -P ubuntu-latest=nektos/act-environments-ubuntu:18.04"
+  },
   "dependencies": {
     "@nomiclabs/hardhat-ethers": "^2.0.2",
     "@nomiclabs/hardhat-truffle5": "^2.0.0",
@@ -18,5 +25,11 @@
     "truffle-contract": "^4.0.31",
     "truffle-security": "^1.7.1",
     "web3": "^1.3.5"
+  },
+  "devDependencies": {
+    "prettier": "^2.2.1",
+    "prettier-plugin-solidity": "^1.0.0-beta.9",
+    "solhint": "^3.3.4",
+    "solhint-plugin-prettier": "^0.0.5"
   }
 }
