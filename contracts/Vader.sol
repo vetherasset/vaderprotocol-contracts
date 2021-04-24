@@ -23,6 +23,7 @@ contract Vader is iERC20 {
     bool public emitting;
     bool public minting;
     uint256 _1m;
+    uint256 public conversionFactor;
     uint256 public baseline;
     uint256 public emissionCurve;
     uint256 public maxSupply;
@@ -65,6 +66,7 @@ contract Vader is iERC20 {
         baseline = _1m;
         totalSupply = 0;
         maxSupply = 2 * _1m;
+        conversionFactor = 1000;
         currentEra = 1;
         secondsPerEra = 1; //86400;
         nextEraTime = block.timestamp + secondsPerEra;
@@ -265,7 +267,7 @@ contract Vader is iERC20 {
     // VETHER Owners to Upgrade
     function upgrade(uint256 amount) external {
         require(iERC20(VETHER).transferFrom(msg.sender, burnAddress, amount));
-        _mint(msg.sender, amount);
+        _mint(msg.sender, amount * conversionFactor);
     }
 
     // Directly redeem back to VADER (must have sent USDV first)
