@@ -6,13 +6,13 @@ import "./interfaces/iERC20.sol";
 
 // Synth Contract
 contract Synth is iERC20 {
-    address public FACTORY;
-    address public TOKEN;
+    address public immutable FACTORY;
+    address public immutable TOKEN;
 
     // Coin Defaults
     string public override name;
     string public override symbol;
-    uint256 public override decimals = 18;
+    uint256 public immutable override decimals = 18;
     uint256 public override totalSupply;
 
     // ERC-20 Mappings
