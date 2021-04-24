@@ -29,6 +29,8 @@ interface iUTILS {
         uint256 targetPrice
     ) external view;
 
+    function getMemberShare(uint256 basisPoints, address token, address member) external view returns(uint256 units, uint256 outputBase, uint256 outputToken);
+
     function getRewardShare(address token, uint256 rewardReductionFactor) external view returns (uint256 rewardShare);
 
     function getReducedShare(uint256 amount) external view returns (uint256);

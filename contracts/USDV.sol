@@ -19,7 +19,6 @@ contract USDV is iERC20 {
 
     // Parameters
     bool private inited;
-    uint256 public nextEraTime;
     uint256 public blockDelay;
 
     address public VADER;
@@ -30,7 +29,7 @@ contract USDV is iERC20 {
 
     // Only DAO can execute
     modifier onlyDAO() {
-        require(msg.sender == DAO(), "Not DAO");
+        require(msg.sender == iVADER(VADER).DAO(), "Not DAO");
         _;
     }
     // Stop flash attacks
@@ -47,7 +46,7 @@ contract USDV is iERC20 {
     }
 
     //=====================================CREATION=========================================//
-    // Constructor
+ 
     constructor() {
         name = "VADER STABLE DOLLAR";
         symbol = "USDV";
@@ -65,7 +64,6 @@ contract USDV is iERC20 {
         VADER = _vader;
         VAULT = _vault;
         ROUTER = _router;
-        nextEraTime = block.timestamp + iVADER(VADER).secondsPerEra();
     }
 
     //========================================iERC20=========================================//
@@ -130,7 +128,6 @@ contract USDV is iERC20 {
             _balances[sender] -= amount;
             _balances[recipient] += amount;
             emit Transfer(sender, recipient, amount);
-            _checkIncentives();
         }
     }
 
@@ -172,26 +169,6 @@ contract USDV is iERC20 {
         blockDelay = newDelay;
     }
 
-    //======================================INCENTIVES========================================//
-    // Internal - Update incentives function
-    function _checkIncentives() private {
-        if (block.timestamp >= nextEraTime && emitting()) {
-            // If new Era
-            nextEraTime = block.timestamp + iVADER(VADER).secondsPerEra();
-            uint256 _balance = iERC20(VADER).balanceOf(address(this)); // Get spare VADER
-            if (_balance > 4) {
-                uint256 _USDVShare = _balance / 2; // Get 50%
-                _convert(address(this), _USDVShare); // Convert it
-                if (balanceOf(address(this)) > 2) {
-                    _transfer(address(this), ROUTER, balanceOf(address(this)) / 2); // Send half USDV to ROUTER
-                    _transfer(address(this), VAULT, balanceOf(address(this))); // Send rest to VAULT
-                }
-                iERC20(VADER).transfer(ROUTER, iERC20(VADER).balanceOf(address(this)) / 2); // Send half VADER to ROUTER
-                iERC20(VADER).transfer(VAULT, iERC20(VADER).balanceOf(address(this))); // Send rest to VAULT
-            }
-        }
-    }
-
     //======================================ASSET MINTING========================================//
     // Convert to USDV
     function convert(uint256 amount) external returns (uint256) {
@@ -206,7 +183,7 @@ contract USDV is iERC20 {
 
     // Internal convert
     function _convert(address _member, uint256 amount) internal flashProof returns (uint256 _convertAmount) {
-        if (minting()) {
+        if (iVADER(VADER).minting()) {
             lastBlock[tx.origin] = block.number; // Record first
             iERC20(VADER).burn(amount);
             _convertAmount = iROUTER(ROUTER).getUSDVAmount(amount); // Critical pricing functionality
@@ -242,15 +219,4 @@ contract USDV is iERC20 {
 
     //============================== HELPERS ================================//
 
-    function DAO() public view returns (address) {
-        return iVADER(VADER).DAO();
-    }
-
-    function emitting() public view returns (bool) {
-        return iVADER(VADER).emitting();
-    }
-
-    function minting() public view returns (bool) {
-        return iVADER(VADER).minting();
-    }
 }

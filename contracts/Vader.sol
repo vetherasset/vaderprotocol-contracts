@@ -34,9 +34,9 @@ contract Vader is iERC20 {
     address public VETHER;
     address public USDV;
     address public UTILS;
-    address public burnAddress;
-    address public rewardAddress;
+    address public RESERVE;
     address public DAO;
+    address public burnAddress;
 
     event NewEra(uint256 currentEra, uint256 nextEraTime, uint256 emission);
 
@@ -56,7 +56,7 @@ contract Vader is iERC20 {
     }
 
     //=====================================CREATION=========================================//
-    // Constructor
+ 
     constructor() {
         name = "VADER PROTOCOL TOKEN";
         symbol = "VADER";
@@ -68,7 +68,7 @@ contract Vader is iERC20 {
         currentEra = 1;
         secondsPerEra = 1; //86400;
         nextEraTime = block.timestamp + secondsPerEra;
-        emissionCurve = 900;
+        emissionCurve = 10;
         DAO = msg.sender;
         burnAddress = 0x0111011001100001011011000111010101100101;
     }
@@ -77,14 +77,15 @@ contract Vader is iERC20 {
     function init(
         address _vether,
         address _USDV,
-        address _utils
+        address _utils,
+        address _reserve
     ) external {
         require(inited == false);
         inited = true;
         VETHER = _vether;
         USDV = _USDV;
         UTILS = _utils;
-        rewardAddress = _USDV;
+        RESERVE = _reserve;
     }
 
     //========================================iERC20=========================================//
@@ -211,8 +212,8 @@ contract Vader is iERC20 {
     }
 
     // Can set reward address
-    function setRewardAddress(address newAddress) external onlyDAO {
-        rewardAddress = newAddress;
+    function setReserve(address newReserve) external onlyDAO {
+        RESERVE = newReserve;
     }
 
     // Can change UTILS
@@ -240,7 +241,7 @@ contract Vader is iERC20 {
             currentEra += 1; // Increment Era
             nextEraTime = block.timestamp + secondsPerEra; // Set next Era time
             uint256 _emission = getDailyEmission(); // Get Daily Dmission
-            _mint(rewardAddress, _emission); // Mint to the Rewad Address
+            _mint(RESERVE, _emission); // Mint to the RESERVE Address
             feeOnTransfer = iUTILS(UTILS).getFeeOnTransfer(totalSupply, maxSupply); // UpdateFeeOnTransfer
             if (feeOnTransfer > 1000) {
                 feeOnTransfer = 1000;
@@ -253,10 +254,10 @@ contract Vader is iERC20 {
     function getDailyEmission() public view returns (uint256) {
         uint256 _adjustedMax;
         if (totalSupply <= baseline) {
-            // If less than 1m, then adjust cap down
-            _adjustedMax = (maxSupply * totalSupply) / baseline; // 2m * 0.5m / 1m = 2m * 50% = 1.5m
+            // If less than 1bn, then adjust cap down
+            _adjustedMax = (maxSupply * totalSupply) / baseline; // 2bn * 0.5m / 1m = 2m * 50% = 1.5m
         } else {
-            _adjustedMax = maxSupply; // 2m
+            _adjustedMax = maxSupply; // 2bn
         }
         return (_adjustedMax - totalSupply) / (emissionCurve); // outstanding / curve
     }

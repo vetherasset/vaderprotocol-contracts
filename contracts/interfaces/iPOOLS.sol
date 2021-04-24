@@ -16,7 +16,7 @@ interface iPOOLS {
         address base,
         address token,
         uint256 basisPoints
-    ) external returns (uint256 outputBase, uint256 outputToken);
+    ) external returns (uint256 units, uint256 outputBase, uint256 outputToken);
 
     function sync(address token, address pool) external;
 

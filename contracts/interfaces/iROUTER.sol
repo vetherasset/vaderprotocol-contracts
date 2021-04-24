@@ -19,7 +19,7 @@ interface iROUTER {
         address base,
         address token,
         uint256 basisPoints
-    ) external returns (uint256 amountBase, uint256 amountToken);
+    ) external returns (uint256 units, uint256 amountBase, uint256 amountToken);
 
     function swap(
         uint256 inputAmount,

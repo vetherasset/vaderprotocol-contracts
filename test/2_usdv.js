@@ -3,6 +3,7 @@ var Utils = artifacts.require('./Utils')
 var Vether = artifacts.require('./Vether')
 var Vader = artifacts.require('./Vader')
 var USDV = artifacts.require('./USDV')
+var RESERVE = artifacts.require('./Reserve')
 var VAULT = artifacts.require('./Vault')
 var POOLS = artifacts.require('./Pools')
 var Router = artifacts.require('./Router')
@@ -19,7 +20,8 @@ function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-var utils; var vader; var vether; var usdv; var vault; var router; var pools; var attack; var factory;
+var utils; var vader; var vether; var usdv;
+var reserve; var vault; var router; var pools; var attack; var factory;
 var acc0; var acc1; var acc2; var acc3; var acc0; var acc5;
 
 // 
@@ -35,6 +37,7 @@ before(async function() {
   vether = await Vether.new();
   vader = await Vader.new();
   usdv = await USDV.new();
+reserve = await RESERVE.new();
   vault = await VAULT.new();
   router = await Router.new();
   pools = await POOLS.new();
@@ -49,10 +52,11 @@ before(async function() {
 
 describe("Deploy USDV", function() {
   it("Should deploy", async function() {
-    await vader.init(vether.address, usdv.address, utils.address)
+    await vader.init(vether.address, usdv.address, utils.address, reserve.address)
     await usdv.init(vader.address, vault.address, router.address)
-    await vault.init(vader.address, usdv.address, router.address, factory.address, pools.address)
-    await router.init(vader.address, usdv.address, pools.address);
+await reserve.init(vader.address, usdv.address, vault.address, router.address, router.address)
+    await vault.init(vader.address, usdv.address, reserve.address, router.address, factory.address, pools.address)
+    await router.init(vader.address, usdv.address, reserve.address, pools.address);
     await pools.init(vader.address, usdv.address, router.address, router.address);
     await attack.init(vader.address, usdv.address)
     await factory.init(pools.address);
@@ -66,7 +70,7 @@ describe("Deploy USDV", function() {
     expect(BN2Str(await usdv.decimals())).to.equal('18');
     expect(BN2Str(await usdv.totalSupply())).to.equal('0');
     // expect(BN2Str(await usdv.minimumDepositTime())).to.equal('1');
-    expect(await usdv.DAO()).to.equal(acc0);
+    // expect(await usdv.DAO()).to.equal(acc0);
     // expect(await usdv.UTILS()).to.equal(utils.address);
   });
 });

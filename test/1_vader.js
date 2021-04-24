@@ -3,6 +3,7 @@ var Utils = artifacts.require('./Utils')
 var Vether = artifacts.require('./Vether')
 var Vader = artifacts.require('./Vader')
 var USDV = artifacts.require('./USDV')
+var RESERVE = artifacts.require('./Reserve')
 var VAULT = artifacts.require('./Vault')
 var Router = artifacts.require('./Router')
 var Factory = artifacts.require('./Factory')
@@ -18,7 +19,8 @@ function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-var utils; var vader; var vether; var usdv; var vault; var router; var factory;
+var utils; var vader; var vether; var usdv;
+var reserve; var vault; var router; var factory;
 var acc0; var acc1; var acc2; var acc3; var acc0; var acc5;
 const one = 10**18
 
@@ -33,14 +35,16 @@ before(async function() {
   vether = await Vether.new();
   vader = await Vader.new();
   usdv = await USDV.new();
+reserve = await RESERVE.new();
   vault = await VAULT.new();
   router = await Router.new();
   factory = await Factory.new();
   pools = await POOLS.new();
 
-  await vader.init(vether.address, usdv.address, utils.address)
+  await vader.init(vether.address, usdv.address, utils.address, reserve.address)
   await usdv.init(vader.address, vault.address, router.address)
-  await vault.init(vader.address, usdv.address, router.address, factory.address, pools.address)
+await reserve.init(vader.address, usdv.address, vault.address, router.address, router.address)
+  await vault.init(vader.address, usdv.address, reserve.address, router.address, factory.address, pools.address)
   await factory.init(pools.address);
 
   await vether.transfer(acc1, '1')
@@ -57,7 +61,7 @@ describe("Deploy Vader", function() {
     expect(BN2Str(await vader.decimals())).to.equal('18');
     expect(BN2Str(await vader.totalSupply())).to.equal('0');
     expect(BN2Str(await vader.maxSupply())).to.equal(BN2Str(2000000000 * one));
-    expect(BN2Str(await vader.emissionCurve())).to.equal('900');
+    expect(BN2Str(await vader.emissionCurve())).to.equal('10');
     expect(await vader.emitting()).to.equal(false);
     expect(BN2Str(await vader.currentEra())).to.equal('1');
     expect(BN2Str(await vader.secondsPerEra())).to.equal('1');
@@ -76,7 +80,7 @@ describe("Upgrade", function() {
     expect(BN2Str(await vader.totalSupply())).to.equal(BN2Str(1000));
     expect(BN2Str(await vether.balanceOf(acc1))).to.equal(BN2Str(0));
     expect(BN2Str(await vader.balanceOf(acc1))).to.equal(BN2Str(1000));
-    expect(BN2Str(await vader.getDailyEmission())).to.equal(BN2Str('1'));
+    expect(BN2Str(await vader.getDailyEmission())).to.equal(BN2Str('100'));
   });
 // acc  | VTH | VADER  |
 // acc0 |   0 |    0 |
@@ -135,8 +139,8 @@ describe("DAO Functions", function() {
     expect(BN2Str(await vader.emissionCurve())).to.equal('1');
   });
   it("DAO changeIncentiveAddress", async function() {
-    await vader.setRewardAddress(usdv.address)
-    expect(await vader.rewardAddress()).to.equal(usdv.address);
+    await vader.setReserve(usdv.address)
+    expect(await vader.RESERVE()).to.equal(usdv.address);
   });
   it("DAO changeDAO", async function() {
     await vader.changeDAO(acc2)
