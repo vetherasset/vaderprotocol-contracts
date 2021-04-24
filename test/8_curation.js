@@ -68,7 +68,7 @@ describe("Deploy Router", function() {
     await anchor.approve(router.address, BN2Str(one), {from:acc1})
 
     await vether.approve(vader.address, '7400', {from:acc1})
-    await vader.upgrade(BN2Str(7400), {from:acc1}) 
+    await vader.upgrade('7', {from:acc1}) 
 
     await asset.transfer(acc1, BN2Str(2000))
     await asset.approve(router.address, BN2Str(one), {from:acc1})

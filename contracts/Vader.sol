@@ -22,7 +22,6 @@ contract Vader is iERC20 {
     bool private inited;
     bool public emitting;
     bool public minting;
-    uint256 _1m;
     uint256 public conversionFactor;
     uint256 public baseline;
     uint256 public emissionCurve;
@@ -62,10 +61,9 @@ contract Vader is iERC20 {
         name = "VADER PROTOCOL TOKEN";
         symbol = "VADER";
         decimals = 18;
-        _1m = 10**6 * 10**decimals; //1m
-        baseline = _1m;
+        baseline = 10**9 * 10**decimals; //1bn;
         totalSupply = 0;
-        maxSupply = 2 * _1m;
+        maxSupply = 2 * baseline; //2bn
         conversionFactor = 1000;
         currentEra = 1;
         secondsPerEra = 1; //86400;

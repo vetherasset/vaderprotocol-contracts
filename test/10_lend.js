@@ -64,7 +64,7 @@ describe("Deploy Router", function() {
     await anchor.approve(router.address, BN2Str(one), {from:acc1})
 
     await vether.approve(vader.address, '9400', {from:acc1})
-    await vader.upgrade('9400', {from:acc1}) 
+    await vader.upgrade('10', {from:acc1}) 
     await vader.flipMinting()
     await usdv.convert('5000', {from:acc1})
 
@@ -101,10 +101,10 @@ describe("Add liquidity", function() {
 
 describe("Should Borrow Debt", function() {
   it("Borrow ANCHOR with VADER", async function() {
-    expect(BN2Str(await vader.balanceOf(acc1))).to.equal('2400');
+    expect(BN2Str(await vader.balanceOf(acc1))).to.equal('3000');
     expect(BN2Str(await anchor.balanceOf(acc1))).to.equal('1000');
     await router.borrow('100', vader.address, anchor.address, {from:acc1})
-    expect(BN2Str(await vader.balanceOf(acc1))).to.equal('2300');
+    expect(BN2Str(await vader.balanceOf(acc1))).to.equal('2900');
     expect(BN2Str(await anchor.balanceOf(acc1))).to.equal('1058');
     expect(BN2Str(await router.getSystemCollateral(vader.address, anchor.address))).to.equal('100');
     expect(BN2Str(await router.getSystemDebt(vader.address, anchor.address))).to.equal('58');
@@ -154,11 +154,11 @@ describe("Should Borrow Debt", function() {
 
 describe("Should Repay Debt", function() {
     it("Repay VADER with ANCHOR", async function() {
-      expect(BN2Str(await vader.balanceOf(acc1))).to.equal('2050');
+      expect(BN2Str(await vader.balanceOf(acc1))).to.equal('2650');
       expect(BN2Str(await anchor.balanceOf(acc1))).to.equal('1124');
     //   expect(BN2Str(await router.getMemberDebt(acc1, vader.address, anchor.address))).to.equal('58');
       await router.repay('10000', vader.address, anchor.address, {from:acc1})
-      expect(BN2Str(await vader.balanceOf(acc1))).to.equal('2150');
+      expect(BN2Str(await vader.balanceOf(acc1))).to.equal('2750');
       expect(BN2Str(await anchor.balanceOf(acc1))).to.equal('1066');
       expect(BN2Str(await router.getSystemCollateral(vader.address, anchor.address))).to.equal('0');
       expect(BN2Str(await router.getSystemDebt(vader.address, anchor.address))).to.equal('0');
