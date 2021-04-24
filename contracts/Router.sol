@@ -5,6 +5,7 @@ pragma solidity 0.8.3;
 import "./interfaces/iERC20.sol";
 import "./interfaces/iUTILS.sol";
 import "./interfaces/iVADER.sol";
+import "./interfaces/iRESERVE.sol";
 import "./interfaces/iPOOLS.sol";
 import "./interfaces/iSYNTH.sol";
 
@@ -23,6 +24,7 @@ contract Router {
 
     address public VADER;
     address public USDV;
+    address public RESERVE;
     address public POOLS;
 
     uint256 public anchorLimit;
@@ -77,24 +79,26 @@ contract Router {
 
     // Only DAO can execute
     modifier onlyDAO() {
-        require(msg.sender == DAO(), "Not DAO");
+        require(msg.sender == iVADER(VADER).DAO(), "Not DAO");
         _;
     }
 
     //=====================================CREATION=========================================//
-    // Constructor
+ 
     constructor() {}
 
     // Init
     function init(
         address _vader,
         address _usdv,
+        address _reserve,
         address _pool
     ) public {
         require(inited == false, "inited");
         inited = true;
         VADER = _vader;
         USDV = _usdv;
+        RESERVE = _reserve;
         POOLS = _pool;
         rewardReductionFactor = 1;
         timeForFullProtection = 1; //8640000; //100 days
@@ -134,6 +138,7 @@ contract Router {
         address token,
         uint256 inputToken
     ) external returns (uint256) {
+        iRESERVE(RESERVE).checkReserve();
         uint256 _actualInputBase = moveTokenToPools(base, inputBase);
         uint256 _actualInputToken = moveTokenToPools(token, inputToken);
         addDepositData(msg.sender, token, _actualInputBase, _actualInputToken);
@@ -144,11 +149,16 @@ contract Router {
         address base,
         address token,
         uint256 basisPoints
-    ) external returns (uint256 amountBase, uint256 amountToken) {
-        (amountBase, amountToken) = iPOOLS(POOLS).removeLiquidity(base, token, basisPoints);
+    ) external returns (uint256 units, uint256 amountBase, uint256 amountToken) {
         uint256 _protection = getILProtection(msg.sender, base, token, basisPoints);
+        if(_protection > 0){
+            iRESERVE(RESERVE).requestFunds(base, POOLS, _protection);
+            iPOOLS(POOLS).addLiquidity(base, token, msg.sender);
+            mapMemberToken_depositBase[msg.sender][token] += _protection;
+        }
+        (units, amountBase, amountToken) = iPOOLS(POOLS).removeLiquidity(base, token, basisPoints);
         removeDepositData(msg.sender, token, basisPoints, _protection);
-        iERC20(base).transfer(msg.sender, _protection);
+        iRESERVE(RESERVE).checkReserve();
     }
 
     //=======================================SWAP===========================================//
@@ -243,7 +253,7 @@ contract Router {
         if (!isBase(_token)) {
             // USDV or VADER is never a pool
             uint256 _reward = iUTILS(UTILS()).getRewardShare(_token, rewardReductionFactor);
-            iERC20(_base).transfer(POOLS, _reward);
+            iRESERVE(RESERVE).requestFunds(_base, POOLS, _reward);
             iPOOLS(POOLS).sync(_base, _token);
             emit PoolReward(_base, _token, _reward);
         }
@@ -405,10 +415,10 @@ contract Router {
         mapCollateralDebt_Debt[collateralAsset][debtAsset] += _debtIssued; // Record debt
         _addDebtToMember(member, _collateral, collateralAsset, _debtIssued, debtAsset); // Update member details
         if (collateralAsset == VADER || iPOOLS(POOLS).isAnchor(debtAsset)) {
-            iERC20(VADER).transfer(POOLS, _baseBorrowed); // Send to pools
+            iRESERVE(RESERVE).requestFundsStrict(VADER, POOLS, _baseBorrowed);
             iPOOLS(POOLS).swap(VADER, debtAsset, member, false); // Execute swap to member
         } else if (collateralAsset == USDV || iPOOLS(POOLS).isAsset(debtAsset)) {
-            iERC20(USDV).transfer(POOLS, _baseBorrowed); // Send to pools
+            iRESERVE(RESERVE).requestFundsStrict(USDV, POOLS, _baseBorrowed); // Send to pools
             iPOOLS(POOLS).swap(USDV, debtAsset, member, false); // Execute swap to member
         }
         emit AddCollateral(member, collateralAsset, amount, debtAsset, _debtIssued); // Event
@@ -435,9 +445,9 @@ contract Router {
         uint256 _amount = iUTILS(UTILS()).calcPart(basisPoints, getMemberDebt(member, collateralAsset, debtAsset));
         uint256 _debt = moveTokenToPools(debtAsset, _amount); // Get Debt
         if (collateralAsset == VADER || iPOOLS(POOLS).isAnchor(debtAsset)) {
-            iPOOLS(POOLS).swap(VADER, debtAsset, address(this), true); // Swap Debt to Base back here
+            iPOOLS(POOLS).swap(VADER, debtAsset, RESERVE, true); // Swap Debt to Base back here
         } else if (collateralAsset == USDV || iPOOLS(POOLS).isAsset(debtAsset)) {
-            iPOOLS(POOLS).swap(USDV, debtAsset, address(this), true); // Swap Debt to Base back here
+            iPOOLS(POOLS).swap(USDV, debtAsset, RESERVE, true); // Swap Debt to Base back here
         }
         (uint256 _collateralUnlocked, uint256 _memberInterestShare) =
             iUTILS(UTILS()).getDebtValueInCollateral(member, _debt, collateralAsset, debtAsset); // Unlock collateral that is pro-rata to re-paid debt ($50/$100 = 50%)
@@ -563,12 +573,12 @@ contract Router {
         }
     }
 
-    function reserveVADER() public view returns (uint256) {
-        return iERC20(VADER).balanceOf(address(this));
+    function reserveUSDV() public view returns (uint256) {
+        return iRESERVE(RESERVE).reserveUSDV(); // Balance
     }
 
-    function reserveUSDV() public view returns (uint256) {
-        return iERC20(USDV).balanceOf(address(this));
+    function reserveVADER() public view returns (uint256) {
+        return iRESERVE(RESERVE).reserveVADER(); // Balance
     }
 
     // Optionality

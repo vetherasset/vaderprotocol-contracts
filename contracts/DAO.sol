@@ -5,6 +5,7 @@ pragma solidity 0.8.3;
 import "./interfaces/iERC20.sol";
 import "./interfaces/iUTILS.sol";
 import "./interfaces/iVADER.sol";
+import "./interfaces/iRESERVE.sol";
 import "./interfaces/iVAULT.sol";
 import "./interfaces/iROUTER.sol";
 
@@ -19,6 +20,7 @@ contract DAO {
     uint256 public proposalCount;
     address public VADER;
     address public USDV;
+    address public RESERVE;
     address public VAULT;
     uint256 public coolOffPeriod;
 
@@ -62,18 +64,20 @@ contract DAO {
     );
 
     //=====================================CREATION=========================================//
-    // Constructor
+ 
     constructor() {}
 
     function init(
         address _vader,
         address _usdv,
+        address _reserve,
         address _vault
     ) public {
         require(inited == false);
         inited = true;
         VADER = _vader;
         USDV = _usdv;
+        RESERVE = _reserve;
         VAULT = _vault;
         coolOffPeriod = 1;
     }
@@ -174,9 +178,8 @@ contract DAO {
 
     function grantFunds(uint256 _proposalID) internal {
         GrantDetails memory _grant = mapPID_grant[_proposalID];
-        require(_grant.amount <= iERC20(USDV).balanceOf(VAULT) / 10, "Not more than 10%");
         completeProposal(_proposalID);
-        iVAULT(VAULT).grant(_grant.recipient, _grant.amount);
+        iRESERVE(RESERVE).grant(_grant.recipient, _grant.amount);
     }
 
     function moveUtils(uint256 _proposalID) internal {
@@ -189,7 +192,7 @@ contract DAO {
     function moveRewardAddress(uint256 _proposalID) internal {
         address _proposedAddress = mapPID_address[_proposalID];
         require(_proposedAddress != address(0), "No address proposed");
-        iVADER(VADER).setRewardAddress(_proposedAddress);
+        iVADER(VADER).setReserve(_proposedAddress);
         completeProposal(_proposalID);
     }
 

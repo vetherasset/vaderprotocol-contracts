@@ -57,7 +57,7 @@ contract Pools {
     event SynthSync(address indexed token, uint256 burntSynth, uint256 deletedUnits);
 
     //=====================================CREATION=========================================//
-    // Constructor
+ 
     constructor() {}
 
     // Init
@@ -117,7 +117,7 @@ contract Pools {
         address base,
         address token,
         uint256 basisPoints
-    ) external returns (uint256 outputBase, uint256 outputToken) {
+    ) external returns (uint256, uint256, uint256) {
         return _removeLiquidity(base, token, basisPoints, tx.origin); // Because this contract is wrapped by a router
     }
 
@@ -125,7 +125,7 @@ contract Pools {
         address base,
         address token,
         uint256 basisPoints
-    ) external returns (uint256 outputBase, uint256 outputToken) {
+    ) external returns (uint256, uint256, uint256) {
         return _removeLiquidity(base, token, basisPoints, msg.sender); // If want to interact directly
     }
 
@@ -134,19 +134,16 @@ contract Pools {
         address token,
         uint256 basisPoints,
         address member
-    ) internal returns (uint256 outputBase, uint256 outputToken) {
+    ) internal returns (uint256 units, uint256 outputBase, uint256 outputToken) {
         require(base == USDV || base == VADER);
-        uint256 _units = iUTILS(UTILS()).calcPart(basisPoints, mapTokenMember_Units[token][member]);
-        outputBase = iUTILS(UTILS()).calcShare(_units, mapToken_Units[token], mapToken_baseAmount[token]);
-        outputToken = iUTILS(UTILS()).calcShare(_units, mapToken_Units[token], mapToken_tokenAmount[token]);
-        mapToken_Units[token] -= _units;
-        mapTokenMember_Units[token][member] -= _units;
+        (units, outputBase, outputToken) = iUTILS(UTILS()).getMemberShare(basisPoints, token, member);
+        mapToken_Units[token] -= units;
+        mapTokenMember_Units[token][member] -= units;
         mapToken_baseAmount[token] -= outputBase;
         mapToken_tokenAmount[token] -= outputToken;
-        emit RemoveLiquidity(member, base, outputBase, token, outputToken, _units, mapToken_Units[token]);
+        emit RemoveLiquidity(member, base, outputBase, token, outputToken, units, mapToken_Units[token]);
         transferOut(base, outputBase, member);
         transferOut(token, outputToken, member);
-        return (outputBase, outputToken);
     }
 
     //=======================================SWAP===========================================//

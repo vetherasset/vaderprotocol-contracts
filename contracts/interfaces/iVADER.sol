@@ -18,7 +18,7 @@ interface iVADER {
 
     function setParams(uint256 newEra, uint256 newCurve) external;
 
-    function setRewardAddress(address newAddress) external;
+    function setReserve(address newReserve) external;
 
     function changeUTILS(address newUTILS) external;
 

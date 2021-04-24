@@ -122,6 +122,12 @@ contract Utils {
         }
     }
 
+    function getMemberShare(uint256 basisPoints, address token, address member) external view returns(uint256 units, uint256 outputBase, uint256 outputToken) {
+        units = calcPart(basisPoints, iPOOLS(POOLS).getMemberUnits(token, member));
+        outputBase = calcShare(units, iPOOLS(POOLS).getUnits(token), iPOOLS(POOLS).getBaseAmount(token));
+        outputToken = calcShare(units, iPOOLS(POOLS).getUnits(token), iPOOLS(POOLS).getTokenAmount(token));
+    }
+
     //====================================INCENTIVES========================================//
 
     function getRewardShare(address token, uint256 rewardReductionFactor) external view returns (uint256 rewardShare) {

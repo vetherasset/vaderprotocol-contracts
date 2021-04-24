@@ -14,7 +14,7 @@ contract Attack {
     address public USDV;
 
     //=====================================CREATION=========================================//
-    // Constructor
+ 
     constructor() {}
 
     function init(address _vader, address _USDV) public {

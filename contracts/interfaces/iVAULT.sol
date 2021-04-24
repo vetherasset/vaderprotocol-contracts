@@ -8,8 +8,6 @@ interface iVAULT {
         uint256 newGrantTime
     ) external;
 
-    function grant(address recipient, uint256 amount) external;
-
     function deposit(address synth, uint256 amount) external;
 
     function depositForMember(

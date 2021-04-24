@@ -3,6 +3,7 @@ var Utils = artifacts.require('./Utils')
 var Vether = artifacts.require('./Vether')
 var Vader = artifacts.require('./Vader')
 var USDV = artifacts.require('./USDV')
+var RESERVE = artifacts.require('./Reserve')
 var VAULT = artifacts.require('./Vault')
 var Pools = artifacts.require('./Pools')
 var Router = artifacts.require('./Router')
@@ -22,7 +23,8 @@ function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-var utils; var vader; var vether; var usdv; var vault; var pools; var anchor; var asset; var router; var factory;
+var utils; var vader; var vether; var usdv;
+var reserve; var vault; var pools; var anchor; var asset; var router; var factory;
 var dao;
 var anchor; var anchor1; var anchor2; var anchor3; var anchor4;  var anchor5; 
 var acc0; var acc1; var acc2; var acc3; var acc0; var acc5;
@@ -39,6 +41,7 @@ before(async function() {
   vether = await Vether.new();
   vader = await Vader.new();
   usdv = await USDV.new();
+reserve = await RESERVE.new();
   vault = await VAULT.new();
   router = await Router.new();
   pools = await Pools.new();
@@ -53,16 +56,22 @@ before(async function() {
 describe("Deploy DAO", function() {
   it("Should deploy right", async function() {
     await utils.init(vader.address, usdv.address, router.address, pools.address, factory.address)
-    await vader.init(vether.address, usdv.address, utils.address)
+    await vader.init(vether.address, usdv.address, utils.address, reserve.address)
     await usdv.init(vader.address, vault.address, router.address)
-    await vault.init(vader.address, usdv.address, router.address, factory.address, pools.address)
-    await router.init(vader.address, usdv.address, pools.address);
+await reserve.init(vader.address, usdv.address, vault.address, router.address, router.address)
+    await vault.init(vader.address, usdv.address, reserve.address, router.address, factory.address, pools.address)
+    await router.init(vader.address, usdv.address, reserve.address, pools.address);
     await pools.init(vader.address, usdv.address, router.address, factory.address);
     await factory.init(pools.address);
-    await dao.init(vader.address, usdv.address, vault.address);
+    await dao.init(vader.address, usdv.address, reserve.address, vault.address);
     
     await vether.approve(vader.address, '6000', {from:acc0})
     await vader.upgrade('3', {from:acc0}) 
+
+    await vader.flipEmissions()
+    await vader.setParams('1', '90')
+    await vader.transfer(acc1, ('100'), {from:acc0})
+    await vader.transfer(acc0, ('100'), {from:acc1})
 
     await vader.transfer(acc1, '2000') 
     await anchor.transfer(acc1, '1110') 
@@ -93,7 +102,7 @@ describe("Deploy DAO", function() {
 describe("DAO Functions", function() {
   it("It should GRANT", async () => {
       await usdv.transfer(vault.address, '100', {from:acc1});
-      assert.equal(BN2Str(await vault.reserveUSDV()), '100')
+      assert.equal(BN2Str(await reserve.reserveUSDV()), '130')
       await dao.newGrantProposal(acc3, '10', { from: acc1 })
       let proposalCount = BN2Str(await dao.proposalCount())
       await dao.voteProposal(proposalCount, { from: acc0 })

@@ -3,6 +3,7 @@ var Utils = artifacts.require('./Utils')
 var Vether = artifacts.require('./Vether')
 var Vader = artifacts.require('./Vader')
 var USDV = artifacts.require('./USDV')
+var RESERVE = artifacts.require('./Reserve')
 var VAULT = artifacts.require('./Vault')
 var Pools = artifacts.require('./Pools')
 var Router = artifacts.require('./Router')
@@ -21,7 +22,8 @@ function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-var utils; var vader; var vether; var usdv; var vault; var pools; var anchor; var asset; var router; var factory;
+var utils; var vader; var vether; var usdv;
+var reserve; var vault; var pools; var anchor; var asset; var router; var factory;
 var anchor0; var anchor1; var anchor2; var anchor3; var anchor4;  var anchor5; 
 var acc0; var acc1; var acc2; var acc3; var acc0; var acc5;
 const one = 10**18
@@ -37,6 +39,7 @@ before(async function() {
   vether = await Vether.new();
   vader = await Vader.new();
   usdv = await USDV.new();
+reserve = await RESERVE.new();
   vault = await VAULT.new();
   router = await Router.new();
   pools = await Pools.new();
@@ -52,10 +55,11 @@ describe("Deploy Protection", function() {
     await vader.flipEmissions()
 
     await utils.init(vader.address, usdv.address, router.address, pools.address, factory.address)
-    await vader.init(vether.address, usdv.address, utils.address)
+    await vader.init(vether.address, usdv.address, utils.address, reserve.address)
     await usdv.init(vader.address, vault.address, router.address)
-    await vault.init(vader.address, usdv.address, router.address, factory.address, pools.address)
-    await router.init(vader.address, usdv.address, pools.address);
+await reserve.init(vader.address, usdv.address, vault.address, router.address, router.address)
+    await vault.init(vader.address, usdv.address, reserve.address, router.address, factory.address, pools.address)
+    await router.init(vader.address, usdv.address, reserve.address, pools.address);
     await pools.init(vader.address, usdv.address, router.address, factory.address);
     await factory.init(pools.address);
 
@@ -70,6 +74,8 @@ describe("Deploy Protection", function() {
     await router.addLiquidity(vader.address, '1000', anchor.address, '1000', {from:acc1})
 
     await vader.flipMinting()
+    await vader.flipEmissions()
+    await vader.setParams('1', '1')
     await usdv.convert('2000', {from:acc1})
 
     await asset.transfer(acc1, '2000')
@@ -77,15 +83,16 @@ describe("Deploy Protection", function() {
     await router.addLiquidity(usdv.address, '1000', asset.address, '1000', {from:acc1})
 
     await vader.transfer(acc0, '100', {from:acc1})
+    await vader.transfer(acc1, '100')
+    await vader.transfer(acc0, '100', {from:acc1})
     await usdv.transfer(acc0, '100', {from:acc1})
 
     // console.log(BN2Str(await vader.getDailyEmission()))
 
-    expect(Number(await vader.getDailyEmission())).to.be.greaterThan(0);
-    expect(Number(await vault.reserveUSDV())).to.be.greaterThan(0);
-    expect(Number(await router.reserveUSDV())).to.be.greaterThan(0);
-    expect(Number(await router.reserveVADER())).to.be.greaterThan(0);
-    await vader.flipEmissions()
+    expect(BN2Str(await vader.getDailyEmission())).to.equal('6800');
+    expect(BN2Str(await reserve.reserveVADER())).to.equal('800');
+    expect(BN2Str(await vader.balanceOf(reserve.address))).to.equal('800');
+    // await vader.flipEmissions()
   });
 });
 
@@ -117,13 +124,45 @@ describe("Should do IL Protection", function() {
     let coverage = await utils.getCoverage(acc1, anchor.address)
     expect(BN2Str(coverage)).to.equal('183');
     expect(BN2Str(await utils.getProtection(acc1, anchor.address, "10000", '1'))).to.equal('183');
-    let reserveVADER = BN2Str(await router.reserveVADER())
-    expect(BN2Str(await router.getILProtection(acc1, vader.address, anchor.address, '10000'))).to.equal(reserveVADER);
+    // let reserveVADER = BN2Str(await reserve.reserveVADER())
+    expect(BN2Str(await router.getILProtection(acc1, vader.address, anchor.address, '10000'))).to.equal('183');
+    // expect(BN2Str(await reserve.reserveVADER())).to.equal('8');
+    // expect(BN2Str(await router.getILProtection(acc1, vader.address, anchor.address, '10000'))).to.equal('8');
 
+    
 
   });
 
+  it("RECEIVE protection on 50% ", async function() {
+
+    expect(BN2Str(await reserve.reserveVADER())).to.equal('800');
+    expect(BN2Str(await vader.balanceOf(acc1))).to.equal('5346');
+    expect(BN2Str(await anchor.balanceOf(acc1))).to.equal('100');
+
+    let share = await utils.getMemberShare('5000', anchor.address, acc1)
+
+    expect(BN2Str(share.units)).to.equal('500'); 
+    expect(BN2Str(share.outputBase)).to.equal('277'); 
+    expect(BN2Str(share.outputToken)).to.equal('950'); 
+
+    let tx = await router.removeLiquidity(vader.address, anchor.address, '5000', {from:acc1})
+
+    expect(BN2Str(await reserve.reserveVADER())).to.equal('709');
+    expect(BN2Str(await vader.balanceOf(acc1))).to.equal('5668'); //+322
+    expect(BN2Str(await anchor.balanceOf(acc1))).to.equal('1050'); //+950
+
+    expect(BN2Str(await pools.getMemberUnits(anchor.address, acc1))).to.equal('500');
+
+    
+
+
+
+  });  
+
   it("Small swap, need protection on Asset", async function() {
+    // await vader.flipEmissions()
+    // expect(Number(await reserve.reserveUSDV())).to.be.greaterThan(0);
+    // expect(Number(await reserve.reserveUSDV())).to.be.greaterThan(0);
     await router.setParams('1', '1', '2')
     expect(await pools.isAsset(asset.address)).to.equal(true);
     await router.curatePool(asset.address)
@@ -138,7 +177,7 @@ describe("Should do IL Protection", function() {
     let coverage = await utils.getCoverage(acc1, asset.address)
     expect(BN2Str(coverage)).to.equal('183');
     expect(BN2Str(await utils.getProtection(acc1, asset.address, "10000", '1'))).to.equal('183');
-    expect(Number(await router.getILProtection(acc1, usdv.address, asset.address, '10000'))).to.be.lessThanOrEqual(Number(await router.reserveVADER()));
+    expect(Number(await router.getILProtection(acc1, usdv.address, asset.address, '10000'))).to.be.lessThanOrEqual(Number(await reserve.reserveVADER()));
   });
 
 });
