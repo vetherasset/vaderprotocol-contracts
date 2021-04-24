@@ -74,6 +74,8 @@ interface iROUTER {
 
     function isCurated(address token) external view returns (bool curated);
 
+    function isBase(address token) external view returns (bool base);
+
     function reserveUSDV() external view returns (uint256);
 
     function reserveVADER() external view returns (uint256);
