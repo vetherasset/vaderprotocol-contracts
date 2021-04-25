@@ -3,6 +3,7 @@ pragma solidity 0.8.3;
 
 // Interfaces
 import "./interfaces/iERC20.sol";
+import "./interfaces/iDAO.sol";
 import "./interfaces/iUTILS.sol";
 import "./interfaces/iUSDV.sol";
 import "./interfaces/iROUTER.sol";
@@ -19,7 +20,7 @@ contract Vader is iERC20 {
     mapping(address => mapping(address => uint256)) private _allowances;
 
     // Parameters
-    bool private inited;
+     
     bool public emitting;
     bool public minting;
     uint256 public conversionFactor;
@@ -31,18 +32,16 @@ contract Vader is iERC20 {
     uint256 public nextEraTime;
     uint256 public feeOnTransfer;
 
-    address public VETHER;
-    address public USDV;
-    address public UTILS;
-    address public RESERVE;
     address public DAO;
+    address public DEPLOYER;
+
     address public burnAddress;
 
     event NewEra(uint256 currentEra, uint256 nextEraTime, uint256 emission);
 
     // Only DAO can execute
     modifier onlyDAO() {
-        require(msg.sender == DAO, "Not DAO");
+        require(msg.sender == DAO || msg.sender == DEPLOYER, "Not DAO");
         _;
     }
     // Stop flash attacks
@@ -52,7 +51,7 @@ contract Vader is iERC20 {
     }
 
     function isMature() public view returns (bool) {
-        return iUSDV(USDV).isMature();
+        return iUSDV(USDV()).isMature();
     }
 
     //=====================================CREATION=========================================//
@@ -69,23 +68,14 @@ contract Vader is iERC20 {
         secondsPerEra = 1; //86400;
         nextEraTime = block.timestamp + secondsPerEra;
         emissionCurve = 10;
-        DAO = msg.sender;
         burnAddress = 0x0111011001100001011011000111010101100101;
+        DEPLOYER = msg.sender;
     }
 
-    // Can only be called once
-    function init(
-        address _vether,
-        address _USDV,
-        address _utils,
-        address _reserve
-    ) external {
-        require(inited == false);
-        inited = true;
-        VETHER = _vether;
-        USDV = _USDV;
-        UTILS = _utils;
-        RESERVE = _reserve;
+    function init(address _dao) external {
+        if(DAO == address(0)){
+            DAO = _dao;
+        }
     }
 
     //========================================iERC20=========================================//
@@ -147,7 +137,7 @@ contract Vader is iERC20 {
         require(sender != address(0), "sender");
         require(recipient != address(this), "recipient");
         _balances[sender] -= amount;
-        uint _fee = iUTILS(UTILS).calcPart(feeOnTransfer, amount);  // Critical functionality
+        uint _fee = iUTILS(UTILS()).calcPart(feeOnTransfer, amount);  // Critical functionality
         if(_fee <= amount){                            // Stops reverts if UTILS corrupted
             amount -= _fee;
             _burn(msg.sender, _fee);
@@ -211,17 +201,6 @@ contract Vader is iERC20 {
         emissionCurve = newCurve;
     }
 
-    // Can set reward address
-    function setReserve(address newReserve) external onlyDAO {
-        RESERVE = newReserve;
-    }
-
-    // Can change UTILS
-    function changeUTILS(address newUTILS) external onlyDAO {
-        require(newUTILS != address(0), "address err");
-        UTILS = newUTILS;
-    }
-
     // Can change DAO
     function changeDAO(address newDAO) external onlyDAO {
         require(newDAO != address(0), "address err");
@@ -241,8 +220,8 @@ contract Vader is iERC20 {
             currentEra += 1; // Increment Era
             nextEraTime = block.timestamp + secondsPerEra; // Set next Era time
             uint256 _emission = getDailyEmission(); // Get Daily Dmission
-            _mint(RESERVE, _emission); // Mint to the RESERVE Address
-            feeOnTransfer = iUTILS(UTILS).getFeeOnTransfer(totalSupply, maxSupply); // UpdateFeeOnTransfer
+            _mint(RESERVE(), _emission); // Mint to the RESERVE Address
+            feeOnTransfer = iUTILS(UTILS()).getFeeOnTransfer(totalSupply, maxSupply); // UpdateFeeOnTransfer
             if (feeOnTransfer > 1000) {
                 feeOnTransfer = 1000;
             } // Max 10% if UTILS corrupted
@@ -265,7 +244,7 @@ contract Vader is iERC20 {
     //======================================ASSET MINTING========================================//
     // VETHER Owners to Upgrade
     function upgrade(uint256 amount) external {
-        require(iERC20(VETHER).transferFrom(msg.sender, burnAddress, amount));
+        require(iERC20(VETHER()).transferFrom(msg.sender, burnAddress, amount));
         _mint(msg.sender, amount * conversionFactor);
     }
 
@@ -277,10 +256,29 @@ contract Vader is iERC20 {
     // Redeem on behalf of member (must have sent USDV first)
     function redeemToMember(address member) public flashProof returns (uint256 redeemAmount) {
         if (minting) {
-            uint256 _amount = iERC20(USDV).balanceOf(address(this));
-            iERC20(USDV).burn(_amount);
-            redeemAmount = iROUTER(iUSDV(USDV).ROUTER()).getVADERAmount(_amount); // Critical pricing functionality
+            uint256 _amount = iERC20(USDV()).balanceOf(address(this));
+            iERC20(USDV()).burn(_amount);
+            redeemAmount = iROUTER(ROUTER()).getVADERAmount(_amount); // Critical pricing functionality
             _mint(member, redeemAmount);
         }
     }
+
+    //====================================== HELPERS ========================================//
+
+    function VETHER() internal view returns(address){
+        return iDAO(DAO).VETHER();
+    }
+    function USDV() internal view returns(address){
+        return iDAO(DAO).USDV();
+    }
+    function RESERVE() internal view returns(address){
+        return iDAO(DAO).RESERVE();
+    }
+    function ROUTER() internal view returns(address){
+        return iDAO(DAO).ROUTER();
+    }
+    function UTILS() internal view returns(address){
+        return iDAO(DAO).UTILS();
+    }
+
 }

@@ -3,6 +3,7 @@ pragma solidity 0.8.3;
 
 // Interfaces
 import "./interfaces/iERC20.sol";
+import "./interfaces/iDAO.sol";
 import "./interfaces/iVADER.sol";
 import "./interfaces/iROUTER.sol";
 
@@ -18,18 +19,15 @@ contract USDV is iERC20 {
     mapping(address => mapping(address => uint256)) private _allowances;
 
     // Parameters
-    bool private inited;
     uint256 public blockDelay;
 
     address public VADER;
-    address public VAULT;
-    address public ROUTER;
 
     mapping(address => uint256) public lastBlock;
 
     // Only DAO can execute
     modifier onlyDAO() {
-        require(msg.sender == iVADER(VADER).DAO(), "Not DAO");
+        require(msg.sender == DAO() || msg.sender == DEPLOYER(), "Not DAO");
         _;
     }
     // Stop flash attacks
@@ -54,16 +52,10 @@ contract USDV is iERC20 {
         totalSupply = 0;
     }
 
-    function init(
-        address _vader,
-        address _vault,
-        address _router
-    ) external {
-        require(inited == false);
-        inited = true;
-        VADER = _vader;
-        VAULT = _vault;
-        ROUTER = _router;
+    function init(address _vader) external {
+        if(VADER == address(0)){
+            VADER = _vader;
+        }
     }
 
     //========================================iERC20=========================================//
@@ -186,7 +178,7 @@ contract USDV is iERC20 {
         if (iVADER(VADER).minting()) {
             lastBlock[tx.origin] = block.number; // Record first
             iERC20(VADER).burn(amount);
-            _convertAmount = iROUTER(ROUTER).getUSDVAmount(amount); // Critical pricing functionality
+            _convertAmount = iROUTER(ROUTER()).getUSDVAmount(amount); // Critical pricing functionality
             _mint(_member, _convertAmount);
         }
     }
@@ -219,4 +211,13 @@ contract USDV is iERC20 {
 
     //============================== HELPERS ================================//
 
+    function DAO() internal view returns(address){
+        return iVADER(VADER).DAO();
+    }
+    function DEPLOYER() internal view returns(address){
+        return iVADER(VADER).DEPLOYER();
+    }
+    function ROUTER() internal view returns(address){
+        return iDAO(iVADER(VADER).DAO()).ROUTER();
+    }
 }

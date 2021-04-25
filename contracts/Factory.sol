@@ -5,14 +5,12 @@ import "./Synth.sol";
 
 // Factory Contract
 contract Factory {
-    bool private inited;
-    address public VADER;
-    address public USDV;
+
     address public POOLS;
 
     address[] public arraySynths;
-    mapping(address => address) public getSynth;
-    mapping(address => bool) public isSynth;
+    mapping(address => address) private mapToken_Synth;
+    mapping(address => bool) private _isSynth;
 
     event CreateSynth(address indexed token, address indexed pool);
 
@@ -23,15 +21,15 @@ contract Factory {
 
     constructor() {}
 
-    function init(address _pool) public {
-        require(inited == false);
-        inited = true;
-        POOLS = _pool;
+    function init(address _pools) public {
+        if(POOLS == address(0)){
+            POOLS = _pools;
+        }
     }
 
     //Create a synth asset
     function deploySynth(address token) external onlyPOOLS returns (address synth) {
-        require(getSynth[token] == address(0), "CreateErr");
+        require(mapToken_Synth[token] == address(0), "CreateErr");
         Synth newSynth;
         newSynth = new Synth(token);
         synth = address(newSynth);
@@ -48,18 +46,19 @@ contract Factory {
         return true;
     }
 
-    // function getSynth(address token) public view returns (address synth){
-    //     return mapToken_Synth[token];
-    // }
-    // function isSynth(address token) public view returns (bool _isSynth){
-    //     if(_isListedSynth[token] == true){
-    //         return true;
-    //     }
-    // }
+    function getSynth(address token) public view returns (address synth){
+        return mapToken_Synth[token];
+    }
+    function isSynth(address token) public view returns (bool _exists){
+        bool _synthExists = _isSynth[token];
+        if(_synthExists){
+            return true;
+        }
+    }
 
     function _addSynth(address _token, address _synth) internal {
-        getSynth[_token] = _synth;
+        mapToken_Synth[_token] = _synth;
         arraySynths.push(_synth);
-        isSynth[_synth] = true;
+        _isSynth[_synth] = true;
     }
 }

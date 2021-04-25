@@ -9,7 +9,7 @@ import "./interfaces/iROUTER.sol";
 
 //======================================VADER=========================================//
 contract Attack {
-    bool private inited;
+     
     address public VADER;
     address public USDV;
 
@@ -18,8 +18,6 @@ contract Attack {
     constructor() {}
 
     function init(address _vader, address _USDV) public {
-        require(inited == false);
-        inited = true;
         VADER = _vader;
         USDV = _USDV;
     }

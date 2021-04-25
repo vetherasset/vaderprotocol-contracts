@@ -44,12 +44,15 @@ All contracts need to be initialised for the first time, else the system will no
 
 ```
 await utils.init(pools.address)
-await vader.init(vether.address, usdv.address, utils.address, reserve.address)
-await usdv.init(vader.address, vault.address, router.address)
-await reserve.init(vader.address, usdv.address, vault.address, router.address, router.address)
-    await vault.init(vader.address, usdv.address, reserve.address, router.address, factory.address, pools.address)
-await router.init(vader.address, usdv.address, reserve.address, pools.address);
-await pools.init(vader.address, usdv.address, router.address, factory.address);
+ 
+await usdv.init(vader.address)
+  await dao.init(vether.address, vader.address, usdv.address, reserve.address, 
+      vault.address, router.address, pools.address, factory.address, utils.address);
+  
+    await reserve.init(vader.address)
+    await vault.init(vader.address)
+await router.init(vader.address);
+await pools.init(vader.address);
 await factory.init(pools.address);
 ```
 

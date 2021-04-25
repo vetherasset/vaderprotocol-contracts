@@ -1,5 +1,6 @@
 const { expect } = require("chai");
 var Utils = artifacts.require('./Utils')
+var DAO = artifacts.require('./DAO')
 var Vether = artifacts.require('./Vether')
 var Vader = artifacts.require('./Vader')
 var USDV = artifacts.require('./USDV')
@@ -21,7 +22,8 @@ function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-var utils; var vader; var vether; var usdv;
+var utils; 
+var dao; var vader; var vether; var usdv;
 var reserve; var vault; var pools; var anchor; var factory; var router;
 var asset; var asset2; var asset3;
 var anchor0; var anchor1; var anchor2; var anchor3; var anchor4;  var anchor5; 
@@ -36,10 +38,11 @@ before(async function() {
   acc3 = await accounts[3].getAddress()
 
   utils = await Utils.new();
+  dao = await DAO.new();
   vether = await Vether.new();
   vader = await Vader.new();
   usdv = await USDV.new();
-reserve = await RESERVE.new();
+  reserve = await RESERVE.new();
   vault = await VAULT.new();
   router = await Router.new();
   pools = await Pools.new();
@@ -51,13 +54,16 @@ reserve = await RESERVE.new();
 describe("Deploy Router", function() {
   it("Should deploy", async function() {
 
-    await utils.init(vader.address, usdv.address, router.address, pools.address, factory.address)
-    await vader.init(vether.address, usdv.address, utils.address, reserve.address)
-    await usdv.init(vader.address, vault.address, router.address)
-await reserve.init(vader.address, usdv.address, vault.address, router.address, router.address)
-    await vault.init(vader.address, usdv.address, reserve.address, router.address, factory.address, pools.address)
-    await router.init(vader.address, usdv.address, reserve.address, pools.address);
-    await pools.init(vader.address, usdv.address, router.address, factory.address);
+    await utils.init(vader.address)
+    await dao.init(vether.address, vader.address, usdv.address, reserve.address, 
+      vault.address, router.address, pools.address, factory.address, utils.address);
+    
+    await vader.init(dao.address)
+    await usdv.init(vader.address)
+    await reserve.init(vader.address)
+    await vault.init(vader.address)
+    await router.init(vader.address);
+    await pools.init(vader.address);
     await factory.init(pools.address);
 
     await vader.flipEmissions()
@@ -86,10 +92,10 @@ await reserve.init(vader.address, usdv.address, vault.address, router.address, r
     await usdv.transfer(acc0, '1', {from:acc1})
     await usdv.transfer(acc1, '1', {from:acc0})
 
-    expect(await router.DAO()).to.equal(acc0);
-    expect(await router.UTILS()).to.equal(utils.address);
+    expect(await vader.DAO()).to.equal(dao.address);
+    expect(await dao.UTILS()).to.equal(utils.address);
     expect(await router.VADER()).to.equal(vader.address);
-    expect(await router.USDV()).to.equal(usdv.address);
+    expect(await dao.USDV()).to.equal(usdv.address);
 
     // expect(Number(await vader.getDailyEmission())).to.be.greaterThan(0);
     // expect(Number(await reserve.reserveUSDV())).to.be.greaterThan(0);

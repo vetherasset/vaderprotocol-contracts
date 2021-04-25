@@ -2,6 +2,7 @@
 pragma solidity ^0.8.3;
 
 import "./interfaces/iERC20.sol";
+import "./interfaces/iDAO.sol";
 import "./interfaces/iUTILS.sol";
 import "./interfaces/iVADER.sol";
 import "./interfaces/iRESERVE.sol";
@@ -11,17 +12,12 @@ import "./interfaces/iFACTORY.sol";
 import "./interfaces/iSYNTH.sol";
 
 contract Vault {
-    bool private inited;
+
     uint256 public erasToEarn;
     uint256 public minGrantTime;
     uint256 public lastGranted;
 
     address public VADER;
-    address public USDV;
-    address public RESERVE;
-    address public ROUTER;
-    address public POOLS;
-    address public FACTORY;
 
     uint256 public minimumDepositTime;
     uint256 public totalWeight;
@@ -55,32 +51,19 @@ contract Vault {
 
     // Only DAO can execute
     modifier onlyDAO() {
-        require(msg.sender == iVADER(VADER).DAO(), "Not DAO");
+        require(msg.sender == DAO() || msg.sender == DEPLOYER(), "Not DAO");
         _;
     }
 
     constructor() {}
 
-    function init(
-        address _vader,
-        address _usdv,
-        address _reserve,
-        address _router,
-        address _factory,
-        address _pool
-    ) public {
-        require(inited == false);
-        inited = true;
-        POOLS = _pool;
-        VADER = _vader;
-        USDV = _usdv;
-        RESERVE = _reserve;
-        ROUTER = _router;
-        FACTORY = _factory;
-        POOLS = _pool;
-        erasToEarn = 100;
-        minimumDepositTime = 1;
-        minGrantTime = 2592000; // 30 days
+    function init(address _vader) public {
+        if(VADER == address(0)){
+            VADER = _vader;
+            erasToEarn = 100;
+            minimumDepositTime = 1;
+            minGrantTime = 2592000; // 30 days
+        }
     }
 
     //=========================================DAO=========================================//
@@ -108,7 +91,7 @@ contract Vault {
         address member,
         uint256 amount
     ) public {
-        require((iFACTORY(FACTORY).isSynth(synth)), "Not Synth"); // Only Synths
+        require((iFACTORY(FACTORY()).isSynth(synth)), "Not Synth"); // Only Synths
         getFunds(synth, amount);
         _deposit(synth, member, amount);
     }
@@ -121,13 +104,13 @@ contract Vault {
         mapMemberSynth_lastTime[_member][_synth] = block.timestamp; // Time of deposit
         mapMemberSynth_deposit[_member][_synth] += _amount; // Record deposit
         uint256 _weight = iUTILS(UTILS()).calcValueInBase(iSYNTH(_synth).TOKEN(), _amount);
-        if (iPOOLS(POOLS).isAnchor(iSYNTH(_synth).TOKEN())) {
-            _weight = iROUTER(ROUTER).getUSDVAmount(_weight); // Price in USDV
+        if (iPOOLS(POOLS()).isAnchor(iSYNTH(_synth).TOKEN())) {
+            _weight = iROUTER(ROUTER()).getUSDVAmount(_weight); // Price in USDV
         }
         mapMember_weight[_member] += _weight; // Total member weight
         totalWeight += _weight; // Total weight
         emit MemberDeposits(_synth, _member, _amount, _weight, totalWeight);
-        iRESERVE(RESERVE).checkReserve();
+        iRESERVE(RESERVE()).checkReserve();
     }
 
     //====================================== HARVEST ========================================//
@@ -139,14 +122,14 @@ contract Vault {
         address _token = iSYNTH(synth).TOKEN();
         reward = calcCurrentReward(synth, _member); // In USDV
         mapMemberSynth_lastTime[_member][synth] = block.timestamp; // Reset time
-        if (iPOOLS(POOLS).isAsset(_token)) {
-            iRESERVE(RESERVE).requestFunds(USDV, POOLS, reward);
-            reward = iPOOLS(POOLS).mintSynth(USDV, _token, address(this));
+        if (iPOOLS(POOLS()).isAsset(_token)) {
+            iRESERVE(RESERVE()).requestFunds(USDV(), POOLS(), reward);
+            reward = iPOOLS(POOLS()).mintSynth(USDV(), _token, address(this));
             _weight = iUTILS(UTILS()).calcValueInBase(_token, reward);
         } else {
-            iRESERVE(RESERVE).requestFunds(VADER, POOLS, reward);
-            reward = iPOOLS(POOLS).mintSynth(VADER, _token, address(this));
-            _weight = iROUTER(ROUTER).getUSDVAmount(iUTILS(UTILS()).calcValueInBase(_token, reward));
+            iRESERVE(RESERVE()).requestFunds(VADER, POOLS(), reward);
+            reward = iPOOLS(POOLS()).mintSynth(VADER, _token, address(this));
+            _weight = iROUTER(ROUTER()).getUSDVAmount(iUTILS(UTILS()).calcValueInBase(_token, reward));
         }
         mapMemberSynth_deposit[_member][synth] += reward;
         mapMember_weight[_member] += _weight;
@@ -160,7 +143,7 @@ contract Vault {
         uint256 _share = calcReward(synth, member); // Get share of rewards for member
         reward = (_share * _secondsSinceClaim) / iVADER(VADER).secondsPerEra(); // Get owed amount, based on per-day rates
         uint256 _reserve;
-        if (iPOOLS(POOLS).isAsset(iSYNTH(synth).TOKEN())) {
+        if (iPOOLS(POOLS()).isAsset(iSYNTH(synth).TOKEN())) {
             _reserve = reserveUSDV();
         } else {
             _reserve = reserveVADER();
@@ -172,11 +155,11 @@ contract Vault {
 
     function calcReward(address synth, address member) public view returns (uint256 reward) {
         uint256 _weight = mapMember_weight[member];
-        if (iPOOLS(POOLS).isAsset(iSYNTH(synth).TOKEN())) {
-            uint256 _adjustedReserve = iROUTER(ROUTER).getUSDVAmount(reserveVADER()) + reserveUSDV(); // Aggregrate reserves
+        if (iPOOLS(POOLS()).isAsset(iSYNTH(synth).TOKEN())) {
+            uint256 _adjustedReserve = iROUTER(ROUTER()).getUSDVAmount(reserveVADER()) + reserveUSDV(); // Aggregrate reserves
             return iUTILS(UTILS()).calcShare(_weight, totalWeight, _adjustedReserve / erasToEarn); // Get member's share of that
         } else {
-            uint256 _adjustedReserve = iROUTER(ROUTER).getUSDVAmount(reserveVADER()) + reserveUSDV();
+            uint256 _adjustedReserve = iROUTER(ROUTER()).getUSDVAmount(reserveVADER()) + reserveUSDV();
             return iUTILS(UTILS()).calcShare(_weight, totalWeight, _adjustedReserve / erasToEarn);
         }
     }
@@ -201,7 +184,7 @@ contract Vault {
         mapMember_weight[_member] -= _weight; // Reduce for member
         totalWeight -= _weight; // Reduce for total
         emit MemberWithdraws(_synth, _member, redeemedAmount, _weight, totalWeight); // Event
-        iRESERVE(RESERVE).checkReserve();
+        iRESERVE(RESERVE()).checkReserve();
     }
 
     //============================== ASSETS ================================//
@@ -225,11 +208,11 @@ contract Vault {
     //============================== HELPERS ================================//
 
     function reserveUSDV() public view returns (uint256) {
-        return iRESERVE(RESERVE).reserveUSDV(); // Balance
+        return iRESERVE(RESERVE()).reserveUSDV(); // Balance
     }
 
     function reserveVADER() public view returns (uint256) {
-        return iRESERVE(RESERVE).reserveVADER(); // Balance
+        return iRESERVE(RESERVE()).reserveVADER(); // Balance
     }
 
     function getMemberDeposit(address synth, address member) external view returns (uint256) {
@@ -244,11 +227,28 @@ contract Vault {
         return mapMemberSynth_lastTime[member][synth];
     }
 
-    function DAO() public view returns (address) {
+    function DAO() internal view returns(address){
         return iVADER(VADER).DAO();
     }
-
+    function DEPLOYER() internal view returns(address){
+        return iVADER(VADER).DEPLOYER();
+    }
+    function USDV() internal view returns(address){
+        return iDAO(iVADER(VADER).DAO()).USDV();
+    }
+    function RESERVE() internal view returns(address){
+        return iDAO(iVADER(VADER).DAO()).RESERVE();
+    }
+    function ROUTER() internal view returns(address){
+        return iDAO(iVADER(VADER).DAO()).ROUTER();
+    }
+    function POOLS() internal view returns(address){
+        return iDAO(iVADER(VADER).DAO()).POOLS();
+    }
+    function FACTORY() internal view returns(address){
+        return iDAO(iVADER(VADER).DAO()).FACTORY();
+    }
     function UTILS() public view returns (address) {
-        return iVADER(VADER).UTILS();
+        return iDAO(iVADER(VADER).DAO()).UTILS();
     }
 }
