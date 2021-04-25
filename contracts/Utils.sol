@@ -3,6 +3,7 @@ pragma solidity 0.8.3;
 
 // Interfaces
 import "./interfaces/iERC20.sol";
+import "./interfaces/iDAO.sol";
 import "./interfaces/iVADER.sol";
 import "./interfaces/iROUTER.sol";
 import "./interfaces/iPOOLS.sol";
@@ -16,30 +17,14 @@ contract Utils {
     uint256 private _10k = 10000;
     uint256 private _year = 31536000; // One Year (in seconds)
 
-    bool private inited;
-
     address public VADER;
-    address public USDV;
-    address public ROUTER;
-    address public POOLS;
-    address public FACTORY;
 
     constructor() {}
 
-    function init(
-        address _vader,
-        address _usdv,
-        address _router,
-        address _pools,
-        address _factory
-    ) public {
-        require(inited == false, "inited");
-        inited = true;
-        VADER = _vader;
-        USDV = _usdv;
-        ROUTER = _router;
-        POOLS = _pools;
-        FACTORY = _factory;
+    function init(address _vader) public {
+        if(VADER == address(0)){
+            VADER = _vader;
+        }
     }
 
     //====================================SYSTEM FUNCTIONS====================================//
@@ -50,24 +35,24 @@ contract Utils {
 
     function assetChecks(address collateralAsset, address debtAsset) external {
         if (collateralAsset == VADER) {
-            require(iPOOLS(POOLS).isAnchor(debtAsset), "Bad Combo"); // Can borrow Anchor with VADER/ANCHOR-SYNTH
-        } else if (collateralAsset == USDV) {
-            require(iPOOLS(POOLS).isAsset(debtAsset), "Bad Combo"); // Can borrow Asset with VADER/ASSET-SYNTH
-        } else if (iPOOLS(POOLS).isSynth(collateralAsset) && iPOOLS(POOLS).isAnchor(iSYNTH(collateralAsset).TOKEN())) {
-            require(iPOOLS(POOLS).isAnchor(debtAsset), "Bad Combo"); // Can borrow Anchor with VADER/ANCHOR-SYNTH
-        } else if (iPOOLS(POOLS).isSynth(collateralAsset) && iPOOLS(POOLS).isAsset(iSYNTH(collateralAsset).TOKEN())) {
-            require(iPOOLS(POOLS).isAsset(debtAsset), "Bad Combo"); // Can borrow Anchor with VADER/ANCHOR-SYNTH
+            require(iPOOLS(POOLS()).isAnchor(debtAsset), "Bad Combo"); // Can borrow Anchor with VADER/ANCHOR-SYNTH
+        } else if (collateralAsset == USDV()) {
+            require(iPOOLS(POOLS()).isAsset(debtAsset), "Bad Combo"); // Can borrow Asset with VADER/ASSET-SYNTH
+        } else if (iPOOLS(POOLS()).isSynth(collateralAsset) && iPOOLS(POOLS()).isAnchor(iSYNTH(collateralAsset).TOKEN())) {
+            require(iPOOLS(POOLS()).isAnchor(debtAsset), "Bad Combo"); // Can borrow Anchor with VADER/ANCHOR-SYNTH
+        } else if (iPOOLS(POOLS()).isSynth(collateralAsset) && iPOOLS(POOLS()).isAsset(iSYNTH(collateralAsset).TOKEN())) {
+            require(iPOOLS(POOLS()).isAsset(debtAsset), "Bad Combo"); // Can borrow Anchor with VADER/ANCHOR-SYNTH
         }
     }
 
     function isBase(address token) public view returns (bool base) {
-        if (token == VADER || token == USDV) {
+        if (token == VADER || token == USDV()) {
             return true;
         }
     }
 
     function isPool(address token) public view returns (bool pool) {
-        if (iPOOLS(POOLS).isAnchor(token) || iPOOLS(POOLS).isAsset(token)) {
+        if (iPOOLS(POOLS()).isAnchor(token) || iPOOLS(POOLS()).isAsset(token)) {
             pool = true;
         }
     }
@@ -75,14 +60,14 @@ contract Utils {
     //====================================PRICING====================================//
 
     function calcValueInBase(address token, uint256 amount) public view returns (uint256 value) {
-        (uint256 _baseAmt, uint256 _tokenAmt) = iPOOLS(POOLS).getPoolAmounts(token);
+        (uint256 _baseAmt, uint256 _tokenAmt) = iPOOLS(POOLS()).getPoolAmounts(token);
         if (_baseAmt > 0 && _tokenAmt > 0) {
             return (amount * _baseAmt) / _tokenAmt;
         }
     }
 
     function calcValueInToken(address token, uint256 amount) public view returns (uint256 value) {
-        (uint256 _baseAmt, uint256 _tokenAmt) = iPOOLS(POOLS).getPoolAmounts(token);
+        (uint256 _baseAmt, uint256 _tokenAmt) = iPOOLS(POOLS()).getPoolAmounts(token);
         if (_baseAmt > 0 && _tokenAmt > 0) {
             return (amount * _tokenAmt) / _baseAmt;
         }
@@ -97,12 +82,12 @@ contract Utils {
     }
 
     function calcSwapValueInBase(address token, uint256 amount) public view returns (uint256) {
-        (uint256 _baseAmt, uint256 _tokenAmt) = iPOOLS(POOLS).getPoolAmounts(token);
+        (uint256 _baseAmt, uint256 _tokenAmt) = iPOOLS(POOLS()).getPoolAmounts(token);
         return calcSwapOutput(amount, _tokenAmt, _baseAmt);
     }
 
     function calcSwapValueInToken(address token, uint256 amount) public view returns (uint256) {
-        (uint256 _baseAmt, uint256 _tokenAmt) = iPOOLS(POOLS).getPoolAmounts(token);
+        (uint256 _baseAmt, uint256 _tokenAmt) = iPOOLS(POOLS()).getPoolAmounts(token);
         return calcSwapOutput(amount, _baseAmt, _tokenAmt);
     }
 
@@ -123,21 +108,21 @@ contract Utils {
     }
 
     function getMemberShare(uint256 basisPoints, address token, address member) external view returns(uint256 units, uint256 outputBase, uint256 outputToken) {
-        units = calcPart(basisPoints, iPOOLS(POOLS).getMemberUnits(token, member));
-        outputBase = calcShare(units, iPOOLS(POOLS).getUnits(token), iPOOLS(POOLS).getBaseAmount(token));
-        outputToken = calcShare(units, iPOOLS(POOLS).getUnits(token), iPOOLS(POOLS).getTokenAmount(token));
+        units = calcPart(basisPoints, iPOOLS(POOLS()).getMemberUnits(token, member));
+        outputBase = calcShare(units, iPOOLS(POOLS()).getUnits(token), iPOOLS(POOLS()).getBaseAmount(token));
+        outputToken = calcShare(units, iPOOLS(POOLS()).getUnits(token), iPOOLS(POOLS()).getTokenAmount(token));
     }
 
     //====================================INCENTIVES========================================//
 
     function getRewardShare(address token, uint256 rewardReductionFactor) external view returns (uint256 rewardShare) {
-        if (iVADER(VADER).emitting() && iROUTER(ROUTER).isCurated(token)) {
-            uint256 _baseAmount = iPOOLS(POOLS).getBaseAmount(token);
-            if (iPOOLS(POOLS).isAsset(token)) {
-                uint256 _share = calcShare(_baseAmount, iPOOLS(POOLS).pooledUSDV(), iROUTER(ROUTER).reserveUSDV());
+        if (iVADER(VADER).emitting() && iROUTER(ROUTER()).isCurated(token)) {
+            uint256 _baseAmount = iPOOLS(POOLS()).getBaseAmount(token);
+            if (iPOOLS(POOLS()).isAsset(token)) {
+                uint256 _share = calcShare(_baseAmount, iPOOLS(POOLS()).pooledUSDV(), iROUTER(ROUTER()).reserveUSDV());
                 rewardShare = getReducedShare(_share, rewardReductionFactor);
-            } else if (iPOOLS(POOLS).isAnchor(token)) {
-                uint256 _share = calcShare(_baseAmount, iPOOLS(POOLS).pooledVADER(), iROUTER(ROUTER).reserveVADER());
+            } else if (iPOOLS(POOLS()).isAnchor(token)) {
+                uint256 _share = calcShare(_baseAmount, iPOOLS(POOLS()).pooledVADER(), iROUTER(ROUTER()).reserveVADER());
                 rewardShare = getReducedShare(_share, rewardReductionFactor);
             }
         }
@@ -157,8 +142,8 @@ contract Utils {
         uint256 timeForFullProtection
     ) public view returns (uint256 protection) {
         uint256 _coverage = getCoverage(member, token);
-        if (iROUTER(ROUTER).isCurated(token)) {
-            uint256 _duration = block.timestamp - iROUTER(ROUTER).getMemberLastDeposit(member, token);
+        if (iROUTER(ROUTER()).isCurated(token)) {
+            uint256 _duration = block.timestamp - iROUTER(ROUTER()).getMemberLastDeposit(member, token);
             if (_duration <= timeForFullProtection) {
                 protection = calcShare(_duration, timeForFullProtection, _coverage); // Apply 100 day rule
             } else {
@@ -170,11 +155,11 @@ contract Utils {
 
     // Theoretical coverage based on deposit/redemption values
     function getCoverage(address member, address token) public view returns (uint256) {
-        uint256 _B0 = iROUTER(ROUTER).getMemberBaseDeposit(member, token);
-        uint256 _T0 = iROUTER(ROUTER).getMemberTokenDeposit(member, token);
-        uint256 _units = iPOOLS(POOLS).getMemberUnits(token, member);
-        uint256 _B1 = calcShare(_units, iPOOLS(POOLS).getUnits(token), iPOOLS(POOLS).getBaseAmount(token));
-        uint256 _T1 = calcShare(_units, iPOOLS(POOLS).getUnits(token), iPOOLS(POOLS).getTokenAmount(token));
+        uint256 _B0 = iROUTER(ROUTER()).getMemberBaseDeposit(member, token);
+        uint256 _T0 = iROUTER(ROUTER()).getMemberTokenDeposit(member, token);
+        uint256 _units = iPOOLS(POOLS()).getMemberUnits(token, member);
+        uint256 _B1 = calcShare(_units, iPOOLS(POOLS()).getUnits(token), iPOOLS(POOLS()).getBaseAmount(token));
+        uint256 _T1 = calcShare(_units, iPOOLS(POOLS()).getUnits(token), iPOOLS(POOLS()).getTokenAmount(token));
         return calcCoverage(_B0, _T0, _B1, _T1);
     }
 
@@ -192,10 +177,10 @@ contract Utils {
         } else if (isPool(collateralAsset)) {
             baseValue = calcAsymmetricShare(
                 _collateralAdjusted,
-                iPOOLS(POOLS).getMemberUnits(collateralAsset, member),
-                iPOOLS(POOLS).getBaseAmount(collateralAsset)
+                iPOOLS(POOLS()).getMemberUnits(collateralAsset, member),
+                iPOOLS(POOLS()).getBaseAmount(collateralAsset)
             ); // calc units to BASE
-        } else if (iFACTORY(FACTORY).isSynth(collateralAsset)) {
+        } else if (iFACTORY(FACTORY()).isSynth(collateralAsset)) {
             baseValue = calcSwapValueInBase(iSYNTH(collateralAsset).TOKEN(), _collateralAdjusted); // Calc swap value
         }
         debt = calcSwapValueInToken(debtAsset, baseValue); // get debt output
@@ -208,10 +193,10 @@ contract Utils {
         address collateralAsset,
         address debtAsset
     ) external view returns (uint256, uint256) {
-        uint256 _memberDebt = iROUTER(ROUTER).getMemberDebt(member, collateralAsset, debtAsset); // Outstanding Debt
-        uint256 _memberCollateral = iROUTER(ROUTER).getMemberCollateral(member, collateralAsset, debtAsset); // Collateral
-        uint256 _collateral = iROUTER(ROUTER).getSystemCollateral(collateralAsset, debtAsset);
-        uint256 _interestPaid = iROUTER(ROUTER).getSystemInterestPaid(collateralAsset, debtAsset);
+        uint256 _memberDebt = iROUTER(ROUTER()).getMemberDebt(member, collateralAsset, debtAsset); // Outstanding Debt
+        uint256 _memberCollateral = iROUTER(ROUTER()).getMemberCollateral(member, collateralAsset, debtAsset); // Collateral
+        uint256 _collateral = iROUTER(ROUTER()).getSystemCollateral(collateralAsset, debtAsset);
+        uint256 _interestPaid = iROUTER(ROUTER()).getSystemInterestPaid(collateralAsset, debtAsset);
         uint256 _memberInterestShare = calcShare(_memberCollateral, _collateral, _interestPaid); // Share of interest based on collateral
         uint256 _collateralUnlocked = calcShare(debt, _memberDebt, _memberCollateral);
         return (_collateralUnlocked, _memberInterestShare);
@@ -225,19 +210,19 @@ contract Utils {
         uint256 _interestPayment = calcShare(timeElapsed, _year, getInterestPayment(collateralAsset, debtAsset)); // Share of the payment over 1 year
         if (isBase(collateralAsset)) {
             interestOwed = calcValueInBase(debtAsset, _interestPayment); // Back to base
-        } else if (iFACTORY(FACTORY).isSynth(collateralAsset)) {
+        } else if (iFACTORY(FACTORY()).isSynth(collateralAsset)) {
             interestOwed = calcValueOfTokenInToken(debtAsset, _interestPayment, collateralAsset); // Get value of Synth in debtAsset (doubleSwap)
         }
     }
 
     function getInterestPayment(address collateralAsset, address debtAsset) public view returns (uint256) {
         uint256 _debtLoading = getDebtLoading(collateralAsset, debtAsset);
-        return (_debtLoading * iROUTER(ROUTER).getSystemDebt(collateralAsset, debtAsset)) / 10000;
+        return (_debtLoading * iROUTER(ROUTER()).getSystemDebt(collateralAsset, debtAsset)) / 10000;
     }
 
     function getDebtLoading(address collateralAsset, address debtAsset) public view returns (uint256) {
-        uint256 _debtIssued = iROUTER(ROUTER).getSystemDebt(collateralAsset, debtAsset);
-        uint256 _debtDepth = iPOOLS(POOLS).getTokenAmount(debtAsset);
+        uint256 _debtIssued = iROUTER(ROUTER()).getSystemDebt(collateralAsset, debtAsset);
+        uint256 _debtDepth = iPOOLS(POOLS()).getTokenAmount(debtAsset);
         return (_debtIssued * 10000) / _debtDepth;
     }
 
@@ -387,4 +372,20 @@ contract Utils {
         }
         return array;
     }
+
+    //============================== HELPERS ================================//
+
+    function USDV() internal view returns(address){
+        return iDAO(iVADER(VADER).DAO()).USDV();
+    }
+    function ROUTER() internal view returns(address){
+        return iDAO(iVADER(VADER).DAO()).ROUTER();
+    }
+    function POOLS() internal view returns(address){
+        return iDAO(iVADER(VADER).DAO()).POOLS();
+    }
+    function FACTORY() internal view returns(address){
+        return iDAO(iVADER(VADER).DAO()).FACTORY();
+    }
+
 }

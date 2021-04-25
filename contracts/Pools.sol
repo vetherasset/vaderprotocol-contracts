@@ -3,6 +3,7 @@ pragma solidity 0.8.3;
 
 // Interfaces
 import "./interfaces/iERC20.sol";
+import "./interfaces/iDAO.sol";
 import "./interfaces/iUTILS.sol";
 import "./interfaces/iVADER.sol";
 import "./interfaces/iROUTER.sol";
@@ -10,14 +11,10 @@ import "./interfaces/iFACTORY.sol";
 
 contract Pools {
     // Parameters
-    bool private inited;
     uint256 public pooledVADER;
     uint256 public pooledUSDV;
 
     address public VADER;
-    address public USDV;
-    address public ROUTER;
-    address public FACTORY;
 
     mapping(address => bool) _isAsset;
     mapping(address => bool) _isAnchor;
@@ -61,18 +58,10 @@ contract Pools {
     constructor() {}
 
     // Init
-    function init(
-        address _vader,
-        address _usdv,
-        address _router,
-        address _factory
-    ) public {
-        require(inited == false);
-        inited = true;
-        VADER = _vader;
-        USDV = _usdv;
-        ROUTER = _router;
-        FACTORY = _factory;
+    function init(address _vader) public {
+        if(VADER == address(0)){
+            VADER = _vader;
+        }
     }
 
     //====================================LIQUIDITY=========================================//
@@ -82,8 +71,8 @@ contract Pools {
         address token,
         address member
     ) external returns (uint256 liquidityUnits) {
-        require(iROUTER(ROUTER).isBase(base), "!Base");
-        require(token != USDV && token != VADER); // Prohibited
+        require(iROUTER(ROUTER()).isBase(base), "!Base");
+        require(token != USDV() && token != VADER); // Prohibited
         uint256 _actualInputBase;
         if (base == VADER) {
             if (!isAnchor(token)) {
@@ -96,7 +85,7 @@ contract Pools {
                 // If new Asset
                 _isAsset[token] = true;
             }
-            _actualInputBase = getAddedAmount(USDV, token);
+            _actualInputBase = getAddedAmount(USDV(), token);
         }
         uint256 _actualInputToken = getAddedAmount(token, token);
         liquidityUnits = iUTILS(UTILS()).calcLiquidityUnits(
@@ -135,7 +124,7 @@ contract Pools {
         uint256 basisPoints,
         address member
     ) internal returns (uint256 units, uint256 outputBase, uint256 outputToken) {
-        require(base == USDV || base == VADER);
+        require(base == USDV() || base == VADER);
         (units, outputBase, outputToken) = iUTILS(UTILS()).getMemberShare(basisPoints, token, member);
         mapToken_Units[token] -= units;
         mapTokenMember_Units[token][member] -= units;
@@ -187,7 +176,7 @@ contract Pools {
     // Add to balances directly (must send first)
     function sync(address token, address pool) external {
         uint256 _actualInput = getAddedAmount(token, pool);
-        if (token == VADER || token == USDV) {
+        if (token == VADER || token == USDV()) {
             mapToken_baseAmount[pool] += _actualInput;
         } else {
             mapToken_tokenAmount[pool] += _actualInput;
@@ -201,8 +190,8 @@ contract Pools {
 
     // Should be done with intention, is gas-intensive
     function deploySynth(address token) external {
-        require(token != VADER || token != USDV);
-        iFACTORY(FACTORY).deploySynth(token);
+        require(token != VADER || token != USDV());
+        iFACTORY(FACTORY()).deploySynth(token);
     }
 
     // Mint a Synth against its own pool
@@ -212,7 +201,7 @@ contract Pools {
         address member
     ) external returns (uint256 outputAmount) {
         address synth = getSynth(token);
-        require(iFACTORY(FACTORY).isSynth(synth), "!synth");
+        require(iFACTORY(FACTORY()).isSynth(synth), "!synth");
         uint256 _actualInputBase = getAddedAmount(base, token); // Get input
         uint256 _synthUnits =
             iUTILS(UTILS()).calcSynthUnits(_actualInputBase, mapToken_baseAmount[token], mapToken_Units[token]); // Get Units
@@ -225,7 +214,7 @@ contract Pools {
         mapToken_Units[token] += _synthUnits; // Add supply
         mapToken_baseAmount[token] += _actualInputBase; // Add BASE
         emit AddLiquidity(member, base, _actualInputBase, token, 0, _synthUnits); // Add Liquidity Event
-        iFACTORY(FACTORY).mintSynth(synth, member, outputAmount); // Ask factory to mint to member
+        iFACTORY(FACTORY()).mintSynth(synth, member, outputAmount); // Ask factory to mint to member
     }
 
     // Burn a Synth to get out BASE
@@ -302,7 +291,7 @@ contract Pools {
             // Want to know added VADER
             addedAmount = _balance - pooledVADER;
             pooledVADER = pooledVADER + addedAmount;
-        } else if (_token == USDV) {
+        } else if (_token == USDV()) {
             // Want to know added USDV
             addedAmount = _balance - pooledUSDV;
             pooledUSDV = pooledUSDV + addedAmount;
@@ -319,7 +308,7 @@ contract Pools {
     ) internal {
         if (_token == VADER) {
             pooledVADER = pooledVADER - _amount; // Accounting
-        } else if (_token == USDV) {
+        } else if (_token == USDV()) {
             pooledUSDV = pooledUSDV - _amount; // Accounting
         }
         if (_recipient != address(this)) {
@@ -356,14 +345,29 @@ contract Pools {
     }
 
     function getSynth(address token) public view returns (address) {
-        return iFACTORY(FACTORY).getSynth(token);
+        return iFACTORY(FACTORY()).getSynth(token);
     }
 
     function isSynth(address token) public view returns (bool) {
-        return iFACTORY(FACTORY).isSynth(token);
+        return iFACTORY(FACTORY()).isSynth(token);
     }
 
-    function UTILS() public view returns (address) {
-        return iVADER(VADER).UTILS();
+    
+
+    // function DAO() internal view returns(address){
+    //     return iVADER(VADER).DAO();
+    // }
+    function USDV() internal view returns(address){
+        return iDAO(iVADER(VADER).DAO()).USDV();
     }
+    function ROUTER() internal view returns(address){
+        return iDAO(iVADER(VADER).DAO()).ROUTER();
+    }
+    function FACTORY() internal view returns(address){
+        return iDAO(iVADER(VADER).DAO()).FACTORY();
+    }
+    function UTILS() public view returns (address) {
+        return iDAO(iVADER(VADER).DAO()).UTILS();
+    }
+
 }

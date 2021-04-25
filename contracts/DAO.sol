@@ -2,12 +2,8 @@
 pragma solidity 0.8.3;
 
 // Interfaces
-import "./interfaces/iERC20.sol";
-import "./interfaces/iUTILS.sol";
-import "./interfaces/iVADER.sol";
 import "./interfaces/iRESERVE.sol";
 import "./interfaces/iVAULT.sol";
-import "./interfaces/iROUTER.sol";
 
 //======================================VADER=========================================//
 contract DAO {
@@ -16,13 +12,19 @@ contract DAO {
         uint256 amount;
     }
 
-    bool private inited;
+     
     uint256 public proposalCount;
+    uint256 public coolOffPeriod;
+
+    address public VETHER;
     address public VADER;
     address public USDV;
     address public RESERVE;
     address public VAULT;
-    uint256 public coolOffPeriod;
+    address public ROUTER;
+    address public POOLS;
+    address public FACTORY;
+    address public UTILS;
 
     mapping(uint256 => GrantDetails) public mapPID_grant;
     mapping(uint256 => address) public mapPID_address;
@@ -68,18 +70,28 @@ contract DAO {
     constructor() {}
 
     function init(
+        address _vether,
         address _vader,
         address _usdv,
         address _reserve,
-        address _vault
+        address _vault,
+        address _router,
+        address _pools,
+        address _factory,
+        address _utils
     ) public {
-        require(inited == false);
-        inited = true;
-        VADER = _vader;
-        USDV = _usdv;
-        RESERVE = _reserve;
-        VAULT = _vault;
-        coolOffPeriod = 1;
+        if(VADER == address(0)){
+            VETHER = _vether;
+            VADER = _vader;
+            USDV = _usdv;
+            RESERVE = _reserve;
+            VAULT = _vault;
+            ROUTER = _router;
+            POOLS = _pools;
+            FACTORY = _factory;
+            UTILS = _utils;
+            coolOffPeriod = 1;
+        }
     }
 
     //============================== CREATE PROPOSALS ================================//
@@ -185,14 +197,14 @@ contract DAO {
     function moveUtils(uint256 _proposalID) internal {
         address _proposedAddress = mapPID_address[_proposalID];
         require(_proposedAddress != address(0), "No address proposed");
-        iVADER(VADER).changeUTILS(_proposedAddress);
+        changeUTILS(_proposedAddress);
         completeProposal(_proposalID);
     }
 
     function moveRewardAddress(uint256 _proposalID) internal {
         address _proposedAddress = mapPID_address[_proposalID];
         require(_proposedAddress != address(0), "No address proposed");
-        iVADER(VADER).setReserve(_proposedAddress);
+        setReserve(_proposedAddress);
         completeProposal(_proposalID);
     }
 
@@ -241,5 +253,18 @@ contract DAO {
         } else {
             return false;
         }
+    }
+
+    //============================== CONSENSUS ================================//
+        // Can set reward address
+    function setReserve(address newReserve) internal {
+        require(newReserve != address(0), "address err");
+        RESERVE = newReserve;
+    }
+
+    // Can change UTILS
+    function changeUTILS(address newUTILS) internal {
+        require(newUTILS != address(0), "address err");
+        UTILS = newUTILS;
     }
 }

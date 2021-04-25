@@ -2,9 +2,12 @@
 pragma solidity 0.8.3;
 
 interface iVADER {
-    function UTILS() external view returns (address);
 
     function DAO() external view returns (address);
+
+    function DEPLOYER() external view returns (address);
+
+    function UTILS() external view returns (address);
 
     function emitting() external view returns (bool);
 

@@ -3,6 +3,7 @@ pragma solidity 0.8.3;
 
 // Interfaces
 import "./interfaces/iERC20.sol";
+import "./interfaces/iDAO.sol";
 import "./interfaces/iUTILS.sol";
 import "./interfaces/iVADER.sol";
 import "./interfaces/iRESERVE.sol";
@@ -13,7 +14,7 @@ import "hardhat/console.sol";
 
 contract Router {
     // Parameters
-    bool private inited;
+
     uint256 one = 10**18;
     uint256 public rewardReductionFactor;
     uint256 public timeForFullProtection;
@@ -23,9 +24,6 @@ contract Router {
     mapping(address => bool) private _isCurated;
 
     address public VADER;
-    address public USDV;
-    address public RESERVE;
-    address public POOLS;
 
     uint256 public anchorLimit;
     uint256 public insidePriceLimit;
@@ -79,7 +77,7 @@ contract Router {
 
     // Only DAO can execute
     modifier onlyDAO() {
-        require(msg.sender == iVADER(VADER).DAO(), "Not DAO");
+        require(msg.sender == DAO() || msg.sender == DEPLOYER(), "Not DAO");
         _;
     }
 
@@ -88,24 +86,16 @@ contract Router {
     constructor() {}
 
     // Init
-    function init(
-        address _vader,
-        address _usdv,
-        address _reserve,
-        address _pool
-    ) public {
-        require(inited == false, "inited");
-        inited = true;
-        VADER = _vader;
-        USDV = _usdv;
-        RESERVE = _reserve;
-        POOLS = _pool;
-        rewardReductionFactor = 1;
-        timeForFullProtection = 1; //8640000; //100 days
-        curatedPoolLimit = 1;
-        anchorLimit = 5;
-        insidePriceLimit = 200;
-        outsidePriceLimit = 500;
+    function init(address _vader) public {
+        if(VADER == address(0)){
+            VADER = _vader;
+            rewardReductionFactor = 1;
+            timeForFullProtection = 1; //8640000; //100 days
+            curatedPoolLimit = 1;
+            anchorLimit = 5;
+            insidePriceLimit = 200;
+            outsidePriceLimit = 500;
+        }
     }
 
     //=========================================DAO=========================================//
@@ -138,11 +128,11 @@ contract Router {
         address token,
         uint256 inputToken
     ) external returns (uint256) {
-        iRESERVE(RESERVE).checkReserve();
+        iRESERVE(RESERVE()).checkReserve();
         uint256 _actualInputBase = moveTokenToPools(base, inputBase);
         uint256 _actualInputToken = moveTokenToPools(token, inputToken);
         addDepositData(msg.sender, token, _actualInputBase, _actualInputToken);
-        return iPOOLS(POOLS).addLiquidity(base, token, msg.sender);
+        return iPOOLS(POOLS()).addLiquidity(base, token, msg.sender);
     }
 
     function removeLiquidity(
@@ -152,13 +142,13 @@ contract Router {
     ) external returns (uint256 units, uint256 amountBase, uint256 amountToken) {
         uint256 _protection = getILProtection(msg.sender, base, token, basisPoints);
         if(_protection > 0){
-            iRESERVE(RESERVE).requestFunds(base, POOLS, _protection);
-            iPOOLS(POOLS).addLiquidity(base, token, msg.sender);
+            iRESERVE(RESERVE()).requestFunds(base, POOLS(), _protection);
+            iPOOLS(POOLS()).addLiquidity(base, token, msg.sender);
             mapMemberToken_depositBase[msg.sender][token] += _protection;
         }
-        (units, amountBase, amountToken) = iPOOLS(POOLS).removeLiquidity(base, token, basisPoints);
+        (units, amountBase, amountToken) = iPOOLS(POOLS()).removeLiquidity(base, token, basisPoints);
         removeDepositData(msg.sender, token, basisPoints, _protection);
-        iRESERVE(RESERVE).checkReserve();
+        iRESERVE(RESERVE()).checkReserve();
     }
 
     //=======================================SWAP===========================================//
@@ -202,43 +192,43 @@ contract Router {
         if (!inSynth) {
             moveTokenToPools(inputToken, inputAmount);
         } else {
-            moveTokenToPools(iPOOLS(POOLS).getSynth(inputToken), inputAmount);
+            moveTokenToPools(iPOOLS(POOLS()).getSynth(inputToken), inputAmount);
         }
         address _base;
-        if (iPOOLS(POOLS).isAnchor(inputToken) || iPOOLS(POOLS).isAnchor(outputToken)) {
+        if (iPOOLS(POOLS()).isAnchor(inputToken) || iPOOLS(POOLS()).isAnchor(outputToken)) {
             _base = VADER;
         } else {
-            _base = USDV;
+            _base = USDV();
         }
         if (isBase(outputToken)) {
             // Token||Synth -> BASE
-            require(iUTILS(UTILS()).calcSwapSlip(inputAmount, iPOOLS(POOLS).getTokenAmount(inputToken)) <= slipLimit);
+            require(iUTILS(UTILS()).calcSwapSlip(inputAmount, iPOOLS(POOLS()).getTokenAmount(inputToken)) <= slipLimit);
             if (!inSynth) {
-                outputAmount = iPOOLS(POOLS).swap(_base, inputToken, _member, true);
+                outputAmount = iPOOLS(POOLS()).swap(_base, inputToken, _member, true);
             } else {
-                outputAmount = iPOOLS(POOLS).burnSynth(_base, inputToken, _member);
+                outputAmount = iPOOLS(POOLS()).burnSynth(_base, inputToken, _member);
             }
         } else if (isBase(inputToken)) {
             // BASE -> Token||Synth
-            require(iUTILS(UTILS()).calcSwapSlip(inputAmount, iPOOLS(POOLS).getBaseAmount(outputToken)) <= slipLimit);
+            require(iUTILS(UTILS()).calcSwapSlip(inputAmount, iPOOLS(POOLS()).getBaseAmount(outputToken)) <= slipLimit);
             if (!outSynth) {
-                outputAmount = iPOOLS(POOLS).swap(_base, outputToken, _member, false);
+                outputAmount = iPOOLS(POOLS()).swap(_base, outputToken, _member, false);
             } else {
-                outputAmount = iPOOLS(POOLS).mintSynth(_base, outputToken, _member);
+                outputAmount = iPOOLS(POOLS()).mintSynth(_base, outputToken, _member);
             }
         } else if (!isBase(inputToken) && !isBase(outputToken)) {
             // Token||Synth -> Token||Synth
-            require(iUTILS(UTILS()).calcSwapSlip(inputAmount, iPOOLS(POOLS).getTokenAmount(inputToken)) <= slipLimit);
+            require(iUTILS(UTILS()).calcSwapSlip(inputAmount, iPOOLS(POOLS()).getTokenAmount(inputToken)) <= slipLimit);
             if (!inSynth) {
-                iPOOLS(POOLS).swap(_base, inputToken, POOLS, true);
+                iPOOLS(POOLS()).swap(_base, inputToken, POOLS(), true);
             } else {
-                iPOOLS(POOLS).burnSynth(_base, inputToken, POOLS);
+                iPOOLS(POOLS()).burnSynth(_base, inputToken, POOLS());
             }
-            require(iUTILS(UTILS()).calcSwapSlip(inputAmount, iPOOLS(POOLS).getBaseAmount(outputToken)) <= slipLimit);
+            require(iUTILS(UTILS()).calcSwapSlip(inputAmount, iPOOLS(POOLS()).getBaseAmount(outputToken)) <= slipLimit);
             if (!outSynth) {
-                outputAmount = iPOOLS(POOLS).swap(_base, outputToken, _member, false);
+                outputAmount = iPOOLS(POOLS()).swap(_base, outputToken, _member, false);
             } else {
-                outputAmount = iPOOLS(POOLS).mintSynth(_base, outputToken, _member);
+                outputAmount = iPOOLS(POOLS()).mintSynth(_base, outputToken, _member);
             }
         }
         _handlePoolReward(_base, inputToken);
@@ -253,8 +243,8 @@ contract Router {
         if (!isBase(_token)) {
             // USDV or VADER is never a pool
             uint256 _reward = iUTILS(UTILS()).getRewardShare(_token, rewardReductionFactor);
-            iRESERVE(RESERVE).requestFunds(_base, POOLS, _reward);
-            iPOOLS(POOLS).sync(_base, _token);
+            iRESERVE(RESERVE()).requestFunds(_base, POOLS(), _reward);
+            iPOOLS(POOLS()).sync(_base, _token);
             emit PoolReward(_base, _token, _reward);
         }
     }
@@ -306,7 +296,7 @@ contract Router {
     //=====================================CURATION==========================================//
 
     function curatePool(address token) external {
-        require(iPOOLS(POOLS).isAsset(token) || iPOOLS(POOLS).isAnchor(token));
+        require(iPOOLS(POOLS()).isAsset(token) || iPOOLS(POOLS()).isAnchor(token));
         if (!isCurated(token)) {
             if (curatedPoolCount < curatedPoolLimit) {
                 // Limit
@@ -318,8 +308,8 @@ contract Router {
     }
 
     function replacePool(address oldToken, address newToken) external {
-        require(iPOOLS(POOLS).isAsset(newToken));
-        if (iPOOLS(POOLS).getBaseAmount(newToken) > iPOOLS(POOLS).getBaseAmount(oldToken)) {
+        require(iPOOLS(POOLS()).isAsset(newToken));
+        if (iPOOLS(POOLS()).getBaseAmount(newToken) > iPOOLS(POOLS()).getBaseAmount(oldToken)) {
             // Must be deeper
             _isCurated[oldToken] = false;
             _isCurated[newToken] = true;
@@ -331,7 +321,7 @@ contract Router {
 
     function listAnchor(address token) external {
         require(arrayAnchors.length < anchorLimit); // Limit
-        require(iPOOLS(POOLS).isAnchor(token)); // Must be anchor
+        require(iPOOLS(POOLS()).isAnchor(token)); // Must be anchor
         arrayAnchors.push(token); // Add
         arrayPrices.push(iUTILS(UTILS()).calcValueInBase(token, one));
         _isCurated[token] = true;
@@ -339,8 +329,8 @@ contract Router {
     }
 
     function replaceAnchor(address oldToken, address newToken) external {
-        require(iPOOLS(POOLS).isAnchor(newToken), "Not anchor");
-        require((iPOOLS(POOLS).getBaseAmount(newToken) > iPOOLS(POOLS).getBaseAmount(oldToken)), "Not deeper");
+        require(iPOOLS(POOLS()).isAnchor(newToken), "Not anchor");
+        require((iPOOLS(POOLS()).getBaseAmount(newToken) > iPOOLS(POOLS()).getBaseAmount(oldToken)), "Not deeper");
         iUTILS(UTILS()).requirePriceBounds(oldToken, outsidePriceLimit, false, getAnchorPrice()); // if price oldToken >5%
         iUTILS(UTILS()).requirePriceBounds(newToken, insidePriceLimit, true, getAnchorPrice()); // if price newToken <2%
         _isCurated[oldToken] = false;
@@ -363,7 +353,7 @@ contract Router {
     }
 
     function _handleAnchorPriceUpdate(address _token) internal {
-        if (iPOOLS(POOLS).isAnchor(_token)) {
+        if (iPOOLS(POOLS()).isAnchor(_token)) {
             updateAnchorPrice(_token);
         }
     }
@@ -414,12 +404,12 @@ contract Router {
         mapCollateralDebt_Collateral[collateralAsset][debtAsset] += _collateral; // Record collateral
         mapCollateralDebt_Debt[collateralAsset][debtAsset] += _debtIssued; // Record debt
         _addDebtToMember(member, _collateral, collateralAsset, _debtIssued, debtAsset); // Update member details
-        if (collateralAsset == VADER || iPOOLS(POOLS).isAnchor(debtAsset)) {
-            iRESERVE(RESERVE).requestFundsStrict(VADER, POOLS, _baseBorrowed);
-            iPOOLS(POOLS).swap(VADER, debtAsset, member, false); // Execute swap to member
-        } else if (collateralAsset == USDV || iPOOLS(POOLS).isAsset(debtAsset)) {
-            iRESERVE(RESERVE).requestFundsStrict(USDV, POOLS, _baseBorrowed); // Send to pools
-            iPOOLS(POOLS).swap(USDV, debtAsset, member, false); // Execute swap to member
+        if (collateralAsset == VADER || iPOOLS(POOLS()).isAnchor(debtAsset)) {
+            iRESERVE(RESERVE()).requestFundsStrict(VADER, POOLS(), _baseBorrowed);
+            iPOOLS(POOLS()).swap(VADER, debtAsset, member, false); // Execute swap to member
+        } else if (collateralAsset == USDV() || iPOOLS(POOLS()).isAsset(debtAsset)) {
+            iRESERVE(RESERVE()).requestFundsStrict(USDV(), POOLS(), _baseBorrowed); // Send to pools
+            iPOOLS(POOLS()).swap(USDV(), debtAsset, member, false); // Execute swap to member
         }
         emit AddCollateral(member, collateralAsset, amount, debtAsset, _debtIssued); // Event
         payInterest(collateralAsset, debtAsset);
@@ -444,10 +434,10 @@ contract Router {
     ) public returns (uint256) {
         uint256 _amount = iUTILS(UTILS()).calcPart(basisPoints, getMemberDebt(member, collateralAsset, debtAsset));
         uint256 _debt = moveTokenToPools(debtAsset, _amount); // Get Debt
-        if (collateralAsset == VADER || iPOOLS(POOLS).isAnchor(debtAsset)) {
-            iPOOLS(POOLS).swap(VADER, debtAsset, RESERVE, true); // Swap Debt to Base back here
-        } else if (collateralAsset == USDV || iPOOLS(POOLS).isAsset(debtAsset)) {
-            iPOOLS(POOLS).swap(USDV, debtAsset, RESERVE, true); // Swap Debt to Base back here
+        if (collateralAsset == VADER || iPOOLS(POOLS()).isAnchor(debtAsset)) {
+            iPOOLS(POOLS()).swap(VADER, debtAsset, RESERVE(), true); // Swap Debt to Base back here
+        } else if (collateralAsset == USDV() || iPOOLS(POOLS()).isAsset(debtAsset)) {
+            iPOOLS(POOLS()).swap(USDV(), debtAsset, RESERVE(), true); // Swap Debt to Base back here
         }
         (uint256 _collateralUnlocked, uint256 _memberInterestShare) =
             iUTILS(UTILS()).getDebtValueInCollateral(member, _debt, collateralAsset, debtAsset); // Unlock collateral that is pro-rata to re-paid debt ($50/$100 = 50%)
@@ -471,11 +461,11 @@ contract Router {
             mapCollateralDebt_interestPaid[collateralAsset][debtAsset] += _interestOwed;
             _removeCollateral(_interestOwed, collateralAsset, debtAsset);
             if (isBase(collateralAsset)) {
-                iERC20(collateralAsset).transfer(POOLS, _interestOwed);
-                iPOOLS(POOLS).sync(collateralAsset, debtAsset);
-            } else if (iPOOLS(POOLS).isSynth(collateralAsset)) {
-                iERC20(collateralAsset).transfer(POOLS, _interestOwed);
-                iPOOLS(POOLS).syncSynth(iSYNTH(collateralAsset).TOKEN());
+                iERC20(collateralAsset).transfer(POOLS(), _interestOwed);
+                iPOOLS(POOLS()).sync(collateralAsset, debtAsset);
+            } else if (iPOOLS(POOLS()).isSynth(collateralAsset)) {
+                iERC20(collateralAsset).transfer(POOLS(), _interestOwed);
+                iPOOLS(POOLS()).syncSynth(iSYNTH(collateralAsset).TOKEN());
             }
         }
     }
@@ -496,10 +486,10 @@ contract Router {
         address _collateralAsset,
         uint256 _amount
     ) internal returns (uint256 _inputAmount) {
-        if (isBase(_collateralAsset) || iPOOLS(POOLS).isSynth(_collateralAsset)) {
+        if (isBase(_collateralAsset) || iPOOLS(POOLS()).isSynth(_collateralAsset)) {
             _inputAmount = _getFunds(_collateralAsset, _amount); // Get funds
         } else if (isPool(_collateralAsset)) {
-            iPOOLS(POOLS).lockUnits(_amount, _collateralAsset, _member); // Lock units to protocol
+            iPOOLS(POOLS()).lockUnits(_amount, _collateralAsset, _member); // Lock units to protocol
             _inputAmount = _amount;
         }
     }
@@ -510,10 +500,10 @@ contract Router {
         address _collateralAsset,
         uint256 _amount
     ) internal {
-        if (isBase(_collateralAsset) || iPOOLS(POOLS).isSynth(_collateralAsset)) {
+        if (isBase(_collateralAsset) || iPOOLS(POOLS()).isSynth(_collateralAsset)) {
             _sendFunds(_collateralAsset, _member, _amount); // Send Base
         } else if (isPool(_collateralAsset)) {
-            iPOOLS(POOLS).unlockUnits(_amount, _collateralAsset, _member); // Unlock units to member
+            iPOOLS(POOLS()).unlockUnits(_amount, _collateralAsset, _member); // Unlock units to member
         }
     }
 
@@ -568,42 +558,35 @@ contract Router {
     //======================================HELPERS=========================================//
 
     function isBase(address token) public view returns (bool base) {
-        if (token == VADER || token == USDV) {
+        if (token == VADER || token == USDV()) {
             return true;
         }
     }
 
     function reserveUSDV() public view returns (uint256) {
-        return iRESERVE(RESERVE).reserveUSDV(); // Balance
+        return iRESERVE(RESERVE()).reserveUSDV(); // Balance
     }
 
     function reserveVADER() public view returns (uint256) {
-        return iRESERVE(RESERVE).reserveVADER(); // Balance
+        return iRESERVE(RESERVE()).reserveVADER(); // Balance
     }
 
     // Optionality
     function moveTokenToPools(address _token, uint256 _amount) internal returns (uint256 safeAmount) {
-        if (_token == VADER || _token == USDV || iPOOLS(POOLS).isSynth(_token)) {
+        if (_token == VADER || _token == USDV() || iPOOLS(POOLS()).isSynth(_token)) {
             safeAmount = _amount;
             if (tx.origin == msg.sender) {
-                iERC20(_token).transferTo(POOLS, _amount);
+                iERC20(_token).transferTo(POOLS(), _amount);
             } else {
-                iERC20(_token).transferFrom(msg.sender, POOLS, _amount);
+                iERC20(_token).transferFrom(msg.sender, POOLS(), _amount);
             }
         } else {
-            uint256 _startBal = iERC20(_token).balanceOf(POOLS);
-            iERC20(_token).transferFrom(msg.sender, POOLS, _amount);
-            safeAmount = iERC20(_token).balanceOf(POOLS) - _startBal;
+            uint256 _startBal = iERC20(_token).balanceOf(POOLS());
+            iERC20(_token).transferFrom(msg.sender, POOLS(), _amount);
+            safeAmount = iERC20(_token).balanceOf(POOLS()) - _startBal;
         }
     }
 
-    function UTILS() public view returns (address) {
-        return iVADER(VADER).UTILS();
-    }
-
-    function DAO() public view returns (address) {
-        return iVADER(VADER).DAO();
-    }
 
     function emitting() public view returns (bool) {
         return iVADER(VADER).emitting();
@@ -616,7 +599,7 @@ contract Router {
     }
 
     function isPool(address token) public view returns (bool pool) {
-        if (iPOOLS(POOLS).isAnchor(token) || iPOOLS(POOLS).isAsset(token)) {
+        if (iPOOLS(POOLS()).isAnchor(token) || iPOOLS(POOLS()).isAsset(token)) {
             pool = true;
         }
     }
@@ -664,4 +647,24 @@ contract Router {
     function getNextEraTime(address collateralAsset, address debtAsset) public view returns (uint256) {
         return mapCollateralAsset_NextEra[collateralAsset][debtAsset];
     }
+
+    function DAO() internal view returns(address){
+        return iVADER(VADER).DAO();
+    }
+    function DEPLOYER() internal view returns(address){
+        return iVADER(VADER).DEPLOYER();
+    }
+    function USDV() internal view returns(address){
+        return iDAO(iVADER(VADER).DAO()).USDV();
+    }
+    function RESERVE() internal view returns(address){
+        return iDAO(iVADER(VADER).DAO()).RESERVE();
+    }
+    function POOLS() internal view returns(address){
+        return iDAO(iVADER(VADER).DAO()).POOLS();
+    }
+    function UTILS() internal view returns(address){
+        return iDAO(iVADER(VADER).DAO()).UTILS();
+    }
+
 }
