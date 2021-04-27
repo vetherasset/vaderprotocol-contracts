@@ -3,7 +3,7 @@
     "compile": "npx hardhat compile",
     "test": "npx hardhat test",
     "format": "prettier --write contracts/*.sol contracts/**/*.sol",
-    "lint": "solhint -f table -w 0 contracts/*.sol contracts/**/*.sol",
+    "lint": "solhint -f table --max-warnings 1000 contracts/*.sol contracts/**/*.sol",
     "pipeline": "act -P ubuntu-latest=nektos/act-environments-ubuntu:18.04"
   },
   "dependencies": {

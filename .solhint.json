@@ -4,7 +4,10 @@
   ],
   "rules": {
     "prettier/prettier": "warn",
-    "compiler-version": ["error", "0.8.3"]
+    "compiler-version": ["error", "0.8.3"],
+    "contract-name-camelcase": "off",
+    "func-name-mixedcase": "off",
+    "var-name-mixedcase": "off"
   },
   "plugins": [
     "prettier"
