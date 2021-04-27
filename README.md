@@ -5,8 +5,8 @@ VADER is a liquidity protocol that combines a collateralized stablecoin with liq
 ## Smart Contracts
 
 VADER (VADER)
-* 1m to VETH holders
-* 2m maxSupply
+* 1,000,000,000 to VETH holders
+* 2,000,000,000 maxSupply
 * Burn USDV to get VADER
 * Daily Emission Rate
 
