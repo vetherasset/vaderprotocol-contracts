@@ -15,7 +15,7 @@ import "hardhat/console.sol";
 contract Router {
     // Parameters
 
-    uint256 one = 10**18;
+    uint256 private constant one = 10**18;
     uint256 public rewardReductionFactor;
     uint256 public timeForFullProtection;
 
@@ -31,7 +31,7 @@ contract Router {
     address[] public arrayAnchors;
     uint256[] public arrayPrices;
 
-    uint256 public repayDelay = 3600;
+    uint256 public constant repayDelay = 3600;
 
     mapping(address => mapping(address => uint256)) public mapMemberToken_depositBase;
     mapping(address => mapping(address => uint256)) public mapMemberToken_depositToken;
