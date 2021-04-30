@@ -73,7 +73,10 @@ contract Synth is iERC20 {
         uint256 amount
     ) public virtual override returns (bool) {
         _transfer(sender, recipient, amount);
-        _approve(sender, msg.sender, _allowances[sender][msg.sender] - amount);
+        // Unlimited approval (saves an SSTORE)
+        if (_allowances[sender][msg.sender] < type(uint256).max) {
+            _approve(sender, msg.sender, _allowances[sender][msg.sender] - amount);
+        }
         return true;
     }
 
