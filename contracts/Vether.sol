@@ -9,7 +9,7 @@ contract Vether is iVETHER {
     // Coin Defaults
     string public constant override name = "Vether"; // Name of Coin
     string public constant override symbol = "VETH"; // Symbol of Coin
-    uint256 public constant override decimals = 18; // Decimals
+    uint8 public constant override decimals = 18; // Decimals
     uint256 public constant override totalSupply = 1 * 10**6 * (10**decimals); // 1,000,000 Total
 
     uint256 public totalFees;
