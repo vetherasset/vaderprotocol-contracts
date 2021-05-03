@@ -9,7 +9,7 @@ contract Token1 is iERC20 {
     // Coin Defaults
     string public override name; // Name of Coin
     string public override symbol; // Symbol of Coin
-    uint256 public override decimals = 18; // Decimals
+    uint256 public constant override decimals = 18; // Decimals
     uint256 public override totalSupply = 1 * 10**9 * (10**decimals); // 1,000,000 Total
 
     // ERC-20 Mappings

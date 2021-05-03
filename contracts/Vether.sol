@@ -7,10 +7,10 @@ import "./interfaces/iVETHER.sol";
 // Token Contract
 contract Vether is iVETHER {
     // Coin Defaults
-    string public override name; // Name of Coin
-    string public override symbol; // Symbol of Coin
-    uint256 public override decimals = 18; // Decimals
-    uint256 public override totalSupply = 1 * 10**6 * (10**decimals); // 1,000,000 Total
+    string public constant override name = "Vether"; // Name of Coin
+    string public constant override symbol = "VETH"; // Symbol of Coin
+    uint256 public constant override decimals = 18; // Decimals
+    uint256 public constant override totalSupply = 1 * 10**6 * (10**decimals); // 1,000,000 Total
 
     uint256 public totalFees;
     mapping(address => bool) public mapAddress_Excluded;
@@ -21,8 +21,6 @@ contract Vether is iVETHER {
 
     // Minting event
     constructor() {
-        name = "Vether";
-        symbol = "VETH";
         _balances[msg.sender] = totalSupply;
         emit Transfer(address(0), msg.sender, totalSupply);
     }

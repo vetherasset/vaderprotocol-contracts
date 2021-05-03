@@ -10,9 +10,9 @@ import "./interfaces/iROUTER.sol";
 
 contract Vader is iERC20 {
     // ERC-20 Parameters
-    string public override name;
-    string public override symbol;
-    uint256 public override decimals;
+    string public constant override name = "VADER PROTOCOL TOKEN";
+    string public constant override symbol = "VADER";
+    uint256 public constant override decimals = 18;
     uint256 public override totalSupply;
 
     // ERC-20 Mappings
@@ -23,10 +23,10 @@ contract Vader is iERC20 {
      
     bool public emitting;
     bool public minting;
-    uint256 public conversionFactor;
-    uint256 public baseline;
+    uint256 public constant conversionFactor = 1000;
+    uint256 public constant baseline = 10**9 * 10**decimals; //1bn;
+    uint256 public constant maxSupply = 2 * baseline; //2bn
     uint256 public emissionCurve;
-    uint256 public maxSupply;
     uint256 public secondsPerEra;
     uint256 public currentEra;
     uint256 public nextEraTime;
@@ -35,7 +35,7 @@ contract Vader is iERC20 {
     address public DAO;
     address public DEPLOYER;
 
-    address public burnAddress;
+    address public constant burnAddress = 0x0111011001100001011011000111010101100101;
 
     event NewEra(uint256 currentEra, uint256 nextEraTime, uint256 emission);
 
@@ -57,18 +57,10 @@ contract Vader is iERC20 {
     //=====================================CREATION=========================================//
  
     constructor() {
-        name = "VADER PROTOCOL TOKEN";
-        symbol = "VADER";
-        decimals = 18;
-        baseline = 10**9 * 10**decimals; //1bn;
-        totalSupply = 0;
-        maxSupply = 2 * baseline; //2bn
-        conversionFactor = 1000;
         currentEra = 1;
         secondsPerEra = 1; //86400;
         nextEraTime = block.timestamp + secondsPerEra;
         emissionCurve = 10;
-        burnAddress = 0x0111011001100001011011000111010101100101;
         DEPLOYER = msg.sender;
     }
 

@@ -14,7 +14,7 @@ contract DAO {
 
      
     uint256 public proposalCount;
-    uint256 public coolOffPeriod;
+    uint256 public constant coolOffPeriod = 1;
 
     address public VETHER;
     address public VADER;
@@ -90,7 +90,6 @@ contract DAO {
             POOLS = _pools;
             FACTORY = _factory;
             UTILS = _utils;
-            coolOffPeriod = 1;
         }
     }
 

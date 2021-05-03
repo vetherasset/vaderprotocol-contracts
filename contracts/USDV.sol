@@ -9,9 +9,9 @@ import "./interfaces/iROUTER.sol";
 
 contract USDV is iERC20 {
     // ERC-20 Parameters
-    string public override name;
-    string public override symbol;
-    uint256 public override decimals;
+    string public constant override name = "VADER STABLE DOLLAR";
+    string public constant override symbol = "USDV";
+    uint256 public constant override decimals = 18;
     uint256 public override totalSupply;
 
     // ERC-20 Mappings
@@ -45,12 +45,7 @@ contract USDV is iERC20 {
 
     //=====================================CREATION=========================================//
  
-    constructor() {
-        name = "VADER STABLE DOLLAR";
-        symbol = "USDV";
-        decimals = 18;
-        totalSupply = 0;
-    }
+    constructor() {}
 
     function init(address _vader) external {
         if(VADER == address(0)){

@@ -15,7 +15,6 @@ contract Vault {
 
     uint256 public erasToEarn;
     uint256 public minGrantTime;
-    uint256 public lastGranted;
 
     address public VADER;
 

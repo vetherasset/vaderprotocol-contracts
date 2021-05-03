@@ -13,9 +13,9 @@ import "./interfaces/iSYNTH.sol";
 import "hardhat/console.sol";
 
 contract Utils {
-    uint256 private one = 10**18;
-    uint256 private _10k = 10000;
-    uint256 private _year = 31536000; // One Year (in seconds)
+    uint256 private constant one = 10**18;
+    uint256 private constant _10k = 10000;
+    uint256 private constant _year = 31536000; // One Year (in seconds)
 
     address public VADER;
 
@@ -281,13 +281,13 @@ contract Utils {
         uint256 t,
         uint256 T,
         uint256 P
-    ) external view returns (uint256) {
+    ) external pure returns (uint256) {
         if (P == 0) {
             return b;
         } else {
             // units = ((P (t B + T b))/(2 T B)) * slipAdjustment
             // P * (part1 + part2) / (part3) * slipAdjustment
-            uint256 slipAdjustment = getSlipAdustment(b, B, t, T);
+            uint256 slipAdjustment = getSlipAdjustment(b, B, t, T);
             uint256 part1 = (t * B);
             uint256 part2 = (T * b);
             uint256 part3 = (T * B) * 2;
@@ -296,12 +296,12 @@ contract Utils {
         }
     }
 
-    function getSlipAdustment(
+    function getSlipAdjustment(
         uint256 b,
         uint256 B,
         uint256 t,
         uint256 T
-    ) public view returns (uint256) {
+    ) public pure returns (uint256) {
         // slipAdjustment = (1 - ABS((B t - b T)/((2 b + B) (t + T))))
         // 1 - ABS(part1 - part2)/(part3 * part4))
         uint256 part1 = B * t;
