@@ -360,9 +360,11 @@ contract Router {
 
     // Price of 1 VADER in USD
     function getAnchorPrice() public view returns (uint256 anchorPrice) {
+        uint _anchorMiddle = 0;
+        if(arrayPrices.length > 1){_anchorMiddle = anchorLimit/2;} // 2/2 = 1; 5/2 = 2
         if (arrayPrices.length > 0) {
             uint256[] memory _sortedAnchorFeed = iUTILS(UTILS()).sortArray(arrayPrices); // Sort price array, no need to modify storage
-            anchorPrice = _sortedAnchorFeed[2]; // Return the middle
+            anchorPrice = _sortedAnchorFeed[_anchorMiddle]; // Return the middle
         } else {
             anchorPrice = one; // Edge case for first USDV mint
         }
