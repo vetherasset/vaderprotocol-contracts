@@ -94,6 +94,11 @@ describe("Upgrade", function() {
 });
 
 describe("Be a valid ERC-20", function() {
+  it("Should transfer From fail", async function() {
+    expect(BN2Str(await vader.allowance(acc1, acc0))).to.equal('0');
+    await truffleAssert.reverts(vader.transferFrom(acc1, acc0, "100", {from:acc0}))
+    expect(BN2Str(await vader.balanceOf(acc0))).to.equal('0');
+  });
   it("Should transfer From", async function() {
     await vader.approve(acc0, "100", {from:acc1}) 
     expect(BN2Str(await vader.allowance(acc1, acc0))).to.equal('100');
