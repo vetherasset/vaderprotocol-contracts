@@ -13,9 +13,9 @@ import "./interfaces/iSYNTH.sol";
 import "hardhat/console.sol";
 
 contract Utils {
-    uint256 private one = 10**18;
-    uint256 private _10k = 10000;
-    uint256 private _year = 31536000; // One Year (in seconds)
+    uint256 private constant one = 10**18;
+    uint256 private constant _10k = 10000;
+    uint256 private constant _year = 31536000; // One Year (in seconds)
 
     address public VADER;
 
