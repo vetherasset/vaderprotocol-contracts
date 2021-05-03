@@ -144,6 +144,7 @@ contract DAO {
         require(mapPID_finalising[oldProposalID], "Must be finalising");
         require(hasMinority(newProposalID), "Must have minority");
         require(isEqual(bytes(mapPID_type[oldProposalID]), bytes(mapPID_type[newProposalID])), "Must be same");
+        require(oldProposalID != newProposalID, "Must be different");
         mapPID_votes[oldProposalID] = 0;
         emit CancelProposal(
             msg.sender,
