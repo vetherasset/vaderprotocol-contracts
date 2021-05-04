@@ -154,7 +154,7 @@ contract Vader is iERC20 {
     }
 
     // Burn supply
-    function burn(uint256 amount) public virtual override {
+    function burn(uint256 amount) external virtual override {
         _burn(msg.sender, amount);
     }
 

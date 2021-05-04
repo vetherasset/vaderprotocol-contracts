@@ -56,7 +56,7 @@ contract Vault {
 
     constructor() {}
 
-    function init(address _vader) public {
+    function init(address _vader) external {
         if(VADER == address(0)){
             VADER = _vader;
             erasToEarn = 100;

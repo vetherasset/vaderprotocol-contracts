@@ -21,7 +21,7 @@ contract Factory {
 
     constructor() {}
 
-    function init(address _pools) public {
+    function init(address _pools) external {
         if(POOLS == address(0)){
             POOLS = _pools;
         }
@@ -46,7 +46,7 @@ contract Factory {
         return true;
     }
 
-    function getSynth(address token) public view returns (address synth){
+    function getSynth(address token) external view returns (address synth){
         return mapToken_Synth[token];
     }
     function isSynth(address token) public view returns (bool _exists){

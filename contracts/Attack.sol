@@ -17,13 +17,13 @@ contract Attack {
  
     constructor() {}
 
-    function init(address _vader, address _USDV) public {
+    function init(address _vader, address _USDV) external {
         VADER = _vader;
         USDV = _USDV;
     }
 
     //========================================iERC20=========================================//
-    function attackUSDV(uint256 amount) public {
+    function attackUSDV(uint256 amount) external {
         iERC20(VADER).approve(USDV, amount);
         iERC20(USDV).approve(USDV, amount);
         iERC20(VADER).transferTo(address(this), amount); // get VADER funds

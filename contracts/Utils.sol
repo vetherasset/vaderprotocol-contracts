@@ -21,7 +21,7 @@ contract Utils {
 
     constructor() {}
 
-    function init(address _vader) public {
+    function init(address _vader) external {
         if(VADER == address(0)){
             VADER = _vader;
         }
@@ -138,7 +138,7 @@ contract Utils {
         address token,
         uint256 basisPoints,
         uint256 timeForFullProtection
-    ) public view returns (uint256 protection) {
+    ) external view returns (uint256 protection) {
         uint256 _coverage = getCoverage(member, token);
         if (iROUTER(ROUTER()).isCurated(token)) {
             uint256 _duration = block.timestamp - iROUTER(ROUTER()).getMemberLastDeposit(member, token);
