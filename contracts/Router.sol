@@ -44,11 +44,9 @@ contract Router {
     mapping(address => mapping(address => uint256)) private mapCollateralAsset_NextEra;
 
     struct CollateralDetails {
-        uint256 ID;
         mapping(address => DebtDetails) mapCollateral_Debt;
     }
     struct DebtDetails {
-        uint256 ID;
         mapping(address => uint256) debt; //assetC > AssetD > AmountDebt
         mapping(address => uint256) collateral; //assetC > AssetD > AmountCol
         // mapping(address =>uint) assetCollateralDeposit; //assetC > AssetD > AmountCol
