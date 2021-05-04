@@ -86,7 +86,7 @@ contract Router {
     constructor() {}
 
     // Init
-    function init(address _vader) public {
+    function init(address _vader) external {
         if(VADER == address(0)){
             VADER = _vader;
             rewardReductionFactor = 1;
@@ -371,13 +371,13 @@ contract Router {
     }
 
     // The correct amount of Vader for an input of USDV
-    function getVADERAmount(uint256 USDVAmount) public view returns (uint256 vaderAmount) {
+    function getVADERAmount(uint256 USDVAmount) external view returns (uint256 vaderAmount) {
         uint256 _price = getAnchorPrice();
         return (_price * USDVAmount) / one;
     }
 
     // The correct amount of USDV for an input of VADER
-    function getUSDVAmount(uint256 vaderAmount) public view returns (uint256 USDVAmount) {
+    function getUSDVAmount(uint256 vaderAmount) external view returns (uint256 USDVAmount) {
         uint256 _price = getAnchorPrice();
         return (vaderAmount * one) / _price;
     }
@@ -389,7 +389,7 @@ contract Router {
         uint256 amount,
         address collateralAsset,
         address debtAsset
-    ) public returns (uint256) {
+    ) external returns (uint256) {
         return borrowForMember(msg.sender, amount, collateralAsset, debtAsset);
     }
 
@@ -423,7 +423,7 @@ contract Router {
         uint256 amount,
         address collateralAsset,
         address debtAsset
-    ) public returns (uint256) {
+    ) external returns (uint256) {
         return repayForMember(msg.sender, amount, collateralAsset, debtAsset);
     }
 
@@ -472,7 +472,7 @@ contract Router {
         }
     }
 
-    function checkLiquidate() public {
+    function checkLiquidate() external {
         // get member remaining Collateral: originalDeposit - shareOfInterestPayments
         // if remainingCollateral <= 101% * debtValueInCollateral
         // purge, send remaining collateral to liquidator
@@ -634,15 +634,15 @@ contract Router {
         return mapMember_Collateral[member].mapCollateral_Debt[collateralAsset].debt[debtAsset];
     }
 
-    function getSystemCollateral(address collateralAsset, address debtAsset) public view returns (uint256) {
+    function getSystemCollateral(address collateralAsset, address debtAsset) external view returns (uint256) {
         return mapCollateralDebt_Collateral[collateralAsset][debtAsset];
     }
 
-    function getSystemDebt(address collateralAsset, address debtAsset) public view returns (uint256) {
+    function getSystemDebt(address collateralAsset, address debtAsset) external view returns (uint256) {
         return mapCollateralDebt_Debt[collateralAsset][debtAsset];
     }
 
-    function getSystemInterestPaid(address collateralAsset, address debtAsset) public view returns (uint256) {
+    function getSystemInterestPaid(address collateralAsset, address debtAsset) external view returns (uint256) {
         return mapCollateralDebt_interestPaid[collateralAsset][debtAsset];
     }
 

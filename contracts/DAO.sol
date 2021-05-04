@@ -79,7 +79,7 @@ contract DAO {
         address _pools,
         address _factory,
         address _utils
-    ) public {
+    ) external {
         if(VADER == address(0)){
             VETHER = _vether;
             VADER = _vader;
@@ -95,7 +95,7 @@ contract DAO {
 
     //============================== CREATE PROPOSALS ================================//
     // Action with funding
-    function newGrantProposal(address recipient, uint256 amount) public {
+    function newGrantProposal(address recipient, uint256 amount) external {
         string memory typeStr = "GRANT";
         proposalCount += 1;
         mapPID_type[proposalCount] = typeStr;
@@ -107,7 +107,7 @@ contract DAO {
     }
 
     // Action with address parameter
-    function newAddressProposal(address proposedAddress, string memory typeStr) public {
+    function newAddressProposal(address proposedAddress, string memory typeStr) external {
         proposalCount += 1;
         mapPID_address[proposalCount] = proposedAddress;
         mapPID_type[proposalCount] = typeStr;
@@ -117,7 +117,7 @@ contract DAO {
     //============================== VOTE && FINALISE ================================//
 
     // Vote for a proposal
-    function voteProposal(uint256 proposalID) public returns (uint256 voteWeight) {
+    function voteProposal(uint256 proposalID) external returns (uint256 voteWeight) {
         bytes memory _type = bytes(mapPID_type[proposalID]);
         voteWeight = countMemberVotes(proposalID);
         if (hasQuorum(proposalID) && mapPID_finalising[proposalID] == false) {
@@ -140,7 +140,7 @@ contract DAO {
     }
 
     // If an existing proposal, allow a minority to cancel
-    function cancelProposal(uint256 oldProposalID, uint256 newProposalID) public {
+    function cancelProposal(uint256 oldProposalID, uint256 newProposalID) external {
         require(mapPID_finalising[oldProposalID], "Must be finalising");
         require(hasMinority(newProposalID), "Must have minority");
         require(isEqual(bytes(mapPID_type[oldProposalID]), bytes(mapPID_type[newProposalID])), "Must be same");
@@ -156,7 +156,7 @@ contract DAO {
     }
 
     // Proposal with quorum can finalise after cool off period
-    function finaliseProposal(uint256 proposalID) public {
+    function finaliseProposal(uint256 proposalID) external {
         require((block.timestamp - mapPID_timeStart[proposalID]) > coolOffPeriod, "Must be after cool off");
         require(mapPID_finalising[proposalID] == true, "Must be finalising");
         if (!hasQuorum(proposalID)) {

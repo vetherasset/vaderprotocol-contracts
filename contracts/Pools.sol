@@ -58,7 +58,7 @@ contract Pools {
     constructor() {}
 
     // Init
-    function init(address _vader) public {
+    function init(address _vader) external {
         if(VADER == address(0)){
             VADER = _vader;
         }
@@ -348,7 +348,7 @@ contract Pools {
         return iFACTORY(FACTORY()).getSynth(token);
     }
 
-    function isSynth(address token) public view returns (bool) {
+    function isSynth(address token) external view returns (bool) {
         return iFACTORY(FACTORY()).isSynth(token);
     }
 

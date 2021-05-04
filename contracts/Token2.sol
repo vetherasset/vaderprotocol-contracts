@@ -25,7 +25,7 @@ contract Token2 is iERC20 {
     }
 
     //========================================iERC20=========================================//
-    function balanceOf(address account) public view override returns (uint256) {
+    function balanceOf(address account) external view override returns (uint256) {
         return _balances[account];
     }
 
@@ -34,13 +34,13 @@ contract Token2 is iERC20 {
     }
 
     // iERC20 Transfer function
-    function transfer(address recipient, uint256 amount) public virtual override returns (bool) {
+    function transfer(address recipient, uint256 amount) external virtual override returns (bool) {
         _transfer(msg.sender, recipient, amount);
         return true;
     }
 
     // iERC20 Approve, change allowance functions
-    function approve(address spender, uint256 amount) public virtual override returns (bool) {
+    function approve(address spender, uint256 amount) external virtual override returns (bool) {
         _approve(msg.sender, spender, amount);
         return true;
     }
@@ -61,7 +61,7 @@ contract Token2 is iERC20 {
         address sender,
         address recipient,
         uint256 amount
-    ) public virtual override returns (bool) {
+    ) external virtual override returns (bool) {
         _transfer(sender, recipient, amount);
         if (_allowances[sender][msg.sender] < type(uint256).max) {
             _approve(sender, msg.sender, _allowances[sender][msg.sender] - amount);
@@ -71,7 +71,7 @@ contract Token2 is iERC20 {
 
     // TransferTo function
     // Risks: User can be phished, or tx.origin may be deprecated, optionality should exist in the system.
-    function transferTo(address recipient, uint256 amount) public virtual override returns (bool) {
+    function transferTo(address recipient, uint256 amount) external virtual override returns (bool) {
         _transfer(tx.origin, recipient, amount);
         return true;
     }
@@ -97,11 +97,11 @@ contract Token2 is iERC20 {
     }
 
     // Burn supply
-    function burn(uint256 amount) public virtual override {
+    function burn(uint256 amount) external virtual override {
         _burn(msg.sender, amount);
     }
 
-    function burnFrom(address account, uint256 amount) public virtual override {
+    function burnFrom(address account, uint256 amount) external virtual override {
         uint256 decreasedAllowance = allowance(account, msg.sender) - amount;
         _approve(account, msg.sender, decreasedAllowance);
         _burn(account, amount);
