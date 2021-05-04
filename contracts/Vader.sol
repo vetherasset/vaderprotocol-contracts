@@ -12,7 +12,7 @@ contract Vader is iERC20 {
     // ERC-20 Parameters
     string public constant override name = "VADER PROTOCOL TOKEN";
     string public constant override symbol = "VADER";
-    uint256 public constant override decimals = 18;
+    uint8 public constant override decimals = 18;
     uint256 public override totalSupply;
 
     // ERC-20 Mappings

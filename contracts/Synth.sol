@@ -12,7 +12,7 @@ contract Synth is iERC20 {
     // Coin Defaults
     string public override name;
     string public override symbol;
-    uint256 public constant override decimals = 18;
+    uint8 public constant override decimals = 18;
     uint256 public override totalSupply;
 
     // ERC-20 Mappings

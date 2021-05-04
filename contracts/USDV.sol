@@ -11,7 +11,7 @@ contract USDV is iERC20 {
     // ERC-20 Parameters
     string public constant override name = "VADER STABLE DOLLAR";
     string public constant override symbol = "USDV";
-    uint256 public constant override decimals = 18;
+    uint8 public constant override decimals = 18;
     uint256 public override totalSupply;
 
     // ERC-20 Mappings
