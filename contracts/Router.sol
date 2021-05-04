@@ -216,7 +216,7 @@ contract Router {
             } else {
                 outputAmount = iPOOLS(POOLS()).mintSynth(_base, outputToken, _member);
             }
-        } else if (!isBase(inputToken) && !isBase(outputToken)) {
+        } else { // !isBase(inputToken) && !isBase(outputToken)
             // Token||Synth -> Token||Synth
             require(iUTILS(UTILS()).calcSwapSlip(inputAmount, iPOOLS(POOLS()).getTokenAmount(inputToken)) <= slipLimit);
             if (!inSynth) {
@@ -594,16 +594,12 @@ contract Router {
         return iVADER(VADER).emitting();
     }
 
-    function isCurated(address token) public view returns (bool curated) {
-        if (_isCurated[token]) {
-            curated = true;
-        }
+    function isCurated(address token) public view returns (bool) {
+        return _isCurated[token];
     }
 
-    function isPool(address token) public view returns (bool pool) {
-        if (iPOOLS(POOLS()).isAnchor(token) || iPOOLS(POOLS()).isAsset(token)) {
-            pool = true;
-        }
+    function isPool(address token) public view returns (bool) {
+        return iPOOLS(POOLS()).isAnchor(token) || iPOOLS(POOLS()).isAsset(token);
     }
 
     function getMemberBaseDeposit(address member, address token) external view returns (uint256) {

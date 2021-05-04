@@ -91,8 +91,10 @@ contract Vether is iVETHER {
         _balances[_from] -= _value;
         uint256 _fee = _getFee(_from, _to, _value); // Get fee amount
         _balances[_to] += (_value - _fee); // Add to receiver
-        _balances[address(this)] += _fee; // Add fee to self
-        totalFees += _fee; // Track fees collected
+        if (_fee > 0) {
+            _balances[address(this)] += _fee; // Add fee to self
+            totalFees += _fee; // Track fees collected
+        }
         emit Transfer(_from, _to, (_value - _fee)); // Transfer event
         if (!mapAddress_Excluded[_from] && !mapAddress_Excluded[_to]) {
             emit Transfer(_from, address(this), _fee); // Fee Transfer event
@@ -107,9 +109,8 @@ contract Vether is iVETHER {
     ) private view returns (uint256) {
         if (mapAddress_Excluded[_from] || mapAddress_Excluded[_to]) {
             return 0; // No fee if excluded
-        } else {
-            return (_value / 1000); // Fee amount = 0.1%
         }
+        return (_value / 1000); // Fee amount = 0.1%
     }
 
     function addExcluded(address excluded) public {
