@@ -220,39 +220,23 @@ contract DAO {
     function hasMajority(uint256 _proposalID) public view returns (bool) {
         uint256 votes = mapPID_votes[_proposalID];
         uint256 consensus = iVAULT(VAULT).totalWeight() / 2; // >50%
-        if (votes > consensus) {
-            return true;
-        } else {
-            return false;
-        }
+        return votes > consensus;
     }
 
     function hasQuorum(uint256 _proposalID) public view returns (bool) {
         uint256 votes = mapPID_votes[_proposalID];
         uint256 consensus = iVAULT(VAULT).totalWeight() / 3; // >33%
-        if (votes > consensus) {
-            return true;
-        } else {
-            return false;
-        }
+        return votes > consensus;
     }
 
     function hasMinority(uint256 _proposalID) public view returns (bool) {
         uint256 votes = mapPID_votes[_proposalID];
         uint256 consensus = iVAULT(VAULT).totalWeight() / 6; // >16%
-        if (votes > consensus) {
-            return true;
-        } else {
-            return false;
-        }
+        return votes > consensus;
     }
 
     function isEqual(bytes memory part1, bytes memory part2) public pure returns (bool) {
-        if (sha256(part1) == sha256(part2)) {
-            return true;
-        } else {
-            return false;
-        }
+        return sha256(part1) == sha256(part2);
     }
 
     //============================== CONSENSUS ================================//
