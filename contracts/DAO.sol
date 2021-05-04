@@ -247,7 +247,7 @@ contract DAO {
         }
     }
 
-    function isEqual(bytes memory part1, bytes memory part2) public pure returns (bool) {
+    function isEqual(bytes memory part1, bytes memory part2) internal pure returns (bool) {
         if (sha256(part1) == sha256(part2)) {
             return true;
         } else {
