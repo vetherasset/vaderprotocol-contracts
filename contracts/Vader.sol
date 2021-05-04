@@ -174,20 +174,12 @@ contract Vader is iERC20 {
     //=========================================DAO=========================================//
     // Can start
     function flipEmissions() external onlyDAO {
-        if (emitting) {
-            emitting = false;
-        } else {
-            emitting = true;
-        }
+        emitting = !emitting;
     }
 
     // Can stop
     function flipMinting() external onlyDAO {
-        if (minting) {
-            minting = false;
-        } else {
-            minting = true;
-        }
+        minting = !minting;
     }
 
     // Can set params
