@@ -44,11 +44,9 @@ contract Router {
     mapping(address => mapping(address => uint256)) private mapCollateralAsset_NextEra;
 
     struct CollateralDetails {
-        uint256 ID;
         mapping(address => DebtDetails) mapCollateral_Debt;
     }
     struct DebtDetails {
-        uint256 ID;
         mapping(address => uint256) debt; //assetC > AssetD > AmountDebt
         mapping(address => uint256) collateral; //assetC > AssetD > AmountCol
         // mapping(address =>uint) assetCollateralDeposit; //assetC > AssetD > AmountCol
@@ -216,7 +214,7 @@ contract Router {
             } else {
                 outputAmount = iPOOLS(POOLS()).mintSynth(_base, outputToken, _member);
             }
-        } else if (!isBase(inputToken) && !isBase(outputToken)) {
+        } else { // !isBase(inputToken) && !isBase(outputToken)
             // Token||Synth -> Token||Synth
             require(iUTILS(UTILS()).calcSwapSlip(inputAmount, iPOOLS(POOLS()).getTokenAmount(inputToken)) <= slipLimit);
             if (!inSynth) {
@@ -560,9 +558,7 @@ contract Router {
     //======================================HELPERS=========================================//
 
     function isBase(address token) public view returns (bool base) {
-        if (token == VADER || token == USDV()) {
-            return true;
-        }
+        return token == VADER || token == USDV();
     }
 
     function reserveUSDV() public view returns (uint256) {
@@ -594,16 +590,12 @@ contract Router {
         return iVADER(VADER).emitting();
     }
 
-    function isCurated(address token) public view returns (bool curated) {
-        if (_isCurated[token]) {
-            curated = true;
-        }
+    function isCurated(address token) public view returns (bool) {
+        return _isCurated[token];
     }
 
-    function isPool(address token) public view returns (bool pool) {
-        if (iPOOLS(POOLS()).isAnchor(token) || iPOOLS(POOLS()).isAsset(token)) {
-            pool = true;
-        }
+    function isPool(address token) public view returns (bool) {
+        return iPOOLS(POOLS()).isAnchor(token) || iPOOLS(POOLS()).isAsset(token);
     }
 
     function getMemberBaseDeposit(address member, address token) external view returns (uint256) {

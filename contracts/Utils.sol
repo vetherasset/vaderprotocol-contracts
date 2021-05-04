@@ -46,9 +46,7 @@ contract Utils {
     }
 
     function isBase(address token) public view returns (bool base) {
-        if (token == VADER || token == USDV()) {
-            return true;
-        }
+        return token == VADER || token == USDV();
     }
 
     function isPool(address token) public view returns (bool pool) {

@@ -75,13 +75,13 @@ contract Pools {
         require(token != USDV() && token != VADER); // Prohibited
         uint256 _actualInputBase;
         if (base == VADER) {
-            if (!isAnchor(token)) {
+            if (!_isAnchor[token]) {
                 // If new Anchor
                 _isAnchor[token] = true;
             }
             _actualInputBase = getAddedAmount(VADER, token);
         } else {
-            if (!isAsset(token)) {
+            if (!_isAsset[token]) {
                 // If new Asset
                 _isAsset[token] = true;
             }
