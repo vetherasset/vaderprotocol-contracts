@@ -120,7 +120,7 @@ contract DAO {
     function voteProposal(uint256 proposalID) public returns (uint256 voteWeight) {
         bytes memory _type = bytes(mapPID_type[proposalID]);
         voteWeight = countMemberVotes(proposalID);
-        if (hasQuorum(proposalID) && mapPID_finalising[proposalID] == false) {
+        if (hasQuorum(proposalID) && !mapPID_finalising[proposalID]) {
             if (isEqual(_type, "DAO") || isEqual(_type, "UTILS") || isEqual(_type, "REWARD")) {
                 if (hasMajority(proposalID)) {
                     _finalise(proposalID);
@@ -158,7 +158,7 @@ contract DAO {
     // Proposal with quorum can finalise after cool off period
     function finaliseProposal(uint256 proposalID) public {
         require((block.timestamp - mapPID_timeStart[proposalID]) > coolOffPeriod, "Must be after cool off");
-        require(mapPID_finalising[proposalID] == true, "Must be finalising");
+        require(mapPID_finalising[proposalID], "Must be finalising");
         if (!hasQuorum(proposalID)) {
             _finalise(proposalID);
         }
@@ -220,39 +220,23 @@ contract DAO {
     function hasMajority(uint256 _proposalID) public view returns (bool) {
         uint256 votes = mapPID_votes[_proposalID];
         uint256 consensus = iVAULT(VAULT).totalWeight() / 2; // >50%
-        if (votes > consensus) {
-            return true;
-        } else {
-            return false;
-        }
+        return votes > consensus;
     }
 
     function hasQuorum(uint256 _proposalID) public view returns (bool) {
         uint256 votes = mapPID_votes[_proposalID];
         uint256 consensus = iVAULT(VAULT).totalWeight() / 3; // >33%
-        if (votes > consensus) {
-            return true;
-        } else {
-            return false;
-        }
+        return votes > consensus;
     }
 
     function hasMinority(uint256 _proposalID) public view returns (bool) {
         uint256 votes = mapPID_votes[_proposalID];
         uint256 consensus = iVAULT(VAULT).totalWeight() / 6; // >16%
-        if (votes > consensus) {
-            return true;
-        } else {
-            return false;
-        }
+        return votes > consensus;
     }
 
-    function isEqual(bytes memory part1, bytes memory part2) internal pure returns (bool) {
-        if (sha256(part1) == sha256(part2)) {
-            return true;
-        } else {
-            return false;
-        }
+    function isEqual(bytes memory part1, bytes memory part2) public pure returns (bool) {
+        return sha256(part1) == sha256(part2);
     }
 
     //============================== CONSENSUS ================================//

@@ -117,8 +117,8 @@ contract USDV is iERC20 {
             require(sender != address(0), "sender");
             _balances[sender] -= amount;
             _balances[recipient] += amount;
-            emit Transfer(sender, recipient, amount);
         }
+        emit Transfer(sender, recipient, amount);
     }
 
     // Internal mint (upgrading and daily emissions)
@@ -128,8 +128,8 @@ contract USDV is iERC20 {
             require(account != address(0), "recipient");
             totalSupply += amount;
             _balances[account] += amount;
-            emit Transfer(address(0), account, amount);
         }
+        emit Transfer(address(0), account, amount);
     }
 
     // Burn supply
@@ -149,8 +149,8 @@ contract USDV is iERC20 {
             require(account != address(0), "address err");
             _balances[account] -= amount;
             totalSupply -= amount;
-            emit Transfer(account, address(0), amount);
         }
+        emit Transfer(account, address(0), amount);
     }
 
     //=========================================DAO=========================================//
