@@ -558,9 +558,7 @@ contract Router {
     //======================================HELPERS=========================================//
 
     function isBase(address token) public view returns (bool base) {
-        if (token == VADER || token == USDV()) {
-            return true;
-        }
+        return token == VADER || token == USDV();
     }
 
     function reserveUSDV() public view returns (uint256) {
