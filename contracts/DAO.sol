@@ -108,6 +108,7 @@ contract DAO {
 
     // Action with address parameter
     function newAddressProposal(address proposedAddress, string memory typeStr) external {
+        require(proposedAddress != address(0), "No address proposed");
         proposalCount += 1;
         mapPID_address[proposalCount] = proposedAddress;
         mapPID_type[proposalCount] = typeStr;
