@@ -145,7 +145,7 @@ contract Vader is iERC20 {
     // Internal mint (upgrading and daily emissions)
     function _mint(address account, uint256 amount) internal virtual {
         require(account != address(0), "recipient");
-        if ((totalSupply + amount) >= maxSupply) {
+        if ((totalSupply + amount) > maxSupply) {
             amount = maxSupply - totalSupply; // Safety, can't mint above maxSupply
         }
         totalSupply += amount;
