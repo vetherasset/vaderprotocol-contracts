@@ -30,6 +30,7 @@ contract Router {
     uint256 public outsidePriceLimit;
     address[] public arrayAnchors;
     uint256[] public arrayPrices;
+    mapping(address => uint) public mapAnchorAddress_arrayAnchorsIndex1; // 1-based indexes
 
     uint256 public constant repayDelay = 3600;
 
@@ -321,32 +322,31 @@ contract Router {
         require(arrayAnchors.length < anchorLimit); // Limit
         require(iPOOLS(POOLS()).isAnchor(token)); // Must be anchor
         arrayAnchors.push(token); // Add
+        mapAnchorAddress_arrayAnchorsIndex1[token] = arrayAnchors.length; // Store 1-based index
         arrayPrices.push(iUTILS(UTILS()).calcValueInBase(token, one));
         _isCurated[token] = true;
         updateAnchorPrice(token);
     }
 
     function replaceAnchor(address oldToken, address newToken) external {
+        require(newToken != oldToken, "New token not new");
+        uint idx1 = mapAnchorAddress_arrayAnchorsIndex1[oldToken];
+        require(idx1 != 0, "No such old token");
         require(iPOOLS(POOLS()).isAnchor(newToken), "Not anchor");
         require((iPOOLS(POOLS()).getBaseAmount(newToken) > iPOOLS(POOLS()).getBaseAmount(oldToken)), "Not deeper");
         iUTILS(UTILS()).requirePriceBounds(oldToken, outsidePriceLimit, false, getAnchorPrice()); // if price oldToken >5%
         iUTILS(UTILS()).requirePriceBounds(newToken, insidePriceLimit, true, getAnchorPrice()); // if price newToken <2%
         _isCurated[oldToken] = false;
         _isCurated[newToken] = true;
-        for (uint256 i = 0; i < arrayAnchors.length; i++) {
-            if (arrayAnchors[i] == oldToken) {
-                arrayAnchors[i] = newToken;
-            }
-        }
+        arrayAnchors[idx1 - 1] = newToken;
         updateAnchorPrice(newToken);
     }
 
     // Anyone to update prices
     function updateAnchorPrice(address token) public {
-        for (uint256 i = 0; i < arrayAnchors.length; i++) {
-            if (arrayAnchors[i] == token) {
-                arrayPrices[i] = iUTILS(UTILS()).calcValueInBase(arrayAnchors[i], one);
-            }
+        uint idx1 = mapAnchorAddress_arrayAnchorsIndex1[token];
+        if (idx1 != 0) {
+            arrayPrices[idx1 - 1] = iUTILS(UTILS()).calcValueInBase(token, one);
         }
     }
 
