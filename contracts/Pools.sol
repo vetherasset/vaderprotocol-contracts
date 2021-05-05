@@ -312,7 +312,7 @@ contract Pools {
             pooledUSDV = pooledUSDV - _amount; // Accounting
         }
         if (_recipient != address(this)) {
-            iERC20(_token).transfer(_recipient, _amount);
+            require(iERC20(_token).transfer(_recipient, _amount));
         }
     }
 
