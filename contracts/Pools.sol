@@ -290,11 +290,11 @@ contract Pools {
         if (_token == VADER && _pool != VADER) {
             // Want to know added VADER
             addedAmount = _balance - pooledVADER;
-            pooledVADER = pooledVADER + addedAmount;
+            pooledVADER = _balance;
         } else if (_token == USDV()) {
             // Want to know added USDV
             addedAmount = _balance - pooledUSDV;
-            pooledUSDV = pooledUSDV + addedAmount;
+            pooledUSDV = _balance;
         } else {
             // Want to know added Asset/Anchor
             addedAmount = _balance - mapToken_tokenAmount[_pool];
