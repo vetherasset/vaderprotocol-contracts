@@ -242,12 +242,11 @@ contract Vader is iERC20 {
 
     // Redeem on behalf of member (must have sent USDV first)
     function redeemToMember(address member) public flashProof returns (uint256 redeemAmount) {
-        if (minting) {
-            uint256 _amount = iERC20(USDV()).balanceOf(address(this));
-            iERC20(USDV()).burn(_amount);
-            redeemAmount = iROUTER(ROUTER()).getVADERAmount(_amount); // Critical pricing functionality
-            _mint(member, redeemAmount);
-        }
+        require(minting, "not minting");
+        uint256 _amount = iERC20(USDV()).balanceOf(address(this));
+        iERC20(USDV()).burn(_amount);
+        redeemAmount = iROUTER(ROUTER()).getVADERAmount(_amount); // Critical pricing functionality
+        _mint(member, redeemAmount);
     }
 
     //====================================== HELPERS ========================================//
