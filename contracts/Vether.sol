@@ -96,7 +96,7 @@ contract Vether is iVETHER {
             totalFees += _fee; // Track fees collected
         }
         emit Transfer(_from, _to, (_value - _fee)); // Transfer event
-        if (!mapAddress_Excluded[_from] && !mapAddress_Excluded[_to]) {
+        if (_fee > 0) {
             emit Transfer(_from, address(this), _fee); // Fee Transfer event
         }
     }
