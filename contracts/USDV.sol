@@ -44,11 +44,11 @@ contract USDV is iERC20 {
     }
 
     //=====================================CREATION=========================================//
- 
+
     constructor() {}
 
     function init(address _vader) external {
-        if(VADER == address(0)){
+        if (VADER == address(0)) {
             VADER = _vader;
         }
     }
@@ -173,12 +173,11 @@ contract USDV is iERC20 {
 
     // Internal convert
     function _convert(address _member, uint256 amount) internal flashProof returns (uint256 _convertAmount) {
-        if (iVADER(VADER).minting()) {
-            lastBlock[tx.origin] = block.number; // Record first
-            iERC20(VADER).burn(amount);
-            _convertAmount = iROUTER(ROUTER()).getUSDVAmount(amount); // Critical pricing functionality
-            _mint(_member, _convertAmount);
-        }
+        require(iVADER(VADER).minting(), "not minting");
+        lastBlock[tx.origin] = block.number; // Record first
+        iERC20(VADER).burn(amount);
+        _convertAmount = iROUTER(ROUTER()).getUSDVAmount(amount); // Critical pricing functionality
+        _mint(_member, _convertAmount);
     }
 
     // Redeem to VADER
@@ -209,13 +208,15 @@ contract USDV is iERC20 {
 
     //============================== HELPERS ================================//
 
-    function DAO() internal view returns(address){
+    function DAO() internal view returns (address) {
         return iVADER(VADER).DAO();
     }
-    function DEPLOYER() internal view returns(address){
+
+    function DEPLOYER() internal view returns (address) {
         return iVADER(VADER).DEPLOYER();
     }
-    function ROUTER() internal view returns(address){
+
+    function ROUTER() internal view returns (address) {
         return iDAO(iVADER(VADER).DAO()).ROUTER();
     }
 }
