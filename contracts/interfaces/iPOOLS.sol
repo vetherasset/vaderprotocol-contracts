@@ -55,8 +55,6 @@ interface iPOOLS {
         address member
     ) external;
 
-    function isMember(address member) external view returns (bool);
-
     function isAsset(address token) external view returns (bool);
 
     function isAnchor(address token) external view returns (bool);
