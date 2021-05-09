@@ -286,10 +286,10 @@ contract Utils {
             // units = ((P (t B + T b))/(2 T B)) * slipAdjustment
             // P * (part1 + part2) / (part3) * slipAdjustment
             uint256 slipAdjustment = getSlipAdjustment(b, B, t, T);
-            uint256 part1 = (t * B);
-            uint256 part2 = (T * b);
-            uint256 part3 = (T * B) * 2;
-            uint256 _units = (((P * part1) + part2) / part3);
+            uint256 part1 = t * B;
+            uint256 part2 = T * b;
+            uint256 part3 = 2 * T * B;
+            uint256 _units = P * (part1 + part2) / part3;
             return (_units * slipAdjustment) / one; // Divide by 10**18
         }
     }
@@ -304,7 +304,7 @@ contract Utils {
         // 1 - ABS(part1 - part2)/(part3 * part4))
         uint256 part1 = B * t;
         uint256 part2 = b * T;
-        uint256 part3 = (b * 2) + B;
+        uint256 part3 = (2 * b) + B;
         uint256 part4 = t + T;
         uint256 numerator;
         if (part1 > part2) {
@@ -332,13 +332,13 @@ contract Utils {
     ) public pure returns (uint256) {
         // share = (u * U * (2 * A^2 - 2 * U * u + U^2))/U^3
         // (part1 * (part2 - part3 + part4)) / part5
-        uint256 part1 = (u * A);
-        uint256 part2 = ((U * U) * 2);
-        uint256 part3 = ((U * u) * 2);
-        uint256 part4 = (u * u);
-        uint256 numerator = ((part1 * part2) - part3) + part4;
-        uint256 part5 = ((U * U) * U);
-        return (numerator / part5);
+        uint256 part1 = u * U;
+        uint256 part2 = 2 * A * A;
+        uint256 part3 = 2 * U * u;
+        uint256 part4 = U * U;
+        uint256 numerator = part1 * (part2 - part3 + part4);
+        uint256 part5 = U * U * U;
+        return numerator / part5;
     }
 
     function calcCoverage(

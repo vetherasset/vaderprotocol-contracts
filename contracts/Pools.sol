@@ -124,7 +124,7 @@ contract Pools {
         uint256 basisPoints,
         address member
     ) internal returns (uint256 units, uint256 outputBase, uint256 outputToken) {
-        require(base == USDV() || base == VADER);
+        require(iROUTER(ROUTER()).isBase(base), "!Base");
         (units, outputBase, outputToken) = iUTILS(UTILS()).getMemberShare(basisPoints, token, member);
         mapToken_Units[token] -= units;
         mapTokenMember_Units[token][member] -= units;
@@ -144,6 +144,7 @@ contract Pools {
         address member,
         bool toBase
     ) external returns (uint256 outputAmount) {
+        require(iROUTER(ROUTER()).isBase(base), "!Base");
         if (toBase) {
             uint256 _actualInput = getAddedAmount(token, token);
             outputAmount = iUTILS(UTILS()).calcSwapOutput(
@@ -190,7 +191,7 @@ contract Pools {
 
     // Should be done with intention, is gas-intensive
     function deploySynth(address token) external {
-        require(token != VADER || token != USDV());
+        require(token != VADER && token != USDV());
         iFACTORY(FACTORY()).deploySynth(token);
     }
 
@@ -201,6 +202,7 @@ contract Pools {
         address member
     ) external returns (uint256 outputAmount) {
         address synth = getSynth(token);
+        require(iROUTER(ROUTER()).isBase(base), "!Base");
         require(iFACTORY(FACTORY()).isSynth(synth), "!synth");
         uint256 _actualInputBase = getAddedAmount(base, token); // Get input
         uint256 _synthUnits =
@@ -297,6 +299,7 @@ contract Pools {
             pooledUSDV = _balance;
         } else {
             // Want to know added Asset/Anchor
+            require(_token == _pool, "!pool");
             addedAmount = _balance - mapToken_tokenAmount[_pool];
         }
     }

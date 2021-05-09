@@ -155,9 +155,9 @@ describe("Should do IL Protection", function() {
 
     expect(BN2Str(await reserve.reserveVADER())).to.equal('709');
     expect(BN2Str(await vader.balanceOf(acc1))).to.equal('5668'); //+322
-    expect(BN2Str(await anchor.balanceOf(acc1))).to.equal('1050'); //+950
+    expect(BN2Str(await anchor.balanceOf(acc1))).to.equal('1049'); //+950
 
-    expect(BN2Str(await pools.getMemberUnits(anchor.address, acc1))).to.equal('500');
+    expect(BN2Str(await pools.getMemberUnits(anchor.address, acc1))).to.equal('536');
 
     
 
