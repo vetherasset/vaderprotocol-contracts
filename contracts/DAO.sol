@@ -159,9 +159,6 @@ contract DAO {
     function finaliseProposal(uint256 proposalID) external {
         require((block.timestamp - mapPID_timeStart[proposalID]) > coolOffPeriod, "Must be after cool off");
         require(mapPID_finalising[proposalID], "Must be finalising");
-        if (!hasQuorum(proposalID)) {
-            _finalise(proposalID);
-        }
         bytes memory _type = bytes(mapPID_type[proposalID]);
         if (isEqual(_type, "GRANT")) {
             grantFunds(proposalID);
