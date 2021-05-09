@@ -205,7 +205,7 @@ contract Utils {
         address debtAsset,
         uint256 timeElapsed
     ) external view returns (uint256 interestOwed) {
-        uint256 _interestPayment = calcShare(timeElapsed, _year, getInterestPayment(collateralAsset, debtAsset)); // Share of the payment over 1 year
+        uint256 _interestPayment = calcShareWithOverflow(timeElapsed, _year, getInterestPayment(collateralAsset, debtAsset)); // Share of the payment
         if (isBase(collateralAsset)) {
             interestOwed = calcValueInBase(debtAsset, _interestPayment); // Back to base
         } else if (iFACTORY(FACTORY()).isSynth(collateralAsset)) {
@@ -241,6 +241,17 @@ contract Utils {
         if (part > total) {
             part = total;
         }
+        if (total > 0) {
+            share = (amount * part) / total;
+        }
+    }
+
+    function calcShareWithOverflow(
+        uint256 part,
+        uint256 total,
+        uint256 amount
+    ) public pure returns (uint256 share) {
+        // share = amount * part/total
         if (total > 0) {
             share = (amount * part) / total;
         }
