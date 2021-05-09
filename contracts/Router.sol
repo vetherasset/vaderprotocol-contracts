@@ -358,13 +358,16 @@ contract Router {
 
     // Price of 1 VADER in USD
     function getAnchorPrice() public view returns (uint256 anchorPrice) {
-        uint _anchorMiddle = 0;
-        if(arrayPrices.length > 1){_anchorMiddle = anchorLimit/2;} // 2/2 = 1; 5/2 = 2
-        if (arrayPrices.length > 0) {
-            uint256[] memory _sortedAnchorFeed = iUTILS(UTILS()).sortArray(arrayPrices); // Sort price array, no need to modify storage
-            anchorPrice = _sortedAnchorFeed[_anchorMiddle]; // Return the middle
-        } else {
+        // if array len odd  3/2 = 1; 5/2 = 2
+        // if array len even 2/2 = 1; 4/2 = 2
+        uint _anchorMiddle = arrayPrices.length/2;
+        uint256[] memory _sortedAnchorFeed = iUTILS(UTILS()).sortArray(arrayPrices); // Sort price array, no need to modify storage
+        if(arrayPrices.length == 0) {
             anchorPrice = one; // Edge case for first USDV mint
+        } else if(arrayPrices.length & 0x1 == 0x1) { // arrayPrices.length is odd
+            anchorPrice = _sortedAnchorFeed[_anchorMiddle]; // Return the middle
+        } else { // arrayPrices.length is even
+            anchorPrice = (_sortedAnchorFeed[_anchorMiddle] / 2) + (_sortedAnchorFeed[_anchorMiddle - 1] / 2); // Return the average of middle pair
         }
     }
 
