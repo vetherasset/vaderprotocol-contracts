@@ -199,6 +199,17 @@ contract Vader is iERC20 {
         DAO = address(0);
     }
 
+    // Can change DEPLOYER
+    function changeDEPLOYER(address newDEPLOYER) external onlyDAO {
+        require(newDEPLOYER != address(0), "address err");
+        DEPLOYER = newDEPLOYER;
+    }
+
+    // Can purge DEPLOYER
+    function purgeDEPLOYER() external onlyDAO {
+        DEPLOYER = address(0);
+    }
+
     //======================================EMISSION========================================//
     // Internal - Update emission function
     function _checkEmission() private {

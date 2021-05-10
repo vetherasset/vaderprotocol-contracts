@@ -29,6 +29,10 @@ interface iVADER {
 
     function purgeDAO() external;
 
+    function changeDEPLOYER(address newDEPLOYER) external;
+
+    function purgeDEPLOYER() external;
+
     function upgrade(uint256 amount) external;
 
     function redeem() external returns (uint256);
