@@ -104,6 +104,9 @@ describe("Deploy Protection", function() {
 
 describe("Should do IL Protection", function() {
   it("Core math", async function() {
+    expect(BN2Str(await utils.calcCoverage('123', '456', '789', '0'))).to.equal('0'); // T1 == 0, so calculation can't continue
+    expect(BN2Str(await utils.calcCoverage('100', '20', '100', '100'))).to.equal('0'); // deposit less than redemption
+
     expect(BN2Str(await utils.calcCoverage('1000', '1000', '1100', '918'))).to.equal('0');
     expect(BN2Str(await utils.calcCoverage('1000', '1000', '1200', '820'))).to.equal('63');
 

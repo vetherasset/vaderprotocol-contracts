@@ -341,19 +341,31 @@ contract Utils {
         return (numerator / part5);
     }
 
+    // From the VADER whitepaper:
+    //   coverage = (B0 - B1) + (T0 - T1) * B1/T1
+    //     where
+    //       B0: USDVDeposited; T0: assetDeposited;
+    //       B1: USDVToRedeem;  T1: assetToRedeem;
+    // This is the same as
+    //   coverage = B0 + T0*B1/T1 - 2*B1
+    //     where
+    //       B0 + T0*B1/T1 is the deposit value
+    //       2*B1          is the redemption value
     function calcCoverage(
         uint256 B0,
         uint256 T0,
         uint256 B1,
         uint256 T1
-    ) public pure returns (uint256 coverage) {
-        if (B0 > 0 && T1 > 0) {
-            uint256 _depositValue = B0 + (T0 * B1) / T1; // B0+(T0*B1/T1)
-            uint256 _redemptionValue = B1 + (T1 * B1) / T1; // B1+(T1*B1/T1)
-            if (_redemptionValue <= _depositValue) {
-                coverage = (_depositValue - _redemptionValue);
-            }
+    ) public pure returns (uint256) {
+        if (T1 == 0) {
+            return 0;
         }
+        uint256 _depositValue = B0 + T0*B1/T1;
+        uint256 _redemptionValue = 2*B1;
+        if (_depositValue <= _redemptionValue) {
+            return 0;
+        }
+        return _depositValue - _redemptionValue;
     }
 
     // Sorts array in memory from low to high, returns in-memory (Does not need to modify storage)
