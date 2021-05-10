@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.3;
 
+import "./interfaces/SafeERC20.sol";
 import "./interfaces/iERC20.sol";
 import "./interfaces/iDAO.sol";
 import "./interfaces/iUTILS.sol";
@@ -12,7 +13,9 @@ import "./interfaces/iFACTORY.sol";
 import "./interfaces/iSYNTH.sol";
 
 contract Vault {
+    using SafeERC20 for ExternalERC20;
 
+    // Parameters
     uint256 public erasToEarn;
     uint256 public minGrantTime;
 
@@ -165,7 +168,7 @@ contract Vault {
 
     //====================================== WITHDRAW ========================================//
 
-    // Members to withdraw
+    // @title Withdraw `basisPoints` basis points of token `synth` from the vault to the caller.
     function withdraw(address synth, uint256 basisPoints) external returns (uint256 redeemedAmount) {
         redeemedAmount = _processWithdraw(synth, msg.sender, basisPoints); // Get amount to withdraw
         sendFunds(synth, msg.sender, redeemedAmount);
@@ -188,20 +191,23 @@ contract Vault {
 
     //============================== ASSETS ================================//
 
+    // @title Deposit tokens into this contract
+    // @dev Assumes `synth` is trusted (is a synth token) and supports transferTo
     function getFunds(address synth, uint256 amount) internal {
         if (tx.origin == msg.sender) {
-            require(iERC20(synth).transferTo(address(this), amount));
+            require(iERC20(synth).transferTo(address(this), amount)); // safeErc20 not needed; synths trusted
         } else {
-            require(iERC20(synth).transferFrom(msg.sender, address(this), amount));
+            require(iERC20(synth).transferFrom(msg.sender, address(this), amount)); // safeErc20 not needed; synths trusted
         }
     }
 
+    // @title Send `amount` tokens of `synth` to `member`
     function sendFunds(
         address synth,
         address member,
         uint256 amount
     ) internal {
-        require(iERC20(synth).transfer(member, amount));
+        ExternalERC20(synth).safeTransfer(member, amount); // use safeErc20 because caller (withdraw()) does not verify token is a synth
     }
 
     //============================== HELPERS ================================//

@@ -194,14 +194,16 @@ contract USDV is iERC20 {
 
     //============================== ASSETS ================================//
 
+    // @title Deposit tokens into this contract
+    // @dev Assumes `token` is trusted and supports transferTo
     function getFunds(address token, uint256 amount) internal {
         if (token == address(this)) {
             _transfer(msg.sender, address(this), amount);
         } else {
             if (tx.origin == msg.sender) {
-                require(iERC20(token).transferTo(address(this), amount));
+                require(iERC20(token).transferTo(address(this), amount)); // safeErc20 not needed; token trusted
             } else {
-                require(iERC20(token).transferFrom(msg.sender, address(this), amount));
+                require(iERC20(token).transferFrom(msg.sender, address(this), amount)); // safeErc20 not needed; token trusted
             }
         }
     }
