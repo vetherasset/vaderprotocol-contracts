@@ -32,8 +32,6 @@ contract Router {
     uint256[] public arrayPrices;
     mapping(address => uint) public mapAnchorAddress_arrayAnchorsIndex1; // 1-based indexes
 
-    uint256 public constant repayDelay = 3600;
-
     mapping(address => mapping(address => uint256)) public mapMemberToken_depositBase;
     mapping(address => mapping(address => uint256)) public mapMemberToken_depositToken;
     mapping(address => mapping(address => uint256)) public mapMemberToken_lastDeposited;

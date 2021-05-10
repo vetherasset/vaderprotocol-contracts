@@ -33,7 +33,6 @@ contract DAO {
     mapping(uint256 => uint256) public mapPID_votes;
     mapping(uint256 => uint256) public mapPID_timeStart;
     mapping(uint256 => bool) public mapPID_finalising;
-    mapping(uint256 => bool) public mapPID_finalised;
     mapping(uint256 => mapping(address => uint256)) public mapPIDMember_votes;
 
     event NewProposal(address indexed member, uint256 indexed proposalID, string proposalType);
@@ -160,9 +159,6 @@ contract DAO {
     function finaliseProposal(uint256 proposalID) external {
         require((block.timestamp - mapPID_timeStart[proposalID]) > coolOffPeriod, "Must be after cool off");
         require(mapPID_finalising[proposalID], "Must be finalising");
-        if (!hasQuorum(proposalID)) {
-            _finalise(proposalID);
-        }
         bytes memory _type = bytes(mapPID_type[proposalID]);
         if (isEqual(_type, "GRANT")) {
             grantFunds(proposalID);
@@ -183,7 +179,6 @@ contract DAO {
             _typeStr
         );
         mapPID_votes[_proposalID] = 0;
-        mapPID_finalised[_proposalID] = true;
         mapPID_finalising[_proposalID] = false;
     }
 
