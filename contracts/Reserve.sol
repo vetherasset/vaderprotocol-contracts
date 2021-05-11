@@ -2,12 +2,14 @@
 pragma solidity 0.8.3;
 
 // Interfaces
+import "./interfaces/SafeERC20.sol";
 import "./interfaces/iERC20.sol";
 import "./interfaces/iDAO.sol";
 import "./interfaces/iVADER.sol";
 import "./interfaces/iUSDV.sol";
 
 contract Reserve {
+    using SafeERC20 for ExternalERC20;
 
     address public VADER;
 
@@ -65,7 +67,7 @@ contract Reserve {
         if(amount > _reserveForGrant){
             amount = _reserveForGrant;
         }
-        iERC20(USDV()).transfer(recipient, amount);
+        iERC20(USDV()).transfer(recipient, amount); // safeErc20 not needed; USDV trusted
     }
 
     //======================================RESERVE SPlIT========================================//
@@ -85,7 +87,7 @@ contract Reserve {
                 amount = _reserve;
             }
         }
-        iERC20(base).transfer(recipient, amount);
+        ExternalERC20(base).safeTransfer(recipient, amount);
         return amount;
     }
 
@@ -97,7 +99,7 @@ contract Reserve {
         } else if(base == USDV()) {
             require(reserveUSDV() > amount, "Insufficient USDV Reserve");
         }
-        iERC20(base).transfer(recipient, amount);
+        ExternalERC20(base).safeTransfer(recipient, amount);
         return amount;
     }
 

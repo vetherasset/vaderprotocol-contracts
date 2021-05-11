@@ -2,6 +2,7 @@
 pragma solidity 0.8.3;
 
 // Interfaces
+import "./interfaces/SafeERC20.sol";
 import "./interfaces/iERC20.sol";
 import "./interfaces/iDAO.sol";
 import "./interfaces/iUTILS.sol";
@@ -10,6 +11,8 @@ import "./interfaces/iROUTER.sol";
 import "./interfaces/iFACTORY.sol";
 
 contract Pools {
+    using SafeERC20 for ExternalERC20;
+
     // Parameters
     uint256 public pooledVADER;
     uint256 public pooledUSDV;
@@ -288,7 +291,7 @@ contract Pools {
 
     // Safe adds
     function getAddedAmount(address _token, address _pool) internal returns (uint256 addedAmount) {
-        uint256 _balance = iERC20(_token).balanceOf(address(this));
+        uint256 _balance = ExternalERC20(_token).balanceOf(address(this));
         if (_token == VADER && _pool != VADER) {
             // Want to know added VADER
             addedAmount = _balance - pooledVADER;
@@ -315,7 +318,7 @@ contract Pools {
             pooledUSDV = pooledUSDV - _amount; // Accounting
         }
         if (_recipient != address(this)) {
-            require(iERC20(_token).transfer(_recipient, _amount));
+            ExternalERC20(_token).safeTransfer(_recipient, _amount);
         }
     }
 

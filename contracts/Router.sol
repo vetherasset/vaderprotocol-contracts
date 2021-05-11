@@ -2,6 +2,7 @@
 pragma solidity 0.8.3;
 
 // Interfaces
+import "./interfaces/SafeERC20.sol";
 import "./interfaces/iERC20.sol";
 import "./interfaces/iDAO.sol";
 import "./interfaces/iUTILS.sol";
@@ -13,6 +14,8 @@ import "./interfaces/iSYNTH.sol";
 import "hardhat/console.sol";
 
 contract Router {
+    using SafeERC20 for ExternalERC20;
+
     // Parameters
 
     uint256 private constant one = 10**18;
@@ -31,8 +34,6 @@ contract Router {
     address[] public arrayAnchors;
     uint256[] public arrayPrices;
     mapping(address => uint) public mapAnchorAddress_arrayAnchorsIndex1; // 1-based indexes
-
-    uint256 public constant repayDelay = 3600;
 
     mapping(address => mapping(address => uint256)) public mapMemberToken_depositBase;
     mapping(address => mapping(address => uint256)) public mapMemberToken_depositToken;
@@ -359,13 +360,16 @@ contract Router {
 
     // Price of 1 VADER in USD
     function getAnchorPrice() public view returns (uint256 anchorPrice) {
-        uint _anchorMiddle = 0;
-        if(arrayPrices.length > 1){_anchorMiddle = anchorLimit/2;} // 2/2 = 1; 5/2 = 2
-        if (arrayPrices.length > 0) {
-            uint256[] memory _sortedAnchorFeed = iUTILS(UTILS()).sortArray(arrayPrices); // Sort price array, no need to modify storage
-            anchorPrice = _sortedAnchorFeed[_anchorMiddle]; // Return the middle
-        } else {
+        // if array len odd  3/2 = 1; 5/2 = 2
+        // if array len even 2/2 = 1; 4/2 = 2
+        uint _anchorMiddle = arrayPrices.length/2;
+        uint256[] memory _sortedAnchorFeed = iUTILS(UTILS()).sortArray(arrayPrices); // Sort price array, no need to modify storage
+        if(arrayPrices.length == 0) {
             anchorPrice = one; // Edge case for first USDV mint
+        } else if(arrayPrices.length & 0x1 == 0x1) { // arrayPrices.length is odd
+            anchorPrice = _sortedAnchorFeed[_anchorMiddle]; // Return the middle
+        } else { // arrayPrices.length is even
+            anchorPrice = (_sortedAnchorFeed[_anchorMiddle] / 2) + (_sortedAnchorFeed[_anchorMiddle - 1] / 2); // Return the average of middle pair
         }
     }
 
@@ -462,10 +466,10 @@ contract Router {
             mapCollateralDebt_interestPaid[collateralAsset][debtAsset] += _interestOwed;
             _removeCollateral(_interestOwed, collateralAsset, debtAsset);
             if (isBase(collateralAsset)) {
-                iERC20(collateralAsset).transfer(POOLS(), _interestOwed);
+                iERC20(collateralAsset).transfer(POOLS(), _interestOwed); // safeErc20 not needed; bases trusted
                 iPOOLS(POOLS()).sync(collateralAsset, debtAsset);
             } else if (iPOOLS(POOLS()).isSynth(collateralAsset)) {
-                iERC20(collateralAsset).transfer(POOLS(), _interestOwed);
+                iERC20(collateralAsset).transfer(POOLS(), _interestOwed); // safeErc20 not needed; synths trusted
                 iPOOLS(POOLS()).syncSynth(iSYNTH(collateralAsset).TOKEN());
             }
         }
@@ -508,22 +512,24 @@ contract Router {
         }
     }
 
+    // @dev Assumes `_token` is trusted (is a base asset or synth) and supports transferTo
     function _getFunds(address _token, uint256 _amount) internal returns (uint256) {
         uint256 _balance = iERC20(_token).balanceOf(address(this));
         if (tx.origin == msg.sender) {
-            require(iERC20(_token).transferTo(address(this), _amount));
+            require(iERC20(_token).transferTo(address(this), _amount)); // safeErc20 not needed; _token trusted
         } else {
-            require(iERC20(_token).transferFrom(msg.sender, address(this), _amount));
+            require(iERC20(_token).transferFrom(msg.sender, address(this), _amount)); // safeErc20 not needed; _token trusted
         }
         return iERC20(_token).balanceOf(address(this)) - _balance;
     }
 
+    // @dev Assumes `_token` is trusted (is a base asset or synth)
     function _sendFunds(
         address _token,
         address _member,
         uint256 _amount
     ) internal {
-        require(iERC20(_token).transfer(_member, _amount));
+        require(iERC20(_token).transfer(_member, _amount)); // safeErc20 not needed; _token trusted
     }
 
     function _addDebtToMember(
@@ -575,14 +581,14 @@ contract Router {
         if (_token == VADER || _token == USDV() || iPOOLS(POOLS()).isSynth(_token)) {
             safeAmount = _amount;
             if (tx.origin == msg.sender) {
-                iERC20(_token).transferTo(POOLS(), _amount);
+                iERC20(_token).transferTo(POOLS(), _amount); // safeErc20 not needed; bases and synths trusted
             } else {
-                iERC20(_token).transferFrom(msg.sender, POOLS(), _amount);
+                iERC20(_token).transferFrom(msg.sender, POOLS(), _amount); // safeErc20 not needed; bases and synths trusted
             }
         } else {
-            uint256 _startBal = iERC20(_token).balanceOf(POOLS());
-            iERC20(_token).transferFrom(msg.sender, POOLS(), _amount);
-            safeAmount = iERC20(_token).balanceOf(POOLS()) - _startBal;
+            uint256 _startBal = ExternalERC20(_token).balanceOf(POOLS());
+            ExternalERC20(_token).safeTransferFrom(msg.sender, POOLS(), _amount);
+            safeAmount = ExternalERC20(_token).balanceOf(POOLS()) - _startBal;
         }
     }
 
