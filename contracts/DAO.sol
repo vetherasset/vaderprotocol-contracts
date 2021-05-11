@@ -74,7 +74,7 @@ contract DAO {
         string proposalType
     );
 
-    // Only DAO can execute
+    // Only COUNCIL can execute
     modifier onlyCouncil() {
         require(msg.sender == COUNCIL, "!Council");
         _;
@@ -139,7 +139,7 @@ contract DAO {
         mapPID_type[proposalCount] = typeStr;
         emit NewProposal(msg.sender, proposalCount, typeStr);
     }
-    // Action with no parameters
+    // Action with parameters
     function newParamProposal(string memory typeStr, uint256 p1, uint256 p2, uint256 p3, uint256 p4) external {
         proposalCount += 1;
         ParamDetails memory params;
