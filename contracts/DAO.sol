@@ -2,8 +2,10 @@
 pragma solidity 0.8.3;
 
 // Interfaces
+import "./interfaces/iVADER.sol";
 import "./interfaces/iRESERVE.sol";
 import "./interfaces/iVAULT.sol";
+import "./interfaces/iROUTER.sol";
 
 //======================================VADER=========================================//
 contract DAO {
@@ -19,7 +21,7 @@ contract DAO {
     }
      
     uint256 public proposalCount;
-    uint256 public constant coolOffPeriod = 1;
+    uint256 public coolOffPeriod;
 
     address public COUNCIL;
     address public VETHER;
@@ -82,6 +84,7 @@ contract DAO {
  
     constructor() {
         COUNCIL = msg.sender; // Deployer is first Council
+        coolOffPeriod = 1;
     }
 
     function init(
@@ -151,11 +154,7 @@ contract DAO {
     // Vote for a proposal
     function voteProposal(uint256 proposalID) external returns (uint256 voteWeight) {
         bytes memory _type = bytes(mapPID_type[proposalID]);
-        if(msg.sender == COUNCIL){
-            voteWeight =  iVAULT(VAULT).totalWeight(); // Full weighting for Council EOA
-        } else {
-            voteWeight = countMemberVotes(proposalID); // Normal weighting
-        }
+        voteWeight = countMemberVotes(proposalID);
         if (hasQuorum(proposalID) && !mapPID_finalising[proposalID]) {
             if (isEqual(_type, "DAO") || isEqual(_type, "UTILS") || isEqual(_type, "RESERVE")) {
                 if (hasMajority(proposalID)) {
@@ -197,23 +196,28 @@ contract DAO {
         require((block.timestamp - mapPID_timeStart[proposalID]) > coolOffPeriod, "Must be after cool off");
         require(mapPID_finalising[proposalID], "Must be finalising");
         require(!mapPID_finalised[proposalID], "Must not be already done");
-        if (!hasQuorum(proposalID)) {
-            _finalise(proposalID);
-        }
         bytes memory _type = bytes(mapPID_type[proposalID]);
         if (isEqual(_type, "GRANT")) {
-            grantFunds(proposalID);
+            GrantDetails memory _grant = mapPID_grant[proposalID];
+            iRESERVE(RESERVE).grant(_grant.recipient, _grant.amount);
         } else if (isEqual(_type, "UTILS")) {
-            moveUtils(proposalID);
+            UTILS = mapPID_address[proposalID];
         } else if (isEqual(_type, "RESERVE")) {
-            moveReserveAddress(proposalID);
+            RESERVE = mapPID_address[proposalID];
+        }else if (isEqual(_type, "DAO")) {
+            iVADER(VADER).changeDAO(mapPID_address[proposalID]);
         } else if (isEqual(_type, "EMISSIONS")) {
-            flipEmissions(proposalID);
+            iVADER(VADER).flipEmissions();
         } else if (isEqual(_type, "MINTING")) {
-            flipMinting(proposalID);
+            iVADER(VADER).flipMinting();
         } else if (isEqual(_type, "VADER_PARAMS")) {
-            setVaderParams(proposalID);
+            ParamDetails memory _params = mapPID_params[proposalID];
+            iVADER(VADER).setParams(_params.p1, _params.p2);
+        } else if (isEqual(_type, "ROUTER_PARAMS")) {
+            ParamDetails memory _params = mapPID_params[proposalID];
+            iROUTER(ROUTER).setParams(_params.p1, _params.p2, _params.p3);
         }
+        completeProposal(proposalID);
     }
 
     function completeProposal(uint256 _proposalID) internal {
@@ -230,47 +234,18 @@ contract DAO {
         mapPID_finalised[_proposalID] = true;
     }
 
-    //============================== BUSINESS LOGIC ================================//
-
-    function grantFunds(uint256 _proposalID) internal {
-        GrantDetails memory _grant = mapPID_grant[_proposalID];
-        completeProposal(_proposalID);
-        iRESERVE(RESERVE).grant(_grant.recipient, _grant.amount);
-    }
-
-    function moveUtils(uint256 _proposalID) internal {
-        address _proposedAddress = mapPID_address[_proposalID];
-        require(_proposedAddress != address(0), "No address proposed");
-        UTILS = newUTILS;
-        completeProposal(_proposalID);
-    }
-
-    function moveReserveAddress(uint256 _proposalID) internal {
-        address _proposedAddress = mapPID_address[_proposalID];
-        require(_proposedAddress != address(0), "No address proposed");
-        RESERVE = newReserve;
-        completeProposal(_proposalID);
-    }
-
-    function flipEmissions(uint256 _proposalID) internal {
-        iVADER(VADER).flipEmissions();
-        completeProposal(_proposalID);
-    }
-    function flipMinting(uint256 _proposalID) internal {
-        iVADER(VADER).flipMinting();
-        completeProposal(_proposalID);
-    }
-    function setVaderParams(uint256 _proposalID) internal {
-        ParamDetails memory _params = mapPID_params[_proposalID];
-        iVADER(VADER).setParams(_params.p1, _params.p2);
-        completeProposal(_proposalID);
-    }
-
     //============================== CONSENSUS ================================//
 
     function countMemberVotes(uint256 _proposalID) internal returns (uint256 voteWeight) {
         mapPID_votes[_proposalID] -= mapPIDMember_votes[_proposalID][msg.sender];
-        voteWeight = iVAULT(VAULT).getMemberWeight(msg.sender);
+        if(msg.sender == COUNCIL){
+            voteWeight = iVAULT(VAULT).totalWeight(); // Full weighting for Council EOA
+            if(voteWeight == 0){
+                voteWeight = 1; // Edge case if no one in vault
+            }
+        } else {
+            voteWeight = iVAULT(VAULT).getMemberWeight(msg.sender); // Normal weighting
+        }
         mapPID_votes[_proposalID] += voteWeight;
         mapPIDMember_votes[_proposalID][msg.sender] = voteWeight;
     }
@@ -307,5 +282,17 @@ contract DAO {
     // Can purge COUNCIL
     function purgeCouncil() external onlyCouncil {
         COUNCIL = address(0);
+    }
+
+    //============================== HELPERS ================================//
+
+    function getVotes(uint256 _proposalID) external view returns (uint256) {
+        return mapPID_votes[_proposalID];
+    }
+    function getMemberVotes(uint256 _proposalID, address member) external view returns (uint256) {
+        return mapPIDMember_votes[_proposalID][member];
+    }
+    function getPIDType(uint256 _proposalID) external view returns (string memory) {
+        return mapPID_type[_proposalID];
     }
 }

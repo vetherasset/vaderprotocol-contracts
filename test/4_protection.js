@@ -55,19 +55,21 @@ before(async function() {
 
 describe("Deploy Protection", function() {
   it("Should have right reserves", async function() {
-    await vader.flipEmissions()
-
     await utils.init(vader.address)
     await dao.init(vether.address, vader.address, usdv.address, reserve.address, 
       vault.address, router.address, pools.address, factory.address, utils.address);
-    
     await vader.init(dao.address)
-  await usdv.init(vader.address)
+    await usdv.init(vader.address)
     await reserve.init(vader.address)
     await vault.init(vader.address)
     await router.init(vader.address);
     await pools.init(vader.address);
     await factory.init(pools.address);
+
+    await dao.newActionProposal("EMISSIONS")
+    await dao.voteProposal(await dao.proposalCount())
+    await sleep(2000)
+    await dao.finaliseProposal(await dao.proposalCount())
 
     anchor = await Anchor.new();
     asset = await Asset.new();
@@ -79,9 +81,18 @@ describe("Deploy Protection", function() {
     await vader.upgrade('8', {from:acc1}) 
     await router.addLiquidity(vader.address, '1000', anchor.address, '1000', {from:acc1})
 
-    await vader.flipMinting()
-    await vader.flipEmissions()
-    await vader.setParams('1', '1')
+    await dao.newActionProposal("MINTING")
+    await dao.voteProposal(await dao.proposalCount())
+    await sleep(2000)
+    await dao.finaliseProposal(await dao.proposalCount())
+    await dao.newActionProposal("EMISSIONS")
+    await dao.voteProposal(await dao.proposalCount())
+    await sleep(2000)
+    await dao.finaliseProposal(await dao.proposalCount())
+    await dao.newParamProposal("VADER_PARAMS", '1', '1', '0', '0')
+    await dao.voteProposal(await dao.proposalCount())
+    await sleep(2000)
+    await dao.finaliseProposal(await dao.proposalCount())
     await usdv.convert('2000', {from:acc1})
 
     await asset.transfer(acc1, '2000')
@@ -98,7 +109,10 @@ describe("Deploy Protection", function() {
     expect(BN2Str(await vader.getDailyEmission())).to.equal('6800');
     expect(BN2Str(await reserve.reserveVADER())).to.equal('800');
     expect(BN2Str(await vader.balanceOf(reserve.address))).to.equal('800');
-    // await vader.flipEmissions()
+    // await dao.newActionProposal("EMISSIONS")
+    // await dao.voteProposal(await dao.proposalCount())
+    // await sleep(2000)
+    // await dao.finaliseProposal(await dao.proposalCount())
   });
 });
 
@@ -169,10 +183,16 @@ describe("Should do IL Protection", function() {
   });  
 
   it("Small swap, need protection on Asset", async function() {
-    // await vader.flipEmissions()
+    // await dao.newActionProposal("EMISSIONS")
+    // await dao.voteProposal(await dao.proposalCount())
+    // await sleep(2000)
+    // await dao.finaliseProposal(await dao.proposalCount())
     // expect(Number(await reserve.reserveUSDV())).to.be.greaterThan(0);
     // expect(Number(await reserve.reserveUSDV())).to.be.greaterThan(0);
-    await router.setParams('1', '1', '2')
+    await dao.newParamProposal("ROUTER_PARAMS", '1', '1', '2', '0')
+    await dao.voteProposal(await dao.proposalCount())
+    await sleep(2000)
+    await dao.finaliseProposal(await dao.proposalCount())
     expect(await pools.isAsset(asset.address)).to.equal(true);
     await router.curatePool(asset.address)
     expect(await router.isCurated(asset.address)).to.equal(true);

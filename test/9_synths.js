@@ -78,7 +78,10 @@ describe("Deploy Router", function() {
     await asset.transfer(acc1, BN2Str(2000))
     await asset.approve(router.address, BN2Str(one), {from:acc1})
 
-    await vader.flipMinting()
+    await dao.newActionProposal("MINTING")
+    await dao.voteProposal(await dao.proposalCount())
+    await sleep(2000)
+    await dao.finaliseProposal(await dao.proposalCount())
     await usdv.convert(BN2Str(3000), {from:acc1})
 
     expect(await vader.DAO()).to.equal(dao.address);
@@ -194,8 +197,14 @@ describe("Should Swap Synths", function() {
 
 describe("Member should deposit Synths for rewards", function() {
   it("Should deposit", async function() {
-    await vader.flipEmissions()
-    await vader.setParams('1', '2')
+    await dao.newActionProposal("EMISSIONS")
+    await dao.voteProposal(await dao.proposalCount())
+    await sleep(2000)
+    await dao.finaliseProposal(await dao.proposalCount())
+    await dao.newParamProposal("VADER_PARAMS", '1', '2', '0', '0')
+    await dao.voteProposal(await dao.proposalCount())
+    await sleep(2000)
+    await dao.finaliseProposal(await dao.proposalCount())
     await vader.transfer(acc0, ('100'), {from:acc1})
     await vader.transfer(acc1, ('100'), {from:acc0})
     expect(BN2Str(await vader.getDailyEmission())).to.equal(('5625'));
@@ -240,7 +249,10 @@ describe("Member should deposit Synths for rewards", function() {
     expect(BN2Str(await synth.balanceOf(vault.address))).to.equal('166');
     expect(BN2Str(await vault.getMemberDeposit(acc1, synth.address))).to.equal('166');
     expect(BN2Str(await vault.getMemberWeight(acc1))).to.equal('213');
-    await vader.flipEmissions()
+    await dao.newActionProposal("EMISSIONS")
+    await dao.voteProposal(await dao.proposalCount())
+    await sleep(2000)
+    await dao.finaliseProposal(await dao.proposalCount())
     let tx = await vault.withdraw(synth.address, "10000",{from:acc1})
     expect(BN2Str(await vault.getMemberDeposit(acc1, synth.address))).to.equal('0');
     expect(BN2Str(await vault.getMemberSynthWeight(acc1, synth.address))).to.equal('0');
