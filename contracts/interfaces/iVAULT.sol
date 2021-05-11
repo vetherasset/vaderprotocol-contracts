@@ -30,9 +30,9 @@ interface iVAULT {
 
     function reserveVADER() external view returns (uint256);
 
-    function getMemberDeposit(address synth, address member) external view returns (uint256);
+    function getMemberDeposit(address member, address synth) external view returns (uint256);
 
     function getMemberWeight(address member) external view returns (uint256);
 
-    function getMemberLastTime(address synth, address member) external view returns (uint256);
+    function getMemberLastTime(address member, address synth) external view returns (uint256);
 }

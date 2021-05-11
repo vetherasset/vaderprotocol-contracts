@@ -25,6 +25,7 @@ contract Vault {
     uint256 public totalWeight;
 
     mapping(address => uint256) private mapMember_weight;
+    mapping(address => mapping(address => uint256)) private mapMemberSynth_weight;
     mapping(address => mapping(address => uint256)) private mapMemberSynth_deposit;
     mapping(address => mapping(address => uint256)) private mapMemberSynth_lastTime;
 
@@ -105,10 +106,11 @@ contract Vault {
     ) internal {
         mapMemberSynth_lastTime[_member][_synth] = block.timestamp; // Time of deposit
         mapMemberSynth_deposit[_member][_synth] += _amount; // Record deposit
-        uint256 _weight = iUTILS(UTILS()).calcValueInBase(iSYNTH(_synth).TOKEN(), _amount);
+        uint256 _weight = iUTILS(UTILS()).calcSwapValueInBase(iSYNTH(_synth).TOKEN(), _amount);
         if (iPOOLS(POOLS()).isAnchor(iSYNTH(_synth).TOKEN())) {
             _weight = iROUTER(ROUTER()).getUSDVAmount(_weight); // Price in USDV
         }
+        mapMemberSynth_weight[_member][_synth] += _weight;
         mapMember_weight[_member] += _weight; // Total member weight
         totalWeight += _weight; // Total weight
         emit MemberDeposits(_synth, _member, _amount, _weight, totalWeight);
@@ -123,6 +125,7 @@ contract Vault {
         uint256 _weight;
         address _token = iSYNTH(synth).TOKEN();
         reward = calcCurrentReward(synth, _member); // In USDV
+        require(mapMemberSynth_weight[_member][synth] > 0, "must have deposited synth");
         mapMemberSynth_lastTime[_member][synth] = block.timestamp; // Reset time
         if (iPOOLS(POOLS()).isAsset(_token)) {
             iRESERVE(RESERVE()).requestFunds(USDV(), POOLS(), reward);
@@ -142,7 +145,7 @@ contract Vault {
     // Get the payment owed for a member
     function calcCurrentReward(address synth, address member) public view returns (uint256 reward) {
         uint256 _secondsSinceClaim = block.timestamp - mapMemberSynth_lastTime[member][synth]; // Get time since last claim
-        uint256 _share = calcReward(synth, member); // Get share of rewards for member
+        uint256 _share = calcReward(member); // Get share of rewards for member
         reward = (_share * _secondsSinceClaim) / iVADER(VADER).secondsPerEra(); // Get owed amount, based on per-day rates
         uint256 _reserve;
         if (iPOOLS(POOLS()).isAsset(iSYNTH(synth).TOKEN())) {
@@ -155,15 +158,10 @@ contract Vault {
         }
     }
 
-    function calcReward(address synth, address member) public view returns (uint256 reward) {
+    function calcReward(address member) public view returns (uint256 reward) {
         uint256 _weight = mapMember_weight[member];
-        if (iPOOLS(POOLS()).isAsset(iSYNTH(synth).TOKEN())) {
-            uint256 _adjustedReserve = iROUTER(ROUTER()).getUSDVAmount(reserveVADER()) + reserveUSDV(); // Aggregrate reserves
-            return iUTILS(UTILS()).calcShare(_weight, totalWeight, _adjustedReserve / erasToEarn); // Get member's share of that
-        } else {
-            uint256 _adjustedReserve = iROUTER(ROUTER()).getUSDVAmount(reserveVADER()) + reserveUSDV();
-            return iUTILS(UTILS()).calcShare(_weight, totalWeight, _adjustedReserve / erasToEarn);
-        }
+        uint256 _adjustedReserve = iROUTER(ROUTER()).getUSDVAmount(reserveVADER()) + reserveUSDV();
+        return iUTILS(UTILS()).calcShare(_weight, totalWeight, _adjustedReserve / erasToEarn);
     }
 
     //====================================== WITHDRAW ========================================//
@@ -182,7 +180,8 @@ contract Vault {
         require((block.timestamp - mapMemberSynth_lastTime[_member][_synth]) >= minimumDepositTime, "DepositTime"); // stops attacks
         redeemedAmount = iUTILS(UTILS()).calcPart(_basisPoints, mapMemberSynth_deposit[_member][_synth]); // Share of deposits
         mapMemberSynth_deposit[_member][_synth] -= redeemedAmount; // Reduce for member
-        uint256 _weight = iUTILS(UTILS()).calcPart(_basisPoints, mapMember_weight[_member]); // Find recorded weight to reduce
+        uint256 _weight = iUTILS(UTILS()).calcPart(_basisPoints, mapMemberSynth_weight[_member][_synth]); // Find recorded weight to reduce
+        mapMemberSynth_weight[_member][_synth] -= _weight; // Reduce for that synth
         mapMember_weight[_member] -= _weight; // Reduce for member
         totalWeight -= _weight; // Reduce for total
         emit MemberWithdraws(_synth, _member, redeemedAmount, _weight, totalWeight); // Event
@@ -220,15 +219,19 @@ contract Vault {
         return iRESERVE(RESERVE()).reserveVADER(); // Balance
     }
 
-    function getMemberDeposit(address synth, address member) external view returns (uint256) {
+    function getMemberDeposit(address member, address synth) external view returns (uint256) {
         return mapMemberSynth_deposit[member][synth];
+    }
+
+    function getMemberSynthWeight(address member, address synth) external view returns (uint256) {
+        return mapMemberSynth_weight[member][synth];
     }
 
     function getMemberWeight(address member) external view returns (uint256) {
         return mapMember_weight[member];
     }
 
-    function getMemberLastTime(address synth, address member) external view returns (uint256) {
+    function getMemberLastTime(address member, address synth) external view returns (uint256) {
         return mapMemberSynth_lastTime[member][synth];
     }
 

@@ -146,6 +146,7 @@ contract DAO {
         require(isEqual(bytes(mapPID_type[oldProposalID]), bytes(mapPID_type[newProposalID])), "Must be same");
         require(oldProposalID != newProposalID, "Must be different");
         mapPID_votes[oldProposalID] = 0;
+        mapPID_finalising[oldProposalID]  = false;
         emit CancelProposal(
             msg.sender,
             oldProposalID,
@@ -159,6 +160,10 @@ contract DAO {
     function finaliseProposal(uint256 proposalID) external {
         require((block.timestamp - mapPID_timeStart[proposalID]) > coolOffPeriod, "Must be after cool off");
         require(mapPID_finalising[proposalID], "Must be finalising");
+        require(!mapPID_finalised[proposalID], "Must not be already done");
+        if (!hasQuorum(proposalID)) {
+            _finalise(proposalID);
+        }
         bytes memory _type = bytes(mapPID_type[proposalID]);
         if (isEqual(_type, "GRANT")) {
             grantFunds(proposalID);

@@ -219,12 +219,13 @@ contract Router {
         } else { // !isBase(inputToken) && !isBase(outputToken)
             // Token||Synth -> Token||Synth
             require(iUTILS(UTILS()).calcSwapSlip(inputAmount, iPOOLS(POOLS()).getTokenAmount(inputToken)) <= slipLimit);
+            uint _intermediaryAmount;
             if (!inSynth) {
-                iPOOLS(POOLS()).swap(_base, inputToken, POOLS(), true);
+                _intermediaryAmount = iPOOLS(POOLS()).swap(_base, inputToken, POOLS(), true);
             } else {
-                iPOOLS(POOLS()).burnSynth(_base, inputToken, POOLS());
+                _intermediaryAmount = iPOOLS(POOLS()).burnSynth(_base, inputToken, POOLS());
             }
-            require(iUTILS(UTILS()).calcSwapSlip(inputAmount, iPOOLS(POOLS()).getBaseAmount(outputToken)) <= slipLimit);
+            require(iUTILS(UTILS()).calcSwapSlip(_intermediaryAmount, iPOOLS(POOLS()).getBaseAmount(outputToken)) <= slipLimit);
             if (!outSynth) {
                 outputAmount = iPOOLS(POOLS()).swap(_base, outputToken, _member, false);
             } else {
