@@ -231,7 +231,7 @@ contract Vader is iERC20 {
     //======================================ASSET MINTING========================================//
     // VETHER Owners to Upgrade
     function upgrade(uint256 amount) external {
-        require(iERC20(VETHER()).transferFrom(msg.sender, burnAddress, amount));
+        require(iERC20(VETHER()).transferFrom(msg.sender, burnAddress, amount)); // safeERC20 not needed; vether trusted
         _mint(msg.sender, amount * conversionFactor);
     }
 
