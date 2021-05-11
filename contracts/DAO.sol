@@ -11,11 +11,17 @@ contract DAO {
         address recipient;
         uint256 amount;
     }
-
+    struct ParamDetails {
+        uint256 p1;
+        uint256 p2;
+        uint256 p3;
+        uint256 p4;
+    }
      
     uint256 public proposalCount;
     uint256 public constant coolOffPeriod = 1;
 
+    address public COUNCIL;
     address public VETHER;
     address public VADER;
     address public USDV;
@@ -28,11 +34,13 @@ contract DAO {
 
     mapping(uint256 => GrantDetails) public mapPID_grant;
     mapping(uint256 => address) public mapPID_address;
+    mapping(uint256 => ParamDetails) public mapPID_params;
 
     mapping(uint256 => string) public mapPID_type;
     mapping(uint256 => uint256) public mapPID_votes;
     mapping(uint256 => uint256) public mapPID_timeStart;
     mapping(uint256 => bool) public mapPID_finalising;
+    mapping(uint256 => bool) public mapPID_finalised;
     mapping(uint256 => mapping(address => uint256)) public mapPIDMember_votes;
 
     event NewProposal(address indexed member, uint256 indexed proposalID, string proposalType);
@@ -64,9 +72,17 @@ contract DAO {
         string proposalType
     );
 
+    // Only DAO can execute
+    modifier onlyCouncil() {
+        require(msg.sender == COUNCIL, "!Council");
+        _;
+    }
+
     //=====================================CREATION=========================================//
  
-    constructor() {}
+    constructor() {
+        COUNCIL = msg.sender; // Deployer is first Council
+    }
 
     function init(
         address _vether,
@@ -78,7 +94,7 @@ contract DAO {
         address _pools,
         address _factory,
         address _utils
-    ) external {
+    ) external onlyCouncil {
         if(VADER == address(0)){
             VETHER = _vether;
             VADER = _vader;
@@ -106,10 +122,26 @@ contract DAO {
     }
 
     // Action with address parameter
-    function newAddressProposal(address proposedAddress, string memory typeStr) external {
+    function newAddressProposal(string memory typeStr, address proposedAddress) external {
         require(proposedAddress != address(0), "No address proposed");
         proposalCount += 1;
         mapPID_address[proposalCount] = proposedAddress;
+        mapPID_type[proposalCount] = typeStr;
+        emit NewProposal(msg.sender, proposalCount, typeStr);
+    }
+
+    // Action with no parameters
+    function newActionProposal(string memory typeStr) external {
+        proposalCount += 1;
+        mapPID_type[proposalCount] = typeStr;
+        emit NewProposal(msg.sender, proposalCount, typeStr);
+    }
+    // Action with no parameters
+    function newParamProposal(string memory typeStr, uint256 p1, uint256 p2, uint256 p3, uint256 p4) external {
+        proposalCount += 1;
+        ParamDetails memory params;
+        params.p1 = p1; params.p2 = p2; params.p3 = p3; params.p4 = p4;
+        mapPID_params[proposalCount] = params;
         mapPID_type[proposalCount] = typeStr;
         emit NewProposal(msg.sender, proposalCount, typeStr);
     }
@@ -119,9 +151,13 @@ contract DAO {
     // Vote for a proposal
     function voteProposal(uint256 proposalID) external returns (uint256 voteWeight) {
         bytes memory _type = bytes(mapPID_type[proposalID]);
-        voteWeight = countMemberVotes(proposalID);
+        if(msg.sender == COUNCIL){
+            voteWeight =  iVAULT(VAULT).totalWeight(); // Full weighting for Council EOA
+        } else {
+            voteWeight = countMemberVotes(proposalID); // Normal weighting
+        }
         if (hasQuorum(proposalID) && !mapPID_finalising[proposalID]) {
-            if (isEqual(_type, "DAO") || isEqual(_type, "UTILS") || isEqual(_type, "REWARD")) {
+            if (isEqual(_type, "DAO") || isEqual(_type, "UTILS") || isEqual(_type, "RESERVE")) {
                 if (hasMajority(proposalID)) {
                     _finalise(proposalID);
                 }
@@ -169,8 +205,14 @@ contract DAO {
             grantFunds(proposalID);
         } else if (isEqual(_type, "UTILS")) {
             moveUtils(proposalID);
-        } else if (isEqual(_type, "REWARD")) {
-            moveRewardAddress(proposalID);
+        } else if (isEqual(_type, "RESERVE")) {
+            moveReserveAddress(proposalID);
+        } else if (isEqual(_type, "EMISSIONS")) {
+            flipEmissions(proposalID);
+        } else if (isEqual(_type, "MINTING")) {
+            flipMinting(proposalID);
+        } else if (isEqual(_type, "VADER_PARAMS")) {
+            setVaderParams(proposalID);
         }
     }
 
@@ -185,6 +227,7 @@ contract DAO {
         );
         mapPID_votes[_proposalID] = 0;
         mapPID_finalising[_proposalID] = false;
+        mapPID_finalised[_proposalID] = true;
     }
 
     //============================== BUSINESS LOGIC ================================//
@@ -198,14 +241,28 @@ contract DAO {
     function moveUtils(uint256 _proposalID) internal {
         address _proposedAddress = mapPID_address[_proposalID];
         require(_proposedAddress != address(0), "No address proposed");
-        changeUTILS(_proposedAddress);
+        UTILS = newUTILS;
         completeProposal(_proposalID);
     }
 
-    function moveRewardAddress(uint256 _proposalID) internal {
+    function moveReserveAddress(uint256 _proposalID) internal {
         address _proposedAddress = mapPID_address[_proposalID];
         require(_proposedAddress != address(0), "No address proposed");
-        setReserve(_proposedAddress);
+        RESERVE = newReserve;
+        completeProposal(_proposalID);
+    }
+
+    function flipEmissions(uint256 _proposalID) internal {
+        iVADER(VADER).flipEmissions();
+        completeProposal(_proposalID);
+    }
+    function flipMinting(uint256 _proposalID) internal {
+        iVADER(VADER).flipMinting();
+        completeProposal(_proposalID);
+    }
+    function setVaderParams(uint256 _proposalID) internal {
+        ParamDetails memory _params = mapPID_params[_proposalID];
+        iVADER(VADER).setParams(_params.p1, _params.p2);
         completeProposal(_proposalID);
     }
 
@@ -240,16 +297,15 @@ contract DAO {
         return sha256(part1) == sha256(part2);
     }
 
-    //============================== CONSENSUS ================================//
-        // Can set reward address
-    function setReserve(address newReserve) internal {
-        require(newReserve != address(0), "address err");
-        RESERVE = newReserve;
+    //============================== COUNCIL ================================//
+    // Can change COUNCIL
+    function changeCouncil(address newCouncil) external onlyCouncil {
+        require(newCouncil != address(0), "address err");
+        COUNCIL = newCouncil;
     }
 
-    // Can change UTILS
-    function changeUTILS(address newUTILS) internal {
-        require(newUTILS != address(0), "address err");
-        UTILS = newUTILS;
+    // Can purge COUNCIL
+    function purgeCouncil() external onlyCouncil {
+        COUNCIL = address(0);
     }
 }

@@ -27,7 +27,7 @@ contract USDV is iERC20 {
 
     // Only DAO can execute
     modifier onlyDAO() {
-        require(msg.sender == DAO() || msg.sender == DEPLOYER(), "Not DAO");
+        require(msg.sender == DAO(), "!DAO");
         _;
     }
     // Stop flash attacks
@@ -213,11 +213,6 @@ contract USDV is iERC20 {
     function DAO() internal view returns (address) {
         return iVADER(VADER).DAO();
     }
-
-    function DEPLOYER() internal view returns (address) {
-        return iVADER(VADER).DEPLOYER();
-    }
-
     function ROUTER() internal view returns (address) {
         return iDAO(iVADER(VADER).DAO()).ROUTER();
     }
