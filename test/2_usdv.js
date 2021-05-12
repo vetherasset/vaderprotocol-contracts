@@ -85,7 +85,10 @@ describe("Deploy USDV", function() {
 describe("Convert and redeem", function() {
 
   it("Should convert acc1", async function() {
-    await vader.flipMinting()
+    await dao.newActionProposal("MINTING")
+    await dao.voteProposal(await dao.proposalCount())
+    await sleep(2000)
+    await dao.finaliseProposal(await dao.proposalCount())
     await usdv.convert('250', {from:acc1})
     expect(BN2Str(await vader.totalSupply())).to.equal('3750');
     expect(BN2Str(await vader.balanceOf(acc1))).to.equal('3750');

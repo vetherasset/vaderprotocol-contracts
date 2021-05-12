@@ -5,8 +5,6 @@ interface iVADER {
 
     function DAO() external view returns (address);
 
-    function DEPLOYER() external view returns (address);
-
     function UTILS() external view returns (address);
 
     function emitting() external view returns (bool);

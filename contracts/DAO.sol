@@ -2,8 +2,10 @@
 pragma solidity 0.8.3;
 
 // Interfaces
+import "./interfaces/iVADER.sol";
 import "./interfaces/iRESERVE.sol";
 import "./interfaces/iVAULT.sol";
+import "./interfaces/iROUTER.sol";
 
 //======================================VADER=========================================//
 contract DAO {
@@ -11,11 +13,17 @@ contract DAO {
         address recipient;
         uint256 amount;
     }
-
+    struct ParamDetails {
+        uint256 p1;
+        uint256 p2;
+        uint256 p3;
+        uint256 p4;
+    }
      
     uint256 public proposalCount;
-    uint256 public constant coolOffPeriod = 1;
+    uint256 public coolOffPeriod;
 
+    address public COUNCIL;
     address public VETHER;
     address public VADER;
     address public USDV;
@@ -28,11 +36,13 @@ contract DAO {
 
     mapping(uint256 => GrantDetails) public mapPID_grant;
     mapping(uint256 => address) public mapPID_address;
+    mapping(uint256 => ParamDetails) public mapPID_params;
 
     mapping(uint256 => string) public mapPID_type;
     mapping(uint256 => uint256) public mapPID_votes;
     mapping(uint256 => uint256) public mapPID_timeStart;
     mapping(uint256 => bool) public mapPID_finalising;
+    mapping(uint256 => bool) public mapPID_finalised;
     mapping(uint256 => mapping(address => uint256)) public mapPIDMember_votes;
 
     event NewProposal(address indexed member, uint256 indexed proposalID, string proposalType);
@@ -64,9 +74,18 @@ contract DAO {
         string proposalType
     );
 
+    // Only COUNCIL can execute
+    modifier onlyCouncil() {
+        require(msg.sender == COUNCIL, "!Council");
+        _;
+    }
+
     //=====================================CREATION=========================================//
  
-    constructor() {}
+    constructor() {
+        COUNCIL = msg.sender; // Deployer is first Council
+        coolOffPeriod = 1;
+    }
 
     function init(
         address _vether,
@@ -78,7 +97,7 @@ contract DAO {
         address _pools,
         address _factory,
         address _utils
-    ) external {
+    ) external onlyCouncil {
         if(VADER == address(0)){
             VETHER = _vether;
             VADER = _vader;
@@ -106,10 +125,26 @@ contract DAO {
     }
 
     // Action with address parameter
-    function newAddressProposal(address proposedAddress, string memory typeStr) external {
+    function newAddressProposal(string memory typeStr, address proposedAddress) external {
         require(proposedAddress != address(0), "No address proposed");
         proposalCount += 1;
         mapPID_address[proposalCount] = proposedAddress;
+        mapPID_type[proposalCount] = typeStr;
+        emit NewProposal(msg.sender, proposalCount, typeStr);
+    }
+
+    // Action with no parameters
+    function newActionProposal(string memory typeStr) external {
+        proposalCount += 1;
+        mapPID_type[proposalCount] = typeStr;
+        emit NewProposal(msg.sender, proposalCount, typeStr);
+    }
+    // Action with parameters
+    function newParamProposal(string memory typeStr, uint256 p1, uint256 p2, uint256 p3, uint256 p4) external {
+        proposalCount += 1;
+        ParamDetails memory params;
+        params.p1 = p1; params.p2 = p2; params.p3 = p3; params.p4 = p4;
+        mapPID_params[proposalCount] = params;
         mapPID_type[proposalCount] = typeStr;
         emit NewProposal(msg.sender, proposalCount, typeStr);
     }
@@ -121,7 +156,7 @@ contract DAO {
         bytes memory _type = bytes(mapPID_type[proposalID]);
         voteWeight = countMemberVotes(proposalID);
         if (hasQuorum(proposalID) && !mapPID_finalising[proposalID]) {
-            if (isEqual(_type, "DAO") || isEqual(_type, "UTILS") || isEqual(_type, "REWARD")) {
+            if (isEqual(_type, "DAO") || isEqual(_type, "UTILS") || isEqual(_type, "RESERVE")) {
                 if (hasMajority(proposalID)) {
                     _finalise(proposalID);
                 }
@@ -161,17 +196,28 @@ contract DAO {
         require((block.timestamp - mapPID_timeStart[proposalID]) > coolOffPeriod, "Must be after cool off");
         require(mapPID_finalising[proposalID], "Must be finalising");
         require(!mapPID_finalised[proposalID], "Must not be already done");
-        if (!hasQuorum(proposalID)) {
-            _finalise(proposalID);
-        }
         bytes memory _type = bytes(mapPID_type[proposalID]);
         if (isEqual(_type, "GRANT")) {
-            grantFunds(proposalID);
+            GrantDetails memory _grant = mapPID_grant[proposalID];
+            iRESERVE(RESERVE).grant(_grant.recipient, _grant.amount);
         } else if (isEqual(_type, "UTILS")) {
-            moveUtils(proposalID);
-        } else if (isEqual(_type, "REWARD")) {
-            moveRewardAddress(proposalID);
+            UTILS = mapPID_address[proposalID];
+        } else if (isEqual(_type, "RESERVE")) {
+            RESERVE = mapPID_address[proposalID];
+        }else if (isEqual(_type, "DAO")) {
+            iVADER(VADER).changeDAO(mapPID_address[proposalID]);
+        } else if (isEqual(_type, "EMISSIONS")) {
+            iVADER(VADER).flipEmissions();
+        } else if (isEqual(_type, "MINTING")) {
+            iVADER(VADER).flipMinting();
+        } else if (isEqual(_type, "VADER_PARAMS")) {
+            ParamDetails memory _params = mapPID_params[proposalID];
+            iVADER(VADER).setParams(_params.p1, _params.p2);
+        } else if (isEqual(_type, "ROUTER_PARAMS")) {
+            ParamDetails memory _params = mapPID_params[proposalID];
+            iROUTER(ROUTER).setParams(_params.p1, _params.p2, _params.p3);
         }
+        completeProposal(proposalID);
     }
 
     function completeProposal(uint256 _proposalID) internal {
@@ -185,35 +231,21 @@ contract DAO {
         );
         mapPID_votes[_proposalID] = 0;
         mapPID_finalising[_proposalID] = false;
-    }
-
-    //============================== BUSINESS LOGIC ================================//
-
-    function grantFunds(uint256 _proposalID) internal {
-        GrantDetails memory _grant = mapPID_grant[_proposalID];
-        completeProposal(_proposalID);
-        iRESERVE(RESERVE).grant(_grant.recipient, _grant.amount);
-    }
-
-    function moveUtils(uint256 _proposalID) internal {
-        address _proposedAddress = mapPID_address[_proposalID];
-        require(_proposedAddress != address(0), "No address proposed");
-        changeUTILS(_proposedAddress);
-        completeProposal(_proposalID);
-    }
-
-    function moveRewardAddress(uint256 _proposalID) internal {
-        address _proposedAddress = mapPID_address[_proposalID];
-        require(_proposedAddress != address(0), "No address proposed");
-        setReserve(_proposedAddress);
-        completeProposal(_proposalID);
+        mapPID_finalised[_proposalID] = true;
     }
 
     //============================== CONSENSUS ================================//
 
     function countMemberVotes(uint256 _proposalID) internal returns (uint256 voteWeight) {
         mapPID_votes[_proposalID] -= mapPIDMember_votes[_proposalID][msg.sender];
-        voteWeight = iVAULT(VAULT).getMemberWeight(msg.sender);
+        if(msg.sender == COUNCIL){
+            voteWeight = iVAULT(VAULT).totalWeight(); // Full weighting for Council EOA
+            if(voteWeight == 0){
+                voteWeight = 1; // Edge case if no one in vault
+            }
+        } else {
+            voteWeight = iVAULT(VAULT).getMemberWeight(msg.sender); // Normal weighting
+        }
         mapPID_votes[_proposalID] += voteWeight;
         mapPIDMember_votes[_proposalID][msg.sender] = voteWeight;
     }
@@ -240,16 +272,27 @@ contract DAO {
         return sha256(part1) == sha256(part2);
     }
 
-    //============================== CONSENSUS ================================//
-        // Can set reward address
-    function setReserve(address newReserve) internal {
-        require(newReserve != address(0), "address err");
-        RESERVE = newReserve;
+    //============================== COUNCIL ================================//
+    // Can change COUNCIL
+    function changeCouncil(address newCouncil) external onlyCouncil {
+        require(newCouncil != address(0), "address err");
+        COUNCIL = newCouncil;
     }
 
-    // Can change UTILS
-    function changeUTILS(address newUTILS) internal {
-        require(newUTILS != address(0), "address err");
-        UTILS = newUTILS;
+    // Can purge COUNCIL
+    function purgeCouncil() external onlyCouncil {
+        COUNCIL = address(0);
+    }
+
+    //============================== HELPERS ================================//
+
+    function getVotes(uint256 _proposalID) external view returns (uint256) {
+        return mapPID_votes[_proposalID];
+    }
+    function getMemberVotes(uint256 _proposalID, address member) external view returns (uint256) {
+        return mapPIDMember_votes[_proposalID][member];
+    }
+    function getPIDType(uint256 _proposalID) external view returns (string memory) {
+        return mapPID_type[_proposalID];
     }
 }

@@ -61,12 +61,10 @@ describe("Deploy Anchor", function() {
   it("Should deploy", async function() {
     await sleep(100)
     await utils.init(vader.address)
-     
     await dao.init(vether.address, vader.address, usdv.address, reserve.address, 
       vault.address, router.address, pools.address, factory.address, utils.address);
-    
     await vader.init(dao.address)
-  await usdv.init(vader.address)
+    await usdv.init(vader.address)
     await reserve.init(vader.address)
     await vault.init(vader.address)
     await router.init(vader.address);

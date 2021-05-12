@@ -22,7 +22,7 @@ contract Reserve {
 
     // Only DAO can execute
     modifier onlyDAO() {
-        require(msg.sender == DAO() || msg.sender == DEPLOYER(), "Not DAO");
+        require(msg.sender == DAO(), "!DAO");
         _;
     }
     // Only DAO can execute
@@ -141,9 +141,6 @@ contract Reserve {
 
     function DAO() internal view returns(address){
         return iVADER(VADER).DAO();
-    }
-    function DEPLOYER() internal view returns(address){
-        return iVADER(VADER).DEPLOYER();
     }
     function USDV() internal view returns(address){
         return iDAO(iVADER(VADER).DAO()).USDV();

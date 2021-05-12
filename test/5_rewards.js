@@ -66,8 +66,14 @@ describe("Deploy Rewards", function() {
     await pools.init(vader.address);
     await factory.init(pools.address);
 
-    await vader.flipEmissions()
-    await vader.setParams('1', '900')
+    await dao.newActionProposal("EMISSIONS")
+    await dao.voteProposal(await dao.proposalCount())
+    await sleep(2000)
+    await dao.finaliseProposal(await dao.proposalCount())
+    await dao.newParamProposal("VADER_PARAMS", '1', '900', '0', '0')
+    await dao.voteProposal(await dao.proposalCount())
+    await sleep(2000)
+    await dao.finaliseProposal(await dao.proposalCount())
 
 
     anchor = await Anchor.new();
@@ -82,7 +88,10 @@ describe("Deploy Rewards", function() {
     await vader.transfer(acc0, '100', {from:acc1})
     await vader.transfer(acc1, '100')
     
-    await vader.flipMinting()
+    await dao.newActionProposal("MINTING")
+    await dao.voteProposal(await dao.proposalCount())
+    await sleep(2000)
+    await dao.finaliseProposal(await dao.proposalCount())
     await usdv.convert(BN2Str(1100), {from:acc1})
     // await usdv.withdrawToUSDV('10000', {from:acc1})
     await asset.transfer(acc1, BN2Str(2000))
@@ -120,7 +129,10 @@ describe("Should do pool rewards", function() {
 
   it("Swap asset, get rewards", async function() {
     let r = '20';
-    await router.setParams('1', '1', '2')
+    await dao.newParamProposal("ROUTER_PARAMS", '1', '1', '2', '0')
+    await dao.voteProposal(await dao.proposalCount())
+    await sleep(2000)
+    await dao.finaliseProposal(await dao.proposalCount())
     await router.curatePool(asset.address, {from:acc1})
     expect(BN2Str(await reserve.reserveUSDV())).to.equal(r);
     expect(await router.emitting()).to.equal(true);

@@ -357,12 +357,7 @@ contract Pools {
     function isSynth(address token) external view returns (bool) {
         return iFACTORY(FACTORY()).isSynth(token);
     }
-
     
-
-    // function DAO() internal view returns(address){
-    //     return iVADER(VADER).DAO();
-    // }
     function USDV() internal view returns(address){
         return iDAO(iVADER(VADER).DAO()).USDV();
     }

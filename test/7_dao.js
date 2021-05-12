@@ -73,15 +73,24 @@ describe("Deploy DAO", function() {
     await vether.approve(vader.address, '6000', {from:acc0})
     await vader.upgrade('3', {from:acc0}) 
 
-    await vader.flipEmissions()
-    await vader.setParams('1', '90')
+    await dao.newActionProposal("EMISSIONS")
+    await dao.voteProposal(await dao.proposalCount())
+    await sleep(2000)
+    await dao.finaliseProposal(await dao.proposalCount())
+    await dao.newParamProposal("VADER_PARAMS", '1', '90', '0', '0')
+    await dao.voteProposal(await dao.proposalCount())
+    await sleep(2000)
+    await dao.finaliseProposal(await dao.proposalCount())
     await vader.transfer(acc1, ('100'), {from:acc0})
     await vader.transfer(acc0, ('100'), {from:acc1})
 
     await vader.transfer(acc1, '2000') 
     await anchor.transfer(acc1, '1110') 
 
-    await vader.flipMinting()
+    await dao.newActionProposal("MINTING")
+    await dao.voteProposal(await dao.proposalCount())
+    await sleep(2000)
+    await dao.finaliseProposal(await dao.proposalCount())
     await usdv.convert(200, {from:acc1})
 
     await anchor.approve(router.address, BN2Str(one), {from:acc1})
@@ -96,11 +105,6 @@ describe("Deploy DAO", function() {
     await vault.deposit(synth.address, '10', {from:acc0})
     await vault.deposit(synth.address, '10', {from:acc1})
 
-    await vader.changeDAO(dao.address, {from:acc0})
-
-    // await anchor.transfer(acc1, BN2Str(2000))
-    // await anchor.approve(router.address, BN2Str(one), {from:acc1})
-    
   });
 });
 
@@ -121,7 +125,7 @@ describe("DAO Functions", function() {
   it("It should cahnge Utils", async () => {
     assert.equal(await dao.UTILS(), utils.address)
     let utils2 = await Utils.new();
-    await dao.newAddressProposal(utils2.address, 'UTILS', { from: acc1 })
+    await dao.newAddressProposal('UTILS', utils2.address, { from: acc1 })
     let proposalCount = BN2Str(await dao.proposalCount())
     await dao.voteProposal(proposalCount, { from: acc0 })
     await dao.voteProposal(proposalCount, { from: acc1 })

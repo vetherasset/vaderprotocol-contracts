@@ -33,7 +33,6 @@ contract Vader is iERC20 {
     uint256 public feeOnTransfer;
 
     address public DAO;
-    address public DEPLOYER;
 
     address public constant burnAddress = 0x0111011001100001011011000111010101100101;
 
@@ -41,9 +40,10 @@ contract Vader is iERC20 {
 
     // Only DAO can execute
     modifier onlyDAO() {
-        require(msg.sender == DAO || msg.sender == DEPLOYER, "Not DAO");
+        require(msg.sender == DAO, "!DAO");
         _;
     }
+
     // Stop flash attacks
     modifier flashProof() {
         require(isMature(), "No flash");
@@ -61,7 +61,6 @@ contract Vader is iERC20 {
         secondsPerEra = 1; //86400;
         nextEraTime = block.timestamp + secondsPerEra;
         emissionCurve = 10;
-        DEPLOYER = msg.sender;
     }
 
     function init(address _dao) external {

@@ -75,8 +75,14 @@ describe("Deploy Router", function() {
 
     await vether.approve(vader.address, '9400', {from:acc1})
     await vader.upgrade('10', {from:acc1}) 
-    await vader.flipEmissions()
-    await vader.flipMinting()
+    await dao.newActionProposal("EMISSIONS")
+    await dao.voteProposal(await dao.proposalCount())
+    await sleep(2000)
+    await dao.finaliseProposal(await dao.proposalCount())
+    await dao.newActionProposal("MINTING")
+    await dao.voteProposal(await dao.proposalCount())
+    await sleep(2000)
+    await dao.finaliseProposal(await dao.proposalCount())
     await usdv.convert('5000', {from:acc1})
 
     await asset.transfer(acc1, '2000')

@@ -145,13 +145,19 @@ describe("DAO Functions", function() {
   });
 
   it("DAO setParams", async function() {
-    await vader.setParams('1', '1')
+    await dao.newParamProposal("VADER_PARAMS", '1', '1', '0', '0')
+    await dao.voteProposal(await dao.proposalCount())
+    await sleep(2000)
+    await dao.finaliseProposal(await dao.proposalCount())
     expect(BN2Str(await vader.secondsPerEra())).to.equal('1');
     expect(BN2Str(await vader.emissionCurve())).to.equal('1');
   });
 
   it("DAO start emitting", async function() {
-    await vader.flipEmissions({from:acc0})
+    await dao.newActionProposal("EMISSIONS")
+    await dao.voteProposal(await dao.proposalCount())
+    await sleep(2000)
+    await dao.finaliseProposal(await dao.proposalCount())
     expect(await vader.emitting()).to.equal(true);
   });
 
@@ -181,7 +187,10 @@ describe("FeeOnTransfer", function() {
     expect(BN2Str(await vether.balanceOf(acc0))).to.equal('999999999999999999999999');
     await vether.approve(vader.address, '999999999999999999999999', {from:acc0})
     await vader.upgrade('999999999999999999999999', {from:acc0})
-    await vader.setParams('1', '2024', {from:acc0})
+    await dao.newParamProposal("VADER_PARAMS", '1', '2024', '0', '0')
+    await dao.voteProposal(await dao.proposalCount())
+    await sleep(2000)
+    await dao.finaliseProposal(await dao.proposalCount())
     expect(BN2Str(await vader.getDailyEmission())).to.equal(BN2Str('494071146245059288537546'));
     expect(BN2Str(await vader.totalSupply())).to.equal('1000000000000000000000005400');
     await vader.transfer(acc1, BN2Str(100), {from:acc0})

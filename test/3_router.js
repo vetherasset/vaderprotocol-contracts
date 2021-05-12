@@ -84,7 +84,10 @@ describe("Deploy Router", function() {
     await asset2.transfer(acc1, BN2Str(2000))
     await asset2.approve(router.address, BN2Str(one), {from:acc1})
 
-    await vader.flipMinting()
+    await dao.newActionProposal("MINTING")
+    await dao.voteProposal(await dao.proposalCount())
+    await sleep(2000)
+    await dao.finaliseProposal(await dao.proposalCount())
     await usdv.convert(BN2Str(3000), {from:acc1})
     // await usdv.withdrawToUSDV('10000', {from:acc1})
 
