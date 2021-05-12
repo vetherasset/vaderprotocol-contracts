@@ -154,7 +154,7 @@ describe("Be a valid ERC-20", function() {
 // acc1 |   0 | 1000 |  900 |
 
   it("Should transfer to", async function() {
-    await usdv.transferTo(acc0, "100", {from:acc1}) 
+    await usdv.transfer(acc1, "100", {from:acc0}) 
     expect(BN2Str(await usdv.balanceOf(acc0))).to.equal('200');
   });
 // acc  | VTH | VADER  | USDV |
