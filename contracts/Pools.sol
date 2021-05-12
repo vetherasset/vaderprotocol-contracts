@@ -69,11 +69,11 @@ contract Pools {
 
     //====================================LIQUIDITY=========================================//
 
-    function addLiquidity(
+    function _addLiquidity(
         address base,
         address token,
         address member
-    ) external returns (uint256 liquidityUnits) {
+    ) internal returns (uint256 liquidityUnits) {
         require(iROUTER(ROUTER()).isBase(base), "!Base");
         require(token != USDV() && token != VADER); // Prohibited
         uint256 _actualInputBase;
@@ -103,6 +103,22 @@ contract Pools {
         mapToken_baseAmount[token] += _actualInputBase; // Add BASE
         mapToken_tokenAmount[token] += _actualInputToken; // Add token
         emit AddLiquidity(member, base, _actualInputBase, token, _actualInputToken, liquidityUnits);
+    }
+
+    function addLiquidity(
+        address base,
+        address token,
+        address member
+    ) external returns (uint256 liquidityUnits) {
+        require(msg.sender == ROUTER(), "Not ROUTER");
+        return _addLiquidity(base, token, member);
+    }
+
+    function addLiquidityDirectly(
+        address base,
+        address token
+    ) external returns (uint256 liquidityUnits) {
+        return _addLiquidity(base, token, msg.sender);
     }
 
     function removeLiquidity(
