@@ -3,6 +3,7 @@ pragma solidity 0.8.3;
 
 // Interfaces
 import "./interfaces/iERC20.sol";
+import "./interfaces/iERC677.sol"; 
 
 // Synth Contract
 contract Synth is iERC20 {
@@ -54,6 +55,16 @@ contract Synth is iERC20 {
         _approve(msg.sender, spender, amount);
         return true;
     }
+    function increaseAllowance(address spender, uint256 addedValue) public virtual returns (bool) {
+        _approve(msg.sender, spender, _allowances[msg.sender][spender]+(addedValue));
+        return true;
+    }
+    function decreaseAllowance(address spender, uint256 subtractedValue) public virtual returns (bool) {
+        uint256 currentAllowance = _allowances[msg.sender][spender];
+        require(currentAllowance >= subtractedValue, "allowance err");
+        _approve(msg.sender, spender, currentAllowance - subtractedValue);
+        return true;
+    }
 
     function _approve(
         address owner,
@@ -62,8 +73,10 @@ contract Synth is iERC20 {
     ) internal virtual {
         require(owner != address(0), "sender");
         require(spender != address(0), "spender");
-        _allowances[owner][spender] = amount;
-        emit Approval(owner, spender, amount);
+        if (_allowances[owner][spender] < type(uint256).max) { // No need to re-approve if already max
+            _allowances[owner][spender] = amount;
+            emit Approval(owner, spender, amount);
+        }
     }
 
     // iERC20 TransferFrom function
@@ -75,17 +88,25 @@ contract Synth is iERC20 {
         _transfer(sender, recipient, amount);
         // Unlimited approval (saves an SSTORE)
         if (_allowances[sender][msg.sender] < type(uint256).max) {
-            _approve(sender, msg.sender, _allowances[sender][msg.sender] - amount);
+            uint256 currentAllowance = _allowances[sender][msg.sender];
+            require(currentAllowance >= amount, "allowance err");
+            _approve(sender, msg.sender, currentAllowance - amount);
         }
         return true;
     }
+    //iERC677 approveAndCall
+    function approveAndCall(address recipient, uint amount, bytes calldata data) public returns (bool) {
+      _approve(msg.sender, recipient, type(uint256).max); // Give recipient max approval
+      iERC677(recipient).onTokenApproval(address(this), amount, msg.sender, data); // Amount is passed thru to recipient
+      return true;
+     }
 
-    // TransferTo function
-    // Risks: User can be phished, or tx.origin may be deprecated, optionality should exist in the system.
-    function transferTo(address recipient, uint256 amount) external virtual override returns (bool) {
-        _transfer(tx.origin, recipient, amount);
-        return true;
-    }
+      //iERC677 transferAndCall
+    function transferAndCall(address recipient, uint amount, bytes calldata data) public returns (bool) {
+      _transfer(msg.sender, recipient, amount);
+      iERC677(recipient).onTokenTransfer(address(this), amount, msg.sender, data); // Amount is passed thru to recipient 
+      return true;
+     }
 
     // Internal transfer function
     function _transfer(
@@ -95,6 +116,7 @@ contract Synth is iERC20 {
     ) internal virtual {
         require(sender != address(0), "sender");
         require(recipient != address(this), "recipient");
+        require(_balances[sender] >= amount, "balance err");
         _balances[sender] -= amount;
         _balances[recipient] += amount;
         emit Transfer(sender, recipient, amount);
@@ -121,6 +143,7 @@ contract Synth is iERC20 {
 
     function _burn(address account, uint256 amount) internal virtual {
         require(account != address(0), "address err");
+        require(_balances[account] >= amount, "balance err");
         _balances[account] -= amount;
         totalSupply -= amount;
         emit Transfer(account, address(0), amount);

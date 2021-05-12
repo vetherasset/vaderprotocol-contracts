@@ -3,6 +3,7 @@ pragma solidity 0.8.3;
 
 // Interfaces
 import "./interfaces/iERC20.sol";
+import "./interfaces/iERC677.sol"; 
 import "./interfaces/iDAO.sol";
 import "./interfaces/iUTILS.sol";
 import "./interfaces/iUSDV.sol";
@@ -28,7 +29,6 @@ contract Vader is iERC20 {
     uint256 public constant maxSupply = 2 * baseline; //2bn
     uint256 public emissionCurve;
     uint256 public secondsPerEra;
-    uint256 public currentEra;
     uint256 public nextEraTime;
     uint256 public feeOnTransfer;
 
@@ -36,7 +36,7 @@ contract Vader is iERC20 {
 
     address public constant burnAddress = 0x0111011001100001011011000111010101100101;
 
-    event NewEra(uint256 currentEra, uint256 nextEraTime, uint256 emission);
+    event NewEra(uint256 nextEraTime, uint256 emission);
 
     // Only DAO can execute
     modifier onlyDAO() {
@@ -57,7 +57,6 @@ contract Vader is iERC20 {
     //=====================================CREATION=========================================//
  
     constructor() {
-        currentEra = 1;
         secondsPerEra = 1; //86400;
         nextEraTime = block.timestamp + secondsPerEra;
         emissionCurve = 10;
@@ -89,6 +88,16 @@ contract Vader is iERC20 {
         _approve(msg.sender, spender, amount);
         return true;
     }
+    function increaseAllowance(address spender, uint256 addedValue) public virtual returns (bool) {
+        _approve(msg.sender, spender, _allowances[msg.sender][spender]+(addedValue));
+        return true;
+    }
+    function decreaseAllowance(address spender, uint256 subtractedValue) public virtual returns (bool) {
+        uint256 currentAllowance = _allowances[msg.sender][spender];
+        require(currentAllowance >= subtractedValue, "allowance err");
+        _approve(msg.sender, spender, currentAllowance - subtractedValue);
+        return true;
+    }
 
     function _approve(
         address owner,
@@ -97,8 +106,10 @@ contract Vader is iERC20 {
     ) internal virtual {
         require(owner != address(0), "sender");
         require(spender != address(0), "spender");
-        _allowances[owner][spender] = amount;
-        emit Approval(owner, spender, amount);
+        if (_allowances[owner][spender] < type(uint256).max) { // No need to re-approve if already max
+            _allowances[owner][spender] = amount;
+            emit Approval(owner, spender, amount);
+        }
     }
 
     // iERC20 TransferFrom function
@@ -110,17 +121,25 @@ contract Vader is iERC20 {
         _transfer(sender, recipient, amount);
         // Unlimited approval (saves an SSTORE)
         if (_allowances[sender][msg.sender] < type(uint256).max) {
-            _approve(sender, msg.sender, _allowances[sender][msg.sender] - amount);
+            uint256 currentAllowance = _allowances[sender][msg.sender];
+            require(currentAllowance >= amount, "allowance err");
+            _approve(sender, msg.sender, currentAllowance - amount);
         }
         return true;
     }
+    //iERC677 approveAndCall
+    function approveAndCall(address recipient, uint amount, bytes calldata data) public returns (bool) {
+      _approve(msg.sender, recipient, type(uint256).max); // Give recipient max approval
+      iERC677(recipient).onTokenApproval(address(this), amount, msg.sender, data); // Amount is passed thru to recipient
+      return true;
+     }
 
-    // TransferTo function
-    // Risks: User can be phished, or tx.origin may be deprecated, optionality should exist in the system.
-    function transferTo(address recipient, uint256 amount) external virtual override returns (bool) {
-        _transfer(tx.origin, recipient, amount);
-        return true;
-    }
+      //iERC677 transferAndCall
+    function transferAndCall(address recipient, uint amount, bytes calldata data) public returns (bool) {
+      _transfer(msg.sender, recipient, amount);
+      iERC677(recipient).onTokenTransfer(address(this), amount, msg.sender, data); // Amount is passed thru to recipient 
+      return true;
+     }
 
     // Internal transfer function
     function _transfer(
@@ -130,12 +149,13 @@ contract Vader is iERC20 {
     ) internal virtual {
         require(sender != address(0), "sender");
         require(recipient != address(this), "recipient");
-        _balances[sender] -= amount;
+        require(_balances[sender] >= amount, "balance err");
         uint _fee = iUTILS(UTILS()).calcPart(feeOnTransfer, amount);  // Critical functionality
         if(_fee <= amount){                            // Stops reverts if UTILS corrupted
             amount -= _fee;
             _burn(sender, _fee);
         }
+        _balances[sender] -= amount;
         _balances[recipient] += amount;
         emit Transfer(sender, recipient, amount);
         _checkEmission();
@@ -165,6 +185,7 @@ contract Vader is iERC20 {
 
     function _burn(address account, uint256 amount) internal virtual {
         require(account != address(0), "address err");
+        require(_balances[account] >= amount, "balance err");
         _balances[account] -= amount;
         totalSupply -= amount;
         emit Transfer(account, address(0), amount);
@@ -203,7 +224,6 @@ contract Vader is iERC20 {
     function _checkEmission() private {
         if ((block.timestamp >= nextEraTime) && emitting) {
             // If new Era and allowed to emit
-            currentEra += 1; // Increment Era
             nextEraTime = block.timestamp + secondsPerEra; // Set next Era time
             uint256 _emission = getDailyEmission(); // Get Daily Dmission
             _mint(RESERVE(), _emission); // Mint to the RESERVE Address
@@ -211,7 +231,7 @@ contract Vader is iERC20 {
             if (feeOnTransfer > 1000) {
                 feeOnTransfer = 1000;
             } // Max 10% if UTILS corrupted
-            emit NewEra(currentEra, nextEraTime, _emission); // Emit Event
+            emit NewEra(nextEraTime, _emission); // Emit Event
         }
     }
 

@@ -24,8 +24,6 @@ interface iERC20 {
         uint256
     ) external returns (bool);
 
-    function transferTo(address, uint256) external returns (bool);
-
     function burn(uint256) external;
 
     function burnFrom(address, uint256) external;

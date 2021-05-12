@@ -69,13 +69,6 @@ contract Token1 is iERC20 {
         return true;
     }
 
-    // TransferTo function
-    // Risks: User can be phished, or tx.origin may be deprecated, optionality should exist in the system.
-    function transferTo(address recipient, uint256 amount) external virtual override returns (bool) {
-        _transfer(tx.origin, recipient, amount);
-        return true;
-    }
-
     // Internal transfer function
     function _transfer(
         address sender,

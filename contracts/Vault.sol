@@ -191,13 +191,9 @@ contract Vault {
     //============================== ASSETS ================================//
 
     // @title Deposit tokens into this contract
-    // @dev Assumes `synth` is trusted (is a synth token) and supports transferTo
+    // @dev Assumes `synth` is trusted (is a synth token) and supports
     function getFunds(address synth, uint256 amount) internal {
-        if (tx.origin == msg.sender) {
-            require(iERC20(synth).transferTo(address(this), amount)); // safeErc20 not needed; synths trusted
-        } else {
-            require(iERC20(synth).transferFrom(msg.sender, address(this), amount)); // safeErc20 not needed; synths trusted
-        }
+        require(iERC20(synth).transferFrom(msg.sender, address(this), amount)); // safeErc20 not needed; synths trusted
     }
 
     // @title Send `amount` tokens of `synth` to `member`
