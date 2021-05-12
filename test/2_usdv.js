@@ -89,6 +89,7 @@ describe("Convert and redeem", function() {
     await dao.voteProposal(await dao.proposalCount())
     await sleep(2000)
     await dao.finaliseProposal(await dao.proposalCount())
+    await vader.approve(usdv.address, '10000', {from:acc1})
     await usdv.convert('250', {from:acc1})
     expect(BN2Str(await vader.totalSupply())).to.equal('3750');
     expect(BN2Str(await vader.balanceOf(acc1))).to.equal('3750');
@@ -154,7 +155,7 @@ describe("Be a valid ERC-20", function() {
 // acc1 |   0 | 1000 |  900 |
 
   it("Should transfer to", async function() {
-    await usdv.transfer(acc1, "100", {from:acc0}) 
+    await usdv.transfer(acc0, "100", {from:acc1}) 
     expect(BN2Str(await usdv.balanceOf(acc0))).to.equal('200');
   });
 // acc  | VTH | VADER  | USDV |

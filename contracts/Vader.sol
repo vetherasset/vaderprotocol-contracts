@@ -254,6 +254,13 @@ contract Vader is iERC20 {
         _mint(msg.sender, amount * conversionFactor);
     }
 
+    // // Convert to USDV
+    // function convert(uint256 amount) external returns (uint256) {
+    //     _transfer(USDV, amount);
+    //     iUSDV(USDV)
+    //     return convertForMember(msg.sender, amount);
+    // }
+
     // Directly redeem back to VADER (must have sent USDV first)
     function redeem() external returns (uint256 redeemAmount) {
         return redeemToMember(msg.sender);
