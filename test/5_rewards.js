@@ -70,7 +70,7 @@ describe("Deploy Rewards", function() {
     await dao.voteProposal(await dao.proposalCount())
     await sleep(2000)
     await dao.finaliseProposal(await dao.proposalCount())
-    await dao.newParamProposal("VADER_PARAMS", '1', '90', '0', '0')
+    await dao.newParamProposal("VADER_PARAMS", '1', '900', '0', '0')
     await dao.voteProposal(await dao.proposalCount())
     await sleep(2000)
     await dao.finaliseProposal(await dao.proposalCount())
