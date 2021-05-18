@@ -46,12 +46,8 @@ contract USDV is iERC20 {
 
     //=====================================CREATION=========================================//
 
-    constructor() {}
-
-    function init(address _vader) external {
-        if (VADER == address(0)) {
-            VADER = _vader;
-        }
+    constructor(address _vader) {
+        VADER = _vader;
     }
 
     //========================================iERC20=========================================//

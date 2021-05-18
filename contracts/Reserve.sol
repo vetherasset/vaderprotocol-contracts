@@ -39,15 +39,16 @@ contract Reserve {
 
     //=====================================CREATION=========================================//
  
-    constructor() {}
+    constructor() {
+        minGrantTime = 2592000;
+        splitForUSDV = 6700;
+    }
 
     // Can only be called once
     function init(address _vader) external {
         if(VADER == address(0)){
             VADER = _vader;
-            minGrantTime = 2592000;
             nextEraTime = block.timestamp + iVADER(VADER).secondsPerEra();
-            splitForUSDV = 6700;
             iERC20(VADER).approve(USDV(), type(uint).max);
         }
     }

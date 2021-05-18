@@ -39,16 +39,16 @@ before(async function() {
   acc2 = await accounts[2].getAddress()
   acc3 = await accounts[3].getAddress()
 
-  utils = await Utils.new();
-  dao = await DAO.new();
+    dao = await DAO.new();
   vether = await Vether.new();
   vader = await Vader.new();
-  usdv = await USDV.new();
+utils = await Utils.new(vader.address);
+  usdv = await USDV.new(vader.address);
   reserve = await RESERVE.new();
-  vault = await VAULT.new();
-  router = await Router.new();
-  pools = await Pools.new();
-  factory = await Factory.new();
+  vault = await VAULT.new(vader.address);
+  router = await Router.new(vader.address);
+  pools = await Pools.new(vader.address);
+  factory = await Factory.new(pools.address);
 })
 // acc  | VTH | VADER  | USDV | Anr  |  Ass |
 // pool|   0 | 2000 | 2000 | 1000 | 1000 |
@@ -56,18 +56,11 @@ before(async function() {
 
 describe("Deploy Rewards", function() {
   it("Should have right reserves", async function() {
-    await utils.init(vader.address)
     await dao.init(vether.address, vader.address, usdv.address, reserve.address, 
-      vault.address, router.address, pools.address, factory.address, utils.address);
+    vault.address, router.address, pools.address, factory.address, utils.address);
+  await vader.init(dao.address)
+  await reserve.init(vader.address)
     
-    await vader.init(dao.address)
-  await usdv.init(vader.address)
-    await reserve.init(vader.address)
-    await vault.init(vader.address)
-    await router.init(vader.address);
-    await pools.init(vader.address);
-    await factory.init(pools.address);
-
     await dao.newActionProposal("EMISSIONS")
     await dao.voteProposal(await dao.proposalCount())
     await sleep(2000)
