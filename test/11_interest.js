@@ -24,6 +24,8 @@ function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
+const max = '115792089237316195423570985008687907853269984665640564039457584007913129639935'
+
 var utils; 
 var dao; var vader; var vether; var usdv;
 var reserve; var vault; var pools; var anchor; var asset; var factory; var router;
@@ -71,9 +73,14 @@ describe("Deploy Router", function() {
 
     await vether.transfer(acc1, '9409') 
     await anchor.transfer(acc1, '2000')
-    await anchor.approve(router.address, BN2Str(one), {from:acc1})
 
-    await vether.approve(vader.address, '9400', {from:acc1})
+    await vader.approve(usdv.address, max, {from:acc1})
+    await vether.approve(vader.address, max, {from:acc1})
+    await vader.approve(router.address, max, {from:acc1})
+    await usdv.approve(router.address, max, {from:acc1})
+    await anchor.approve(router.address, max, {from:acc1})
+    await asset.approve(router.address, max, {from:acc1})
+
     await vader.upgrade('10', {from:acc1}) 
     await dao.newActionProposal("EMISSIONS")
     await dao.voteProposal(await dao.proposalCount())
@@ -86,7 +93,6 @@ describe("Deploy Router", function() {
     await usdv.convert('5000', {from:acc1})
 
     await asset.transfer(acc1, '2000')
-    await asset.approve(router.address, BN2Str(one), {from:acc1})
 
     await vader.transfer(router.address, '1000', {from:acc1})
     await usdv.transfer(router.address, '1000', {from:acc1})
@@ -109,10 +115,12 @@ describe("Should Borrow Debt", function() {
     await pools.deploySynth(anchor.address)
     await router.swapWithSynths('250', vader.address, false, anchor.address, true, {from:acc1})
     let synth = await Synth.at(await factory.getSynth(anchor.address));
+    await synth.approve(router.address, max, {from:acc1})
     await router.borrow('144', synth.address, anchor.address, {from:acc1})
     await pools.deploySynth(asset.address)
     await router.swapWithSynths('250', usdv.address, false, asset.address, true, {from:acc1})
     let synth2 = await Synth.at(await factory.getSynth(asset.address));
+    await synth2.approve(router.address, max, {from:acc1})
     await router.borrow('144', synth2.address, asset.address, {from:acc1})
   });
   

@@ -24,6 +24,8 @@ function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
+const max = '115792089237316195423570985008687907853269984665640564039457584007913129639935'
+
 var utils; 
 var dao; var vader; var vether; var usdv;
 var reserve; var vault; var pools; var anchor; var asset; var router; var factory;
@@ -70,7 +72,16 @@ describe("Deploy DAO", function() {
     await pools.init(vader.address);
     await factory.init(pools.address);
 
-    await vether.approve(vader.address, '6000', {from:acc0})
+    await vader.approve(usdv.address, max, {from:acc1})
+    await vether.approve(vader.address, max, {from:acc0})
+
+    await vader.approve(router.address, max, {from:acc0})
+    await usdv.approve(router.address, max, {from:acc0})
+    await vader.approve(router.address, max, {from:acc1})
+    await usdv.approve(router.address, max, {from:acc1})
+
+    await anchor.approve(router.address, max, {from:acc1})
+
     await vader.upgrade('3', {from:acc0}) 
 
     await dao.newActionProposal("EMISSIONS")
@@ -93,7 +104,6 @@ describe("Deploy DAO", function() {
     await dao.finaliseProposal(await dao.proposalCount())
     await usdv.convert(200, {from:acc1})
 
-    await anchor.approve(router.address, BN2Str(one), {from:acc1})
     await router.addLiquidity(vader.address, '1000', anchor.address, '1000', {from:acc1})
 
     await pools.deploySynth(anchor.address)
@@ -101,6 +111,9 @@ describe("Deploy DAO", function() {
     await router.swapWithSynths('110', vader.address, false, anchor.address, true, {from:acc1})
 
     let synth = await Synth.at(await factory.getSynth(anchor.address));
+
+    await synth.approve(vault.address, max, {from:acc0})
+    await synth.approve(vault.address, max, {from:acc1})
 
     await vault.deposit(synth.address, '10', {from:acc0})
     await vault.deposit(synth.address, '10', {from:acc1})

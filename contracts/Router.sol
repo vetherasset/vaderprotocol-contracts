@@ -512,14 +512,10 @@ contract Router {
         }
     }
 
-    // @dev Assumes `_token` is trusted (is a base asset or synth) and supports transferTo
+    // @dev Assumes `_token` is trusted (is a base asset or synth) and supports
     function _getFunds(address _token, uint256 _amount) internal returns (uint256) {
         uint256 _balance = iERC20(_token).balanceOf(address(this));
-        if (tx.origin == msg.sender) {
-            require(iERC20(_token).transferTo(address(this), _amount)); // safeErc20 not needed; _token trusted
-        } else {
-            require(iERC20(_token).transferFrom(msg.sender, address(this), _amount)); // safeErc20 not needed; _token trusted
-        }
+        require(iERC20(_token).transferFrom(msg.sender, address(this), _amount)); // safeErc20 not needed; _token trusted
         return iERC20(_token).balanceOf(address(this)) - _balance;
     }
 
@@ -580,11 +576,7 @@ contract Router {
     function moveTokenToPools(address _token, uint256 _amount) internal returns (uint256 safeAmount) {
         if (_token == VADER || _token == USDV() || iPOOLS(POOLS()).isSynth(_token)) {
             safeAmount = _amount;
-            if (tx.origin == msg.sender) {
-                iERC20(_token).transferTo(POOLS(), _amount); // safeErc20 not needed; bases and synths trusted
-            } else {
-                iERC20(_token).transferFrom(msg.sender, POOLS(), _amount); // safeErc20 not needed; bases and synths trusted
-            }
+            iERC20(_token).transferFrom(msg.sender, POOLS(), _amount); // safeErc20 not needed; bases and synths trusted
         } else {
             uint256 _startBal = ExternalERC20(_token).balanceOf(POOLS());
             ExternalERC20(_token).safeTransferFrom(msg.sender, POOLS(), _amount);

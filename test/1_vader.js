@@ -68,7 +68,6 @@ describe("Deploy Vader", function() {
     expect(BN2Str(await vader.maxSupply())).to.equal(BN2Str(2000000000 * one));
     expect(BN2Str(await vader.emissionCurve())).to.equal('10');
     expect(await vader.emitting()).to.equal(false);
-    expect(BN2Str(await vader.currentEra())).to.equal('1');
     expect(BN2Str(await vader.secondsPerEra())).to.equal('1');
     // console.log(BN2Str(await vader.nextEraTime()));
     expect(await vader.DAO()).to.equal(dao.address);
@@ -107,10 +106,10 @@ describe("Be a valid ERC-20", function() {
   });
 // acc  | VTH | VADER  |
 // acc0 |   0 |  100 |
-// acc1 |   0 |  900 |
+// acc1 |   0 |  1000 |
 
-  it("Should transfer to", async function() {
-    await vader.transferTo(acc0, "100", {from:acc1}) 
+  it("Should transfer", async function() {
+    await vader.transfer(acc0, "100", {from:acc1}) 
     expect(BN2Str(await vader.balanceOf(acc0))).to.equal('200');
   });
 // acc  | VTH | VADER  |
@@ -169,12 +168,10 @@ describe("Emissions", function() {
 // 
     await vader.transfer(acc0, BN2Str(200), {from:acc1})
     await vader.transfer(acc1, BN2Str(100), {from:acc0})
-    expect(BN2Str(await vader.currentEra())).to.equal('3');
     expect(BN2Str(await vader.balanceOf(reserve.address))).to.equal(BN2Str('2400'));
     expect(BN2Str(await vader.getDailyEmission())).to.equal(BN2Str('3200'));
     
     await vader.transfer(acc0, BN2Str(100), {from:acc1})
-    expect(BN2Str(await vader.currentEra())).to.equal('4');
     expect(BN2Str(await vader.balanceOf(reserve.address))).to.equal(BN2Str('5600'));
     expect(BN2Str(await vader.getDailyEmission())).to.equal(BN2Str('6400'));
   });

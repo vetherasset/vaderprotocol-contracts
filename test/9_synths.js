@@ -24,6 +24,8 @@ function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
+const max = '115792089237316195423570985008687907853269984665640564039457584007913129639935'
+
 var utils; 
 var dao; var vader; var vether; var usdv;
 var reserve; var vault; var pools; var anchor; var asset; var factory; var router;
@@ -71,12 +73,17 @@ describe("Deploy Router", function() {
 
     await vether.transfer(acc1, BN2Str(7407)) 
     await anchor.transfer(acc1, BN2Str(2000))
-    await anchor.approve(router.address, BN2Str(one), {from:acc1})
 
-    await vether.approve(vader.address, '7400', {from:acc1})
+    await vader.approve(usdv.address, max, {from:acc1})
+    await vether.approve(vader.address, max, {from:acc1})
+    await vader.approve(router.address, max, {from:acc1})
+    await usdv.approve(router.address, max, {from:acc1})
+
+    await anchor.approve(router.address, max, {from:acc1})
+    await asset.approve(router.address, max, {from:acc1})
+
     await vader.upgrade('8', {from:acc1}) 
     await asset.transfer(acc1, BN2Str(2000))
-    await asset.approve(router.address, BN2Str(one), {from:acc1})
 
     await dao.newActionProposal("MINTING")
     await dao.voteProposal(await dao.proposalCount())
@@ -130,6 +137,7 @@ describe("Should Swap Synths", function() {
   it("Swap from Synth to Base", async function() {
     let synthAddress = await factory.getSynth(anchor.address)
     let synth = await Synth.at(synthAddress);
+    await synth.approve(router.address, max, {from:acc1})
     await router.swapWithSynths('80', anchor.address, true, vader.address, false, {from:acc1})
     expect(BN2Str(await synth.balanceOf(acc1))).to.equal('80');
     expect(BN2Str(await pools.getBaseAmount(anchor.address))).to.equal('1165');
@@ -143,6 +151,7 @@ describe("Should Swap Synths", function() {
     await pools.deploySynth(asset.address)
     let synthAddress = await factory.getSynth(anchor.address)
     let synth = await Synth.at(synthAddress);
+    await synth.approve(router.address, max, {from:acc1})
     await router.swapWithSynths('80', anchor.address, true, asset.address, true, {from:acc1})
     expect(BN2Str(await synth.balanceOf(acc1))).to.equal('0');
     expect(BN2Str(await pools.getBaseAmount(anchor.address))).to.equal('1086');
@@ -172,7 +181,8 @@ describe("Should Swap Synths", function() {
   });
   it("Swap from Synth to token", async function() {
     let synth = await Synth.at(await factory.getSynth(asset.address));
-    
+    await synth.approve(router.address, max, {from:acc1})
+
     expect(BN2Str(await synth.balanceOf(acc1))).to.equal('127');
     expect(BN2Str(await anchor.balanceOf(acc1))).to.equal('920');
 
@@ -184,6 +194,7 @@ describe("Should Swap Synths", function() {
   });
   it("Swap from Token to its own Synth", async function() {
     let synth = await Synth.at(await factory.getSynth(asset.address));
+    await synth.approve(router.address, max, {from:acc1})
     expect(BN2Str(await asset.balanceOf(acc1))).to.equal('1000');
     expect(BN2Str(await synth.balanceOf(acc1))).to.equal('77');
 
@@ -210,7 +221,7 @@ describe("Member should deposit Synths for rewards", function() {
     expect(BN2Str(await vader.getDailyEmission())).to.equal(('5625'));
 
     let synth = await Synth.at(await factory.getSynth(asset.address));
-
+    await synth.approve(vault.address, max, {from:acc1})
     await vault.deposit(synth.address, '20', {from:acc1})
     expect(BN2Str(await synth.balanceOf(acc1))).to.equal(('66'));
     expect(BN2Str(await synth.balanceOf(vault.address))).to.equal(('20'));
@@ -266,6 +277,7 @@ describe("Member should deposit Synths for rewards", function() {
     await router.swapWithSynths('30', anchor.address, false, anchor.address, true, {from:acc1})
     let synth = await Synth.at(await factory.getSynth(anchor.address));
     expect(BN2Str(await synth.balanceOf(acc1))).to.equal('28');
+    await synth.approve(vault.address, max, {from:acc1})
     await vault.deposit(synth.address, '20', {from:acc1})
     expect(BN2Str(await synth.balanceOf(acc1))).to.equal(('8'));
     expect(BN2Str(await synth.balanceOf(vault.address))).to.equal(('20'));
