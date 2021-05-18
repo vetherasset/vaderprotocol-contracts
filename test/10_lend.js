@@ -24,6 +24,8 @@ function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
+const max = '115792089237316195423570985008687907853269984665640564039457584007913129639935'
+
 var utils; 
 var dao; var vader; var vether; var usdv;
 var reserve; var vault; var pools; var anchor; var asset; var factory; var router;
@@ -71,9 +73,13 @@ describe("Deploy Router", function() {
 
     await vether.transfer(acc1, '9409') 
     await anchor.transfer(acc1, '2000')
-    await anchor.approve(router.address, BN2Str(one), {from:acc1})
 
-    await vether.approve(vader.address, '9400', {from:acc1})
+    await vader.approve(usdv.address, max, {from:acc1})
+    await vether.approve(vader.address, max, {from:acc1})
+    await vader.approve(router.address, max, {from:acc1})
+    await usdv.approve(router.address, max, {from:acc1})
+    await anchor.approve(router.address, max, {from:acc1})
+
     await vader.upgrade('10', {from:acc1}) 
 
     await dao.newActionProposal("EMISSIONS")
@@ -153,6 +159,7 @@ describe("Should Borrow Debt", function() {
     let synth = await Synth.at(await factory.getSynth(anchor.address));
     expect(BN2Str(await synth.balanceOf(acc1))).to.equal('144');
     expect(BN2Str(await anchor.balanceOf(acc1))).to.equal('1058');
+    await synth.approve(router.address, max, {from:acc1})
     await router.borrow('144', synth.address, anchor.address, {from:acc1})
     expect(BN2Str(await synth.balanceOf(acc1))).to.equal('0');
     expect(BN2Str(await anchor.balanceOf(acc1))).to.equal('1124');
@@ -163,6 +170,7 @@ describe("Should Borrow Debt", function() {
     let synth = await Synth.at(await factory.getSynth(asset.address));
     expect(BN2Str(await synth.balanceOf(acc1))).to.equal('144');
     expect(BN2Str(await asset.balanceOf(acc1))).to.equal('1058');
+    await synth.approve(router.address, max, {from:acc1})
     await router.borrow('144', synth.address, asset.address, {from:acc1})
     expect(BN2Str(await synth.balanceOf(acc1))).to.equal('0');
     expect(BN2Str(await asset.balanceOf(acc1))).to.equal('1124');
