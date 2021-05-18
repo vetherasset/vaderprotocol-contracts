@@ -83,14 +83,9 @@ describe("Deploy Router", function() {
 
     await vader.approve(usdv.address, max, {from:acc1})
     await vether.approve(vader.address, max, {from:acc1})
-
-    await vader.approve(router.address, max, {from:acc0})
-    await usdv.approve(router.address, max, {from:acc0})
     await vader.approve(router.address, max, {from:acc1})
     await usdv.approve(router.address, max, {from:acc1})
-
     await anchor.approve(router.address, max, {from:acc1})
-
 
     await vader.upgrade('7', {from:acc1}) 
 
