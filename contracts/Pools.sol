@@ -58,13 +58,8 @@ contract Pools {
 
     //=====================================CREATION=========================================//
  
-    constructor() {}
-
-    // Init
-    function init(address _vader) external {
-        if(VADER == address(0)){
-            VADER = _vader;
-        }
+    constructor(address _vader) {
+        VADER = _vader;
     }
 
     //====================================LIQUIDITY=========================================//

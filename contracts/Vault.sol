@@ -58,15 +58,11 @@ contract Vault {
         _;
     }
 
-    constructor() {}
-
-    function init(address _vader) external {
-        if(VADER == address(0)){
-            VADER = _vader;
-            erasToEarn = 100;
-            minimumDepositTime = 1;
-            minGrantTime = 2592000; // 30 days
-        }
+    constructor(address _vader) {
+        VADER = _vader;
+        erasToEarn = 100;
+        minimumDepositTime = 1;
+        minGrantTime = 2592000; // 30 days
     }
 
     //=========================================DAO=========================================//

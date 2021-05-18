@@ -82,19 +82,14 @@ contract Router {
 
     //=====================================CREATION=========================================//
  
-    constructor() {}
-
-    // Init
-    function init(address _vader) external {
-        if(VADER == address(0)){
-            VADER = _vader;
-            rewardReductionFactor = 1;
-            timeForFullProtection = 1; //8640000; //100 days
-            curatedPoolLimit = 1;
-            anchorLimit = 5;
-            insidePriceLimit = 200;
-            outsidePriceLimit = 500;
-        }
+    constructor(address _vader) {
+        VADER = _vader;
+        rewardReductionFactor = 1;
+        timeForFullProtection = 1; //8640000; //100 days
+        curatedPoolLimit = 1;
+        anchorLimit = 5;
+        insidePriceLimit = 200;
+        outsidePriceLimit = 500;
     }
 
     //=========================================DAO=========================================//

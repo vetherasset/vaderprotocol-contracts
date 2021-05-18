@@ -33,24 +33,22 @@ before(async function() {
   acc2 = await accounts[2].getAddress()
   acc3 = await accounts[3].getAddress()
 
-  utils = await Utils.new();
   dao = await DAO.new();
   vether = await Vether.new();
   vader = await Vader.new();
-  usdv = await USDV.new();
+  utils = await Utils.new(vader.address);
+  usdv = await USDV.new(vader.address);
   reserve = await RESERVE.new();
-  vault = await VAULT.new();
-  router = await Router.new();
-  factory = await Factory.new();
-  pools = await POOLS.new();
-   
+  vault = await VAULT.new(vader.address);
+  router = await Router.new(vader.address);
+  pools = await POOLS.new(vader.address);
+  factory = await Factory.new(pools.address);
+
+
   await dao.init(vether.address, vader.address, usdv.address, reserve.address, 
-      vault.address, router.address, pools.address, factory.address, utils.address);
+    vault.address, router.address, pools.address, factory.address, utils.address);
   await vader.init(dao.address)
-  await usdv.init(vader.address)
   await reserve.init(vader.address)
-  await vault.init(vader.address)
-  await factory.init(pools.address);
 
   await vether.transfer(acc1, '1')
 // acc  | VTH | VADER  |

@@ -19,12 +19,8 @@ contract Factory {
         _;
     }
 
-    constructor() {}
-
-    function init(address _pools) external {
-        if(POOLS == address(0)){
-            POOLS = _pools;
-        }
+    constructor(address _pools) {
+        POOLS = _pools;
     }
 
     //Create a synth asset

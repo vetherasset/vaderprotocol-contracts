@@ -35,16 +35,16 @@ before(async function() {
   acc2 = await accounts[2].getAddress()
   acc3 = await accounts[3].getAddress()
   
-  utils = await Utils.new();
-  dao = await DAO.new();
+    dao = await DAO.new();
   vether = await Vether.new();
   vader = await Vader.new();
-  usdv = await USDV.new();
+utils = await Utils.new(vader.address);
+  usdv = await USDV.new(vader.address);
   reserve = await RESERVE.new();
-  vault = await VAULT.new();
-  router = await Router.new();
-  pools = await POOLS.new();
-  factory = await Factory.new();
+  vault = await VAULT.new(vader.address);
+  router = await Router.new(vader.address);
+  pools = await POOLS.new(vader.address);
+  factory = await Factory.new(pools.address);
   attack = await Attack.new();
 
 })
@@ -57,16 +57,11 @@ describe("Deploy USDV", function() {
   it("Should deploy", async function() {
      
     await dao.init(vether.address, vader.address, usdv.address, reserve.address, 
-      vault.address, router.address, pools.address, factory.address, utils.address);
+    vault.address, router.address, pools.address, factory.address, utils.address);
+  await vader.init(dao.address)
+  await reserve.init(vader.address)
     
-    await vader.init(dao.address)
-  await usdv.init(vader.address)
-    await reserve.init(vader.address)
-    await vault.init(vader.address)
-    await router.init(vader.address);
-    await pools.init(vader.address);
     await attack.init(vader.address, usdv.address)
-    await factory.init(pools.address);
 
     await vether.transfer(acc1, '3403') 
     await vether.approve(vader.address, '3400', {from:acc1})

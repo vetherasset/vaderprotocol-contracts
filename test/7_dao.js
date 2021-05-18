@@ -41,16 +41,16 @@ before(async function() {
   acc2 = await accounts[2].getAddress()
   acc3 = await accounts[3].getAddress()
 
-  utils = await Utils.new();
-  dao = await DAO.new();
+    dao = await DAO.new();
   vether = await Vether.new();
   vader = await Vader.new();
-  usdv = await USDV.new();
+utils = await Utils.new(vader.address);
+  usdv = await USDV.new(vader.address);
   reserve = await RESERVE.new();
-  vault = await VAULT.new();
-  router = await Router.new();
-  pools = await Pools.new();
-  factory = await Factory.new();
+  vault = await VAULT.new(vader.address);
+  router = await Router.new(vader.address);
+  pools = await Pools.new(vader.address);
+  factory = await Factory.new(pools.address);
   dao = await DAO.new();
 
   asset = await Asset.new();
@@ -60,18 +60,12 @@ before(async function() {
 
 describe("Deploy DAO", function() {
   it("Should deploy right", async function() {
-    await utils.init(vader.address)
+     
     await dao.init(vether.address, vader.address, usdv.address, reserve.address, 
-      vault.address, router.address, pools.address, factory.address, utils.address);
+    vault.address, router.address, pools.address, factory.address, utils.address);
+  await vader.init(dao.address)
+  await reserve.init(vader.address)
     
-    await vader.init(dao.address)
-    await usdv.init(vader.address)
-    await reserve.init(vader.address)
-    await vault.init(vader.address)
-    await router.init(vader.address);
-    await pools.init(vader.address);
-    await factory.init(pools.address);
-
     await vader.approve(usdv.address, max, {from:acc1})
     await vether.approve(vader.address, max, {from:acc0})
 
@@ -137,7 +131,7 @@ describe("DAO Functions", function() {
   })
   it("It should cahnge Utils", async () => {
     assert.equal(await dao.UTILS(), utils.address)
-    let utils2 = await Utils.new();
+    let utils2 = await Utils.new(vader.address);
     await dao.newAddressProposal('UTILS', utils2.address, { from: acc1 })
     let proposalCount = BN2Str(await dao.proposalCount())
     await dao.voteProposal(proposalCount, { from: acc0 })
