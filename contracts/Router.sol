@@ -57,7 +57,6 @@ contract Router {
     }
 
     event PoolReward(address indexed base, address indexed token, uint256 amount);
-    event Protection(address indexed member, uint256 amount);
     event Curated(address indexed curator, address indexed token);
 
     event AddCollateral(
