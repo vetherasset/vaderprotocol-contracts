@@ -22,6 +22,8 @@ function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
+const max = '115792089237316195423570985008687907853269984665640564039457584007913129639935'
+
 var utils; 
 var dao; var vader; var vether; var usdv;
 var reserve; var vault; var pools; var anchor; var asset; var router; var factory;
@@ -72,7 +74,12 @@ describe("Deploy Anchor", function() {
     await factory.init(pools.address);
     
     await vether.transfer(acc1, BN2Str(6006)) 
-    await vether.approve(vader.address, '6000', {from:acc1})
+
+    await vader.approve(usdv.address, max, {from:acc1})
+    await vether.approve(vader.address, max, {from:acc1})
+    await vader.approve(router.address, max, {from:acc1})
+    await usdv.approve(router.address, max, {from:acc1})
+
     await vader.upgrade('6', {from:acc1}) 
 
     await anchor0.transfer(acc1, BN2Str(2000))

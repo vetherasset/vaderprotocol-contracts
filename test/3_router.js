@@ -15,6 +15,8 @@ var Anchor = artifacts.require('./Token2')
 const BigNumber = require('bignumber.js')
 const truffleAssert = require('truffle-assertions')
 
+const max = '115792089237316195423570985008687907853269984665640564039457584007913129639935'
+
 function BN2Str(BN) { return ((new BigNumber(BN)).toFixed()) }
 function getBN(BN) { return (new BigNumber(BN)) }
 
@@ -80,15 +82,20 @@ describe("Deploy Router", function() {
     await vader.upgrade('8', {from:acc1}) 
 
     await asset.transfer(acc1, BN2Str(2000))
-    await asset.approve(router.address, BN2Str(one), {from:acc1})
     await asset2.transfer(acc1, BN2Str(2000))
-    await asset2.approve(router.address, BN2Str(one), {from:acc1})
+
+    await vader.approve(usdv.address, max, {from:acc1})
+    await vader.approve(router.address, max, {from:acc1})
+    await usdv.approve(router.address, max, {from:acc1})
+    await asset.approve(router.address, max, {from:acc1})
+    await asset2.approve(router.address, max, {from:acc1})
 
     await dao.newActionProposal("MINTING")
     await dao.voteProposal(await dao.proposalCount())
     await sleep(2000)
     await dao.finaliseProposal(await dao.proposalCount())
-    await usdv.convert(BN2Str(3000), {from:acc1})
+
+    await usdv.convert('3000', {from:acc1})
     // await usdv.withdrawToUSDV('10000', {from:acc1})
 
     expect(await vader.DAO()).to.equal(dao.address);
