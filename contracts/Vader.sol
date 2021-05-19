@@ -44,16 +44,6 @@ contract Vader is iERC20 {
         _;
     }
 
-    // Stop flash attacks
-    modifier flashProof() {
-        require(isMature(), "No flash");
-        _;
-    }
-
-    function isMature() public view returns (bool) {
-        return iUSDV(USDV()).isMature();
-    }
-
     //=====================================CREATION=========================================//
  
     constructor() {
@@ -254,20 +244,24 @@ contract Vader is iERC20 {
         _mint(msg.sender, amount * conversionFactor);
     }
 
-    // // Convert to USDV
-    // function convert(uint256 amount) external returns (uint256) {
-    //     _transfer(USDV, amount);
-    //     iUSDV(USDV)
-    //     return convertForMember(msg.sender, amount);
-    // }
+    // Convert to USDV
+    function convert(uint256 amount) external returns (uint256) {
+        return convertForMember(msg.sender, amount);
+    }
+
+    // Convert for members
+    function convertForMember(address member, uint256 amount) public returns (uint256 convertAmount) {
+        _transfer(msg.sender, USDV(), amount); // Move funds directly to USDV
+        convertAmount = iUSDV(USDV()).convertDirectlyForMember(member); // Ask USDV to convert
+    }
 
     // Directly redeem back to VADER (must have sent USDV first)
-    function redeem() external returns (uint256 redeemAmount) {
-        return redeemToMember(msg.sender);
+    function redeemDirectly() external returns (uint256 redeemAmount) {
+        return redeemDirectlyToMember(msg.sender);
     }
 
     // Redeem on behalf of member (must have sent USDV first)
-    function redeemToMember(address member) public flashProof returns (uint256 redeemAmount) {
+    function redeemDirectlyToMember(address member) public returns (uint256 redeemAmount) {
         require(minting, "not minting");
         uint256 _amount = iERC20(USDV()).balanceOf(address(this));
         iERC20(USDV()).burn(_amount);

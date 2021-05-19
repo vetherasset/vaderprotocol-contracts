@@ -114,7 +114,7 @@ contract Reserve {
             uint256 _unallocatedVADER = unallocatedVADER(); // Get unallocated VADER
             if (_unallocatedVADER >= 2) {
                 uint256 _USDVShare = (_unallocatedVADER * splitForUSDV) / 10000; // Get 67%
-                iUSDV(USDV()).convert(_USDVShare); // Convert it to USDV()
+                iVADER(VADER).convert(_USDVShare); // Convert it to USDV()
             }
             allocatedVADER = reserveVADER(); // The remaining VADER is now allocated
         }

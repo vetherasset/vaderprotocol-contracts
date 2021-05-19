@@ -96,7 +96,7 @@ describe("Deploy DAO", function() {
     await dao.voteProposal(await dao.proposalCount())
     await sleep(2000)
     await dao.finaliseProposal(await dao.proposalCount())
-    await usdv.convert(200, {from:acc1})
+    await vader.convert(200, {from:acc1})
 
     await router.addLiquidity(vader.address, '1000', anchor.address, '1000', {from:acc1})
 

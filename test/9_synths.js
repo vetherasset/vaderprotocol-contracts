@@ -83,7 +83,7 @@ describe("Deploy Router", function() {
     await dao.voteProposal(await dao.proposalCount())
     await sleep(2000)
     await dao.finaliseProposal(await dao.proposalCount())
-    await usdv.convert(BN2Str(3000), {from:acc1})
+    await vader.convert(BN2Str(3000), {from:acc1})
 
     expect(await vader.DAO()).to.equal(dao.address);
     expect(await dao.UTILS()).to.equal(utils.address);
