@@ -167,29 +167,30 @@ contract USDV is iERC20 {
     }
 
     //======================================ASSET MINTING========================================//
+
+    // Convert to USDV
+    function convertToUSDV(uint256 amount) external returns (uint256) {
+        return convertToUSDVForMember(msg.sender, amount);
+    }
+
+    // Convert to USDV for Member
+    function convertToUSDVForMember(address member, uint256 amount) public returns (uint256) {
+        require(iERC20(VADER).transferFrom(msg.sender, address(this), amount)); // Get VADER Funds
+        return convertToUSDVForMemberDirectly(member);
+    }
+
     // Convert to USDV (must have sent VADER first)
-    function convertDirectly() external returns (uint256) {
-        return convertDirectlyForMember(msg.sender);
+    function convertToUSDVDirectly() external returns (uint256) {
+        return convertToUSDVForMemberDirectly(msg.sender);
     }
 
     // Convert for members (must have sent VADER first)
-    function convertDirectlyForMember(address member) public returns (uint256 convertAmount) {
+    function convertToUSDVForMemberDirectly(address member) public returns (uint256 convertAmount) {
         require(iVADER(VADER).minting(), "not minting");
         uint256 _amount = iERC20(VADER).balanceOf(address(this));
         iERC20(VADER).burn(_amount);
         convertAmount = iROUTER(ROUTER()).getUSDVAmount(_amount); // Critical pricing functionality
         _mint(member, convertAmount);
-    }
-
-    // Redeem to VADER
-    function redeem(uint256 amount) external returns (uint256) {
-        return redeemForMember(msg.sender, amount);
-    }
-
-    // Contracts to redeem for members
-    function redeemForMember(address member, uint256 amount) public returns (uint256 redeemAmount) {
-        _transfer(msg.sender, VADER, amount); // Move funds directly to VADER
-        redeemAmount = iVADER(VADER).redeemDirectlyToMember(member); // Ask VADER to redeem
     }
 
     //============================== HELPERS ================================//

@@ -29,11 +29,11 @@ interface iVADER {
 
     function upgrade(uint256 amount) external;
 
-    function convert(uint256 amount) external returns (uint256);
+    function convertToUSDV(uint256 amount) external returns (uint256);
 
-    function convertForMember(address member, uint256 amount) external returns (uint256 convertAmount);
+    function convertToUSDVForMember(address member, uint256 amount) external returns (uint256 convertAmount);
 
-    function redeemDirectly() external returns (uint256);
+    function redeemToVADER(uint256 amount) external returns (uint256);
 
-    function redeemDirectlyToMember(address member) external returns (uint256);
+    function redeemToVADERForMember(address member, uint256 amount) external returns (uint256);
 }

@@ -85,14 +85,14 @@ describe("Convert and redeem", function() {
     await sleep(2000)
     await dao.finaliseProposal(await dao.proposalCount())
     await vader.approve(usdv.address, '10000', {from:acc1})
-    await vader.convert('250', {from:acc1})
+    await vader.convertToUSDV('250', {from:acc1})
     expect(BN2Str(await vader.totalSupply())).to.equal('3750');
     expect(BN2Str(await vader.balanceOf(acc1))).to.equal('3750');
     expect(BN2Str(await usdv.totalSupply())).to.equal('250');
     expect(BN2Str(await usdv.balanceOf(acc1))).to.equal('250');
   });
   it("Should convert for member", async function() {
-    await vader.convertForMember(acc1, '250', {from:acc1})
+    await vader.convertToUSDVForMember(acc1, '250', {from:acc1})
     expect(BN2Str(await vader.totalSupply())).to.equal('3500');
     expect(BN2Str(await vader.balanceOf(acc1))).to.equal('3500');
     expect(BN2Str(await usdv.totalSupply())).to.equal('500');
@@ -100,7 +100,7 @@ describe("Convert and redeem", function() {
   });
   it("Should convert acc1 directly", async function() {
     await vader.transfer(usdv.address, '500', {from:acc1})
-    await usdv.convertDirectly({from:acc1})
+    await usdv.convertToUSDVDirectly({from:acc1})
     expect(BN2Str(await vader.totalSupply())).to.equal('3000');
     expect(BN2Str(await vader.balanceOf(acc1))).to.equal('3000');
     expect(BN2Str(await usdv.totalSupply())).to.equal(BN2Str(1000));
@@ -109,7 +109,7 @@ describe("Convert and redeem", function() {
   it("Should redeem", async function() {
     // await usdv.approve(usdv.address, '1000', {from:acc1}) 
     expect(BN2Str(await usdv.balanceOf(acc1))).to.equal('1000');
-    await usdv.redeem('250',{from:acc1})
+    await usdv.redeemToVADER('250',{from:acc1})
     // expect(BN2Str(await usdv.getMemberDeposit(acc1))).to.equal(BN2Str(0));
     expect(BN2Str(await usdv.totalSupply())).to.equal('750');
     expect(BN2Str(await usdv.balanceOf(acc1))).to.equal('750');
@@ -126,7 +126,7 @@ describe("Convert and redeem", function() {
   });
 
   it("Should convert acc1", async function() {
-    await vader.convert('500', {from:acc1})
+    await vader.convertToUSDV('500', {from:acc1})
     expect(BN2Str(await vader.totalSupply())).to.equal('3000');
     expect(BN2Str(await vader.balanceOf(acc1))).to.equal('3000');
     expect(BN2Str(await usdv.totalSupply())).to.equal(BN2Str(1000));

@@ -94,7 +94,7 @@ describe("Deploy Router", function() {
     await dao.voteProposal(await dao.proposalCount())
     await sleep(2000)
     await dao.finaliseProposal(await dao.proposalCount())
-    await vader.convert(3000, {from:acc1})
+    await vader.convertToUSDV(3000, {from:acc1})
     await usdv.transfer(acc0, '1', {from:acc1})
     await usdv.transfer(acc1, '1', {from:acc0})
 

@@ -16,40 +16,37 @@ contract Vault {
     using SafeERC20 for ExternalERC20;
 
     // Parameters
-    uint256 public erasToEarn;
-    uint256 public minGrantTime;
+    uint256 private constant secondsPerYear = 31536000;
 
     address public VADER;
 
     uint256 public minimumDepositTime;
     uint256 public totalWeight;
 
+    mapping(address => uint256) private mapAsset_deposit;
+    mapping(address => uint256) private mapAsset_lastHarvestedTime;
     mapping(address => uint256) private mapMember_weight;
-    mapping(address => mapping(address => uint256)) private mapMemberSynth_weight;
-    mapping(address => mapping(address => uint256)) private mapMemberSynth_deposit;
-    mapping(address => mapping(address => uint256)) private mapMemberSynth_lastTime;
+    mapping(address => mapping(address => uint256)) private mapMemberAsset_deposit;
+    mapping(address => mapping(address => uint256)) private mapMemberAsset_lastTime;
 
     // Events
     event MemberDeposits(
-        address indexed synth,
+        address indexed asset,
         address indexed member,
         uint256 amount,
         uint256 weight,
         uint256 totalWeight
     );
     event MemberWithdraws(
-        address indexed synth,
+        address indexed asset,
         address indexed member,
         uint256 amount,
         uint256 weight,
         uint256 totalWeight
     );
-    event MemberHarvests(
-        address indexed synth,
-        address indexed member,
-        uint256 amount,
-        uint256 weight,
-        uint256 totalWeight
+    event Harvests(
+        address indexed asset,
+        uint256 reward
     );
 
     // Only DAO can execute
@@ -60,145 +57,124 @@ contract Vault {
 
     constructor(address _vader) {
         VADER = _vader;
-        erasToEarn = 100;
         minimumDepositTime = 1;
-        minGrantTime = 2592000; // 30 days
     }
 
     //=========================================DAO=========================================//
     // Can set params
     function setParams(
-        uint256 newEra,
-        uint256 newDepositTime,
-        uint256 newGrantTime
+        uint256 newDepositTime
     ) external onlyDAO {
-        erasToEarn = newEra;
         minimumDepositTime = newDepositTime;
-        minGrantTime = newGrantTime;
     }
 
     //======================================DEPOSITS========================================//
 
     // Deposit USDV or SYNTHS
-    function deposit(address synth, uint256 amount) external {
-        depositForMember(synth, msg.sender, amount);
+    function deposit(address asset, uint256 amount) external  returns(uint256) {
+        return depositForMember(asset, msg.sender, amount);
     }
 
     // Wrapper for contracts
     function depositForMember(
-        address synth,
+        address asset,
         address member,
         uint256 amount
-    ) public {
-        require((iFACTORY(FACTORY()).isSynth(synth)), "Not Synth"); // Only Synths
-        getFunds(synth, amount);
-        _deposit(synth, member, amount);
+    ) public returns(uint256){
+        require(((iFACTORY(FACTORY()).isSynth(asset)) || asset == USDV()), "!Permitted"); // Only Synths or USDV
+        require(iERC20(asset).transferFrom(msg.sender, address(this), amount));
+        return _deposit(asset, member, amount);
     }
 
     function _deposit(
-        address _synth,
+        address _asset,
         address _member,
         uint256 _amount
-    ) internal {
-        mapMemberSynth_lastTime[_member][_synth] = block.timestamp; // Time of deposit
-        mapMemberSynth_deposit[_member][_synth] += _amount; // Record deposit
-        uint256 _weight = iUTILS(UTILS()).calcSwapValueInBase(iSYNTH(_synth).TOKEN(), _amount);
-        if (iPOOLS(POOLS()).isAnchor(iSYNTH(_synth).TOKEN())) {
-            _weight = iROUTER(ROUTER()).getUSDVAmount(_weight); // Price in USDV
+    ) internal returns(uint256 weight){
+        mapMemberAsset_lastTime[_member][_asset] = block.timestamp; // Time of deposit
+        mapMemberAsset_deposit[_member][_asset] += _amount; // Record deposit for member
+        mapAsset_deposit[_asset] += _amount; // Record total deposit
+        if(mapAsset_lastHarvestedTime[_asset] == 0){
+            mapAsset_lastHarvestedTime[_asset] = block.timestamp;
         }
-        mapMemberSynth_weight[_member][_synth] += _weight;
-        mapMember_weight[_member] += _weight; // Total member weight
-        totalWeight += _weight; // Total weight
-        emit MemberDeposits(_synth, _member, _amount, _weight, totalWeight);
+        if(_asset == USDV()){
+            weight = _amount;
+        } else {
+            weight = iUTILS(UTILS()).calcSwapValueInBase(iSYNTH(_asset).TOKEN(), _amount);
+        }
+        mapMember_weight[_member] += weight; // Record total weight for member in USDV
+        totalWeight += weight; // Total weight
+        emit MemberDeposits(_asset, _member, _amount, weight, totalWeight);
         iRESERVE(RESERVE()).checkReserve();
     }
 
     //====================================== HARVEST ========================================//
-
-    // Harvest, get payment, allocate, increase weight
-    function harvest(address synth) external returns (uint256 reward) {
-        address _member = msg.sender;
-        uint256 _weight;
-        address _token = iSYNTH(synth).TOKEN();
-        reward = calcCurrentReward(synth, _member); // In USDV
-        require(mapMemberSynth_weight[_member][synth] > 0, "must have deposited synth");
-        mapMemberSynth_lastTime[_member][synth] = block.timestamp; // Reset time
-        if (iPOOLS(POOLS()).isAsset(_token)) {
+    
+    // Harvest, get reward, increase weight
+    function harvest(address asset) external returns (uint256 reward) {
+        uint256 _owed = iRESERVE(RESERVE()).getVaultReward();
+        uint256 _rewardsPerSecond = _owed / secondsPerYear; // Deplete over 1 year
+        reward = (block.timestamp - mapAsset_lastHarvestedTime[asset]) * _rewardsPerSecond; // Multiply since last harvest
+        uint256 _weight = mapAsset_deposit[asset]; // Total Deposit
+        if (asset != USDV()) {
+            _weight = iUTILS(UTILS()).calcValueInBase(asset, _weight);
+        }
+        reward = iUTILS(UTILS()).calcShare(_weight, totalWeight, reward); // Share of the reward
+        if(reward > _owed){
+            reward = _owed; // If too much
+        }
+        if (asset == USDV()) {
+            iRESERVE(RESERVE()).requestFunds(USDV(), address(this), reward);
+        } else {
+            address _token = iSYNTH(asset).TOKEN();
             iRESERVE(RESERVE()).requestFunds(USDV(), POOLS(), reward);
             reward = iPOOLS(POOLS()).mintSynth(USDV(), _token, address(this));
-            _weight = iUTILS(UTILS()).calcValueInBase(_token, reward);
-        } else {
-            iRESERVE(RESERVE()).requestFunds(VADER, POOLS(), reward);
-            reward = iPOOLS(POOLS()).mintSynth(VADER, _token, address(this));
-            _weight = iROUTER(ROUTER()).getUSDVAmount(iUTILS(UTILS()).calcValueInBase(_token, reward));
         }
-        mapMemberSynth_deposit[_member][synth] += reward;
-        mapMember_weight[_member] += _weight;
-        totalWeight += _weight;
-        emit MemberHarvests(synth, _member, reward, _weight, totalWeight);
-    }
-
-    // Get the payment owed for a member
-    function calcCurrentReward(address synth, address member) public view returns (uint256 reward) {
-        uint256 _secondsSinceClaim = block.timestamp - mapMemberSynth_lastTime[member][synth]; // Get time since last claim
-        uint256 _share = calcReward(member); // Get share of rewards for member
-        reward = (_share * _secondsSinceClaim) / iVADER(VADER).secondsPerEra(); // Get owed amount, based on per-day rates
-        uint256 _reserve;
-        if (iPOOLS(POOLS()).isAsset(iSYNTH(synth).TOKEN())) {
-            _reserve = reserveUSDV();
-        } else {
-            _reserve = reserveVADER();
-        }
-        if (reward >= _reserve) {
-            reward = _reserve; // Send full reserve if the last
-        }
-    }
-
-    function calcReward(address member) public view returns (uint256 reward) {
-        uint256 _weight = mapMember_weight[member];
-        uint256 _adjustedReserve = iROUTER(ROUTER()).getUSDVAmount(reserveVADER()) + reserveUSDV();
-        return iUTILS(UTILS()).calcShare(_weight, totalWeight, _adjustedReserve / erasToEarn);
+        emit Harvests(asset, reward);
     }
 
     //====================================== WITHDRAW ========================================//
 
-    // @title Withdraw `basisPoints` basis points of token `synth` from the vault to the caller.
-    function withdraw(address synth, uint256 basisPoints) external returns (uint256 redeemedAmount) {
-        redeemedAmount = _processWithdraw(synth, msg.sender, basisPoints); // Get amount to withdraw
-        sendFunds(synth, msg.sender, redeemedAmount);
+    // @title Withdraw `basisPoints` basis points of token `asset` from the vault to the caller.
+    function withdraw(address asset, uint256 basisPoints) external returns (uint256 redeemedAmount) {
+        redeemedAmount = _processWithdraw(asset, msg.sender, basisPoints); // Get amount to withdraw
+        iERC20(asset).transfer(msg.sender, redeemedAmount); // All assets are safe
+    }
+
+    // Withdraw to VADER
+    function withdrawToVader(address asset, uint256 basisPoints) external returns (uint256 redeemedAmount) {
+        redeemedAmount = _processWithdraw(asset, msg.sender, basisPoints); // Get amount to withdraw
+        if(asset != USDV()){
+            redeemedAmount = iPOOLS(POOLS()).burnSynth(USDV(), asset, address(this)); // Burn to USDV
+        }
+        iERC20(USDV()).approve(VADER, type(uint256).max);
+        iVADER(VADER).redeemToVADERForMember(msg.sender, redeemedAmount); // Redeem to VADER for Member
     }
 
     function _processWithdraw(
-        address _synth,
+        address _asset,
         address _member,
         uint256 _basisPoints
     ) internal returns (uint256 redeemedAmount) {
-        require((block.timestamp - mapMemberSynth_lastTime[_member][_synth]) >= minimumDepositTime, "DepositTime"); // stops attacks
-        redeemedAmount = iUTILS(UTILS()).calcPart(_basisPoints, mapMemberSynth_deposit[_member][_synth]); // Share of deposits
-        mapMemberSynth_deposit[_member][_synth] -= redeemedAmount; // Reduce for member
-        uint256 _weight = iUTILS(UTILS()).calcPart(_basisPoints, mapMemberSynth_weight[_member][_synth]); // Find recorded weight to reduce
-        mapMemberSynth_weight[_member][_synth] -= _weight; // Reduce for that synth
-        mapMember_weight[_member] -= _weight; // Reduce for member
-        totalWeight -= _weight; // Reduce for total
-        emit MemberWithdraws(_synth, _member, redeemedAmount, _weight, totalWeight); // Event
+        require((block.timestamp - mapMemberAsset_lastTime[_member][_asset]) >= minimumDepositTime, "DepositTime"); // stops attacks
+        redeemedAmount = iUTILS(UTILS()).calcPart(_basisPoints, calcDepositValueForMember(_asset, _member)); // BasisPoints
+        mapMemberAsset_deposit[_member][_asset] -= iUTILS(UTILS()).calcPart(_basisPoints, mapMemberAsset_deposit[_member][_asset]); // Reduce for member
+        uint256 _redeemedWeight = redeemedAmount;
+        if (_asset != USDV()) {
+            _redeemedWeight = iUTILS(UTILS()).calcValueInBase(_asset, redeemedAmount);
+        }
+        uint256 _memberWeight = mapMember_weight[_member];
+        mapMember_weight[_member] -= iUTILS(UTILS()).calcShare(_redeemedWeight, _memberWeight, _memberWeight); // Safely reduce member weight
+        totalWeight -= _redeemedWeight; // Reduce for total
+        emit MemberWithdraws(_asset, _member, redeemedAmount, _redeemedWeight, totalWeight); // Event
         iRESERVE(RESERVE()).checkReserve();
     }
 
-    //============================== ASSETS ================================//
-
-    // @title Deposit tokens into this contract
-    // @dev Assumes `synth` is trusted (is a synth token) and supports
-    function getFunds(address synth, uint256 amount) internal {
-        require(iERC20(synth).transferFrom(msg.sender, address(this), amount)); // safeErc20 not needed; synths trusted
-    }
-
-    // @title Send `amount` tokens of `synth` to `member`
-    function sendFunds(
-        address synth,
-        address member,
-        uint256 amount
-    ) internal {
-        ExternalERC20(synth).safeTransfer(member, amount); // use safeErc20 because caller (withdraw()) does not verify token is a synth
+    // Get the value owed for a member
+    function calcDepositValueForMember(address asset, address member) public view returns (uint256 value) {
+        uint256 _balance = iERC20(asset).balanceOf(address(this));
+        uint256 _memberDeposit = mapMemberAsset_deposit[member][asset];
+        value = iUTILS(UTILS()).calcShare(_memberDeposit, mapAsset_deposit[asset], _balance); // Share of balance
     }
 
     //============================== HELPERS ================================//
@@ -211,20 +187,20 @@ contract Vault {
         return iRESERVE(RESERVE()).reserveVADER(); // Balance
     }
 
-    function getMemberDeposit(address member, address synth) external view returns (uint256) {
-        return mapMemberSynth_deposit[member][synth];
+    function getMemberDeposit(address member, address asset) external view returns (uint256) {
+        return mapMemberAsset_deposit[member][asset];
     }
 
-    function getMemberSynthWeight(address member, address synth) external view returns (uint256) {
-        return mapMemberSynth_weight[member][synth];
+    function getMemberLastTime(address member, address asset) external view returns (uint256) {
+        return mapMemberAsset_lastTime[member][asset];
     }
 
-    function getMemberWeight(address member) external view returns (uint256) {
-        return mapMember_weight[member];
+    function getMemberVaultWeight(address member) external view returns (uint256) {
+        return iUTILS(UTILS()).calcShare(mapMember_weight[member], totalWeight, 10**18);
     }
 
-    function getMemberLastTime(address member, address synth) external view returns (uint256) {
-        return mapMemberSynth_lastTime[member][synth];
+    function getAssetDeposit(address asset) external view returns (uint256) {
+        return mapAsset_deposit[asset];
     }
 
     function DAO() internal view returns(address){

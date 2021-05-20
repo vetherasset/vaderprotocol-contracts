@@ -83,7 +83,7 @@ describe("Deploy Router", function() {
     await dao.voteProposal(await dao.proposalCount())
     await sleep(2000)
     await dao.finaliseProposal(await dao.proposalCount())
-    await vader.convert(BN2Str(3000), {from:acc1})
+    await vader.convertToUSDV(BN2Str(3000), {from:acc1})
 
     expect(await vader.DAO()).to.equal(dao.address);
     expect(await dao.UTILS()).to.equal(utils.address);
@@ -260,7 +260,7 @@ describe("Member should deposit Synths for rewards", function() {
     await dao.finaliseProposal(await dao.proposalCount())
     let tx = await vault.withdraw(synth.address, "10000",{from:acc1})
     expect(BN2Str(await vault.getMemberDeposit(acc1, synth.address))).to.equal('0');
-    expect(BN2Str(await vault.getMemberSynthWeight(acc1, synth.address))).to.equal('0');
+    expect(BN2Str(await vault.getMemberAssetWeight(acc1, synth.address))).to.equal('0');
     expect(BN2Str(await vault.getMemberWeight(acc1))).to.equal('193');
     expect(BN2Str(await vault.totalWeight())).to.equal('193');
     expect(BN2Str(await synth.balanceOf(vault.address))).to.equal('0');

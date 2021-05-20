@@ -95,7 +95,7 @@ describe("Deploy Protection", function() {
     await dao.voteProposal(await dao.proposalCount())
     await sleep(2000)
     await dao.finaliseProposal(await dao.proposalCount())
-    await vader.convert('2000', {from:acc1})
+    await vader.convertToUSDV('2000', {from:acc1})
 
     await asset.transfer(acc1, '2000')
     await asset.approve(router.address, BN2Str(one), {from:acc1})

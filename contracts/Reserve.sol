@@ -19,6 +19,7 @@ contract Reserve {
     uint256 public nextEraTime;
     uint256 public splitForUSDV;
     uint256 public allocatedVADER;
+    uint256 public vaultShare;
 
     // Only DAO can execute
     modifier onlyDAO() {
@@ -42,6 +43,7 @@ contract Reserve {
     constructor() {
         minGrantTime = 2592000;
         splitForUSDV = 6700;
+        vaultShare = 2;
     }
 
     // Can only be called once
@@ -55,9 +57,10 @@ contract Reserve {
     
     //=========================================DAO=========================================//
 
-    function setParams(uint256 newSplit, uint256 newDelay) external onlyDAO {
+    function setParams(uint256 newSplit, uint256 newDelay, uint256 newShare) external onlyDAO {
         splitForUSDV = newSplit;
         minGrantTime = newDelay;
+        vaultShare = newShare;
     }
 
     // Can issue grants
@@ -114,10 +117,14 @@ contract Reserve {
             uint256 _unallocatedVADER = unallocatedVADER(); // Get unallocated VADER
             if (_unallocatedVADER >= 2) {
                 uint256 _USDVShare = (_unallocatedVADER * splitForUSDV) / 10000; // Get 67%
-                iVADER(VADER).convert(_USDVShare); // Convert it to USDV()
+                iVADER(VADER).convertToUSDV(_USDVShare); // Convert it to USDV()
             }
             allocatedVADER = reserveVADER(); // The remaining VADER is now allocated
         }
+    }
+
+    function getVaultReward() external view returns(uint256) {
+        return reserveUSDV() / vaultShare;
     }
 
     //=========================================HELPERS=========================================//
