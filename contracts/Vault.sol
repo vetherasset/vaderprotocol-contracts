@@ -19,7 +19,7 @@ contract Vault {
     uint256 public erasToEarn;
     uint256 public minGrantTime;
 
-    address public VADER;
+    address public immutable VADER;
 
     uint256 public minimumDepositTime;
     uint256 public totalWeight;

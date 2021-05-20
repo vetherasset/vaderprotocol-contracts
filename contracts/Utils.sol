@@ -17,7 +17,7 @@ contract Utils {
     uint256 private constant _10k = 10000;
     uint256 private constant _year = 31536000; // One Year (in seconds)
 
-    address public VADER;
+    address public immutable VADER;
 
     constructor(address _vader) {
         VADER = _vader;

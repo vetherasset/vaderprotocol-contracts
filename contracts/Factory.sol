@@ -6,7 +6,7 @@ import "./Synth.sol";
 // Factory Contract
 contract Factory {
 
-    address public POOLS;
+    address public immutable POOLS;
 
     address[] public arraySynths;
     mapping(address => address) private mapToken_Synth;
