@@ -22,7 +22,7 @@ contract USDV is iERC20 {
     // Parameters
     uint256 public blockDelay;
 
-    address public VADER;
+    address public immutable VADER;
 
     mapping(address => uint256) public lastBlock;
 

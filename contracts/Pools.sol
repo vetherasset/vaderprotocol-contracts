@@ -17,7 +17,7 @@ contract Pools {
     uint256 public pooledVADER;
     uint256 public pooledUSDV;
 
-    address public VADER;
+    address public immutable VADER;
 
     mapping(address => bool) _isAsset;
     mapping(address => bool) _isAnchor;

@@ -26,7 +26,7 @@ contract Router {
     uint256 public curatedPoolCount;
     mapping(address => bool) private _isCurated;
 
-    address public VADER;
+    address public immutable VADER;
 
     uint256 public anchorLimit;
     uint256 public insidePriceLimit;
