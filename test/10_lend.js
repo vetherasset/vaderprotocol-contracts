@@ -59,8 +59,9 @@ describe("Deploy Router", function() {
      
     await dao.init(vether.address, vader.address, usdv.address, reserve.address, 
     vault.address, router.address, pools.address, factory.address, utils.address);
-  await vader.init(dao.address)
-  await reserve.init(vader.address)
+ 
+  await vader.changeDAO(dao.address)
+await reserve.init(vader.address)
 
     asset = await Asset.new();
     anchor = await Anchor.new();

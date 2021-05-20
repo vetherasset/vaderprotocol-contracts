@@ -9,7 +9,6 @@ var VAULT = artifacts.require('./Vault')
 var POOLS = artifacts.require('./Pools')
 var Router = artifacts.require('./Router')
 var Factory = artifacts.require('./Factory')
-var Attack = artifacts.require('./Attack')
 
 const BigNumber = require('bignumber.js')
 const truffleAssert = require('truffle-assertions')
@@ -45,7 +44,6 @@ before(async function() {
   router = await Router.new(vader.address);
   pools = await POOLS.new(vader.address);
   factory = await Factory.new(pools.address);
-  attack = await Attack.new();
 
 })
 
@@ -58,11 +56,10 @@ describe("Deploy USDV", function() {
      
     await dao.init(vether.address, vader.address, usdv.address, reserve.address, 
     vault.address, router.address, pools.address, factory.address, utils.address);
-  await vader.init(dao.address)
-  await reserve.init(vader.address)
+ 
+  await vader.changeDAO(dao.address)
+await reserve.init(vader.address)
     
-    await attack.init(vader.address, usdv.address)
-
     await vether.transfer(acc1, '3403') 
     await vether.approve(vader.address, '3400', {from:acc1})
     await vader.upgrade('4', {from:acc1}) 
@@ -77,13 +74,14 @@ describe("Deploy USDV", function() {
   });
 });
 
-describe("Convert and redeem", function() {
+describe("Convert", function() {
 
   it("Should convert acc1", async function() {
     await dao.newActionProposal("MINTING")
     await dao.voteProposal(await dao.proposalCount())
     await sleep(2000)
     await dao.finaliseProposal(await dao.proposalCount())
+
     await vader.approve(usdv.address, '10000', {from:acc1})
     await vader.convertToUSDV('250', {from:acc1})
     expect(BN2Str(await vader.totalSupply())).to.equal('3750');
@@ -106,31 +104,32 @@ describe("Convert and redeem", function() {
     expect(BN2Str(await usdv.totalSupply())).to.equal(BN2Str(1000));
     expect(BN2Str(await usdv.balanceOf(acc1))).to.equal(BN2Str(1000));
   });
-  it("Should redeem", async function() {
-    // await usdv.approve(usdv.address, '1000', {from:acc1}) 
-    expect(BN2Str(await usdv.balanceOf(acc1))).to.equal('1000');
-    await usdv.redeemToVADER('250',{from:acc1})
-    // expect(BN2Str(await usdv.getMemberDeposit(acc1))).to.equal(BN2Str(0));
-    expect(BN2Str(await usdv.totalSupply())).to.equal('750');
-    expect(BN2Str(await usdv.balanceOf(acc1))).to.equal('750');
-    expect(BN2Str(await vader.totalSupply())).to.equal('3250');
-    expect(BN2Str(await vader.balanceOf(acc1))).to.equal('3250');
-  });
-  it("Should redeem for member", async function() {
-    await usdv.redeemForMember(acc1, '250',{from:acc1})
-    // expect(BN2Str(await usdv.getMemberDeposit(acc1))).to.equal(BN2Str(0));
-    expect(BN2Str(await usdv.totalSupply())).to.equal('500');
-    expect(BN2Str(await usdv.balanceOf(acc1))).to.equal('500');
-    expect(BN2Str(await vader.totalSupply())).to.equal('3500');
-    expect(BN2Str(await vader.balanceOf(acc1))).to.equal('3500');
-  });
+  // it("Should redeem", async function() {
+  //   // await usdv.approve(usdv.address, '1000', {from:acc1}) 
+  //   expect(BN2Str(await usdv.balanceOf(acc1))).to.equal('1000');
+  //   await usdv.redeemToVADER('250',{from:acc1})
+  //   // expect(BN2Str(await usdv.getMemberDeposit(acc1))).to.equal(BN2Str(0));
+  //   expect(BN2Str(await usdv.totalSupply())).to.equal('750');
+  //   expect(BN2Str(await usdv.balanceOf(acc1))).to.equal('750');
+  //   expect(BN2Str(await vader.totalSupply())).to.equal('3250');
+  //   expect(BN2Str(await vader.balanceOf(acc1))).to.equal('3250');
+  // });
+  // it("Should redeem for member", async function() {
+  //   await usdv.redeemForMember(acc1, '250',{from:acc1})
+  //   // expect(BN2Str(await usdv.getMemberDeposit(acc1))).to.equal(BN2Str(0));
+  //   expect(BN2Str(await usdv.totalSupply())).to.equal('500');
+  //   expect(BN2Str(await usdv.balanceOf(acc1))).to.equal('500');
+  //   expect(BN2Str(await vader.totalSupply())).to.equal('3500');
+  //   expect(BN2Str(await vader.balanceOf(acc1))).to.equal('3500');
+  // });
 
   it("Should convert acc1", async function() {
-    await vader.convertToUSDV('500', {from:acc1})
-    expect(BN2Str(await vader.totalSupply())).to.equal('3000');
-    expect(BN2Str(await vader.balanceOf(acc1))).to.equal('3000');
-    expect(BN2Str(await usdv.totalSupply())).to.equal(BN2Str(1000));
-    expect(BN2Str(await usdv.balanceOf(acc1))).to.equal(BN2Str(1000));
+    await vader.transfer(usdv.address, '500', {from:acc1})
+    await usdv.convertToUSDVForMemberDirectly(acc1, {from:acc1})
+    expect(BN2Str(await vader.totalSupply())).to.equal('2500');
+    expect(BN2Str(await vader.balanceOf(acc1))).to.equal('2500');
+    expect(BN2Str(await usdv.totalSupply())).to.equal('1500');
+    expect(BN2Str(await usdv.balanceOf(acc1))).to.equal('1500');
   });
 
 // acc  | VTH | VADER  | USDV |
@@ -161,7 +160,7 @@ describe("Be a valid ERC-20", function() {
   it("Should burn", async function() {
     await usdv.burn("100", {from:acc0})
     expect(BN2Str(await usdv.balanceOf(acc0))).to.equal('100');
-    expect(BN2Str(await usdv.totalSupply())).to.equal(BN2Str('900'));
+    expect(BN2Str(await usdv.totalSupply())).to.equal(BN2Str('1400'));
   });
 // acc  | VTH | VADER  | USDV |
 // acc0 |   0 |    0 |  100 |
@@ -172,8 +171,8 @@ describe("Be a valid ERC-20", function() {
     expect(BN2Str(await usdv.allowance(acc0, acc1))).to.equal('100');
     await usdv.burnFrom(acc0, "100", {from:acc1})
     expect(BN2Str(await usdv.balanceOf(acc0))).to.equal('0');
-    expect(BN2Str(await usdv.totalSupply())).to.equal(BN2Str('800'));
-    expect(BN2Str(await usdv.balanceOf(acc1))).to.equal('800');
+    expect(BN2Str(await usdv.totalSupply())).to.equal(BN2Str('1300'));
+    expect(BN2Str(await usdv.balanceOf(acc1))).to.equal('1300');
   });
 // acc  | VTH | VADER  | USDV |
 // acc0 |   0 |    0 |  0   |
@@ -181,21 +180,4 @@ describe("Be a valid ERC-20", function() {
 
 });
 
-// describe("Should fail deposit USDV for rewards", function() {
-//   it("Should fail USDV deposit", async function() {
-//     await truffleAssert.reverts(vault.deposit(usdv.address, '200', {from:acc1})) 
-//   });
-//   it("Should fail VADER deposit", async function() {
-//     await truffleAssert.reverts(vault.deposit(vader.address, '200', {from:acc1})) 
-//   });
-// });
-
-// describe("Should fail attack", function() {
-//   it("Same block fails", async function() {
-//     // console.log(await usdv.isMature({from:acc1}))
-//     await attack.attackUSDV('100', {from:acc1})
-//     await usdv.setParams('100', '1', '1', '2592000')
-//     await truffleAssert.reverts(attack.attackUSDV('100', {from:acc1}), "No flash")
-//   });
-// });
 
