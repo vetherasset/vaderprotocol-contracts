@@ -5,7 +5,8 @@ interface iROUTER {
     function setParams(
         uint256 newFactor,
         uint256 newTime,
-        uint256 newLimit
+        uint256 newLimit,
+        uint256 newInterval
     ) external;
 
     function addLiquidity(

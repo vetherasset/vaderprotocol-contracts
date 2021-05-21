@@ -35,6 +35,14 @@ contract Router {
     uint256[] public arrayPrices;
     mapping(address => uint) public mapAnchorAddress_arrayAnchorsIndex1; // 1-based indexes
 
+    uint256 public intervalTWAP;
+    uint256 public accumulatedPrice;
+    uint256 public lastUpdatedPrice;
+    uint256 public startIntervalAccumulatedPrice;
+    uint256 public startIntervalTime;
+    uint256 public cachedIntervalAccumulatedPrice;
+    uint256 public cachedIntervalTime;
+
     mapping(address => mapping(address => uint256)) public mapMemberToken_depositBase;
     mapping(address => mapping(address => uint256)) public mapMemberToken_depositToken;
     mapping(address => mapping(address => uint256)) public mapMemberToken_lastDeposited;
@@ -90,6 +98,7 @@ contract Router {
         anchorLimit = 5;
         insidePriceLimit = 200;
         outsidePriceLimit = 500;
+        intervalTWAP = 3600;
     }
 
     //=========================================DAO=========================================//
@@ -97,11 +106,13 @@ contract Router {
     function setParams(
         uint256 newFactor,
         uint256 newTime,
-        uint256 newLimit
+        uint256 newLimit,
+        uint256 newInterval
     ) external onlyDAO {
         rewardReductionFactor = newFactor;
         timeForFullProtection = newTime;
         curatedPoolLimit = newLimit;
+        intervalTWAP = newInterval;
     }
 
     function setAnchorParams(
@@ -126,6 +137,7 @@ contract Router {
         uint256 _actualInputBase = moveTokenToPools(base, inputBase);
         uint256 _actualInputToken = moveTokenToPools(token, inputToken);
         addDepositData(msg.sender, token, _actualInputBase, _actualInputToken);
+        updateTWAPPrice();
         return iPOOLS(POOLS()).addLiquidity(base, token, msg.sender);
     }
 
@@ -230,6 +242,7 @@ contract Router {
         _handlePoolReward(_base, outputToken);
         _handleAnchorPriceUpdate(inputToken);
         _handleAnchorPriceUpdate(outputToken);
+        updateTWAPPrice();
     }
 
     //====================================INCENTIVES========================================//
@@ -338,6 +351,12 @@ contract Router {
         updateAnchorPrice(newToken);
     }
 
+    function _handleAnchorPriceUpdate(address _token) internal {
+        if (iPOOLS(POOLS()).isAnchor(_token)) {
+            updateAnchorPrice(_token);
+        }
+    }
+
     // Anyone to update prices
     function updateAnchorPrice(address token) public {
         uint idx1 = mapAnchorAddress_arrayAnchorsIndex1[token];
@@ -346,9 +365,16 @@ contract Router {
         }
     }
 
-    function _handleAnchorPriceUpdate(address _token) internal {
-        if (iPOOLS(POOLS()).isAnchor(_token)) {
-            updateAnchorPrice(_token);
+    function updateTWAPPrice() public {
+        uint _now = block.timestamp;
+        uint _secondsSinceLastUpdate = _now - lastUpdatedPrice;
+        accumulatedPrice = _secondsSinceLastUpdate * getAnchorPrice();
+        lastUpdatedPrice = _now;
+        if((_now - cachedIntervalTime) > intervalTWAP){ // More than the interval, update interval params
+            startIntervalAccumulatedPrice = cachedIntervalAccumulatedPrice; // update price from cache
+            startIntervalTime = cachedIntervalTime; // update time from cache
+            cachedIntervalAccumulatedPrice = accumulatedPrice; // reset cache
+            cachedIntervalTime = _now; // reset cache
         }
     }
 
@@ -367,15 +393,21 @@ contract Router {
         }
     }
 
+    // TWAP Price of 1 VADER in USD
+    function getTWAPPrice() public view returns (uint256) {
+        return (block.timestamp - startIntervalTime) / (accumulatedPrice - startIntervalAccumulatedPrice);
+    }
+
+
     // The correct amount of Vader for an input of USDV
     function getVADERAmount(uint256 USDVAmount) external view returns (uint256 vaderAmount) {
-        uint256 _price = getAnchorPrice();
+        uint256 _price = getTWAPPrice();
         return (_price * USDVAmount) / one;
     }
 
     // The correct amount of USDV for an input of VADER
     function getUSDVAmount(uint256 vaderAmount) external view returns (uint256 USDVAmount) {
-        uint256 _price = getAnchorPrice();
+        uint256 _price = getTWAPPrice();
         return (vaderAmount * one) / _price;
     }
 
