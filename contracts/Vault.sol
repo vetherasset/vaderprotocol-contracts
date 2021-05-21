@@ -195,8 +195,8 @@ contract Vault {
         return mapMemberAsset_lastTime[member][asset];
     }
 
-    function getMemberVaultWeight(address member) external view returns (uint256) {
-        return iUTILS(UTILS()).calcShare(mapMember_weight[member], totalWeight, 10**18);
+    function getMemberWeight(address member) external view returns (uint256) {
+        return mapMember_weight[member];
     }
 
     function getAssetDeposit(address asset) external view returns (uint256) {
