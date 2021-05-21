@@ -37,7 +37,7 @@ contract Router {
 
     uint256 public intervalTWAP;
     uint256 public accumulatedPrice;
-    uint256 public lastUpdatedPrice;
+    uint256 public lastUpdatedTime;
     uint256 public startIntervalAccumulatedPrice;
     uint256 public startIntervalTime;
     uint256 public cachedIntervalAccumulatedPrice;
@@ -98,7 +98,13 @@ contract Router {
         anchorLimit = 5;
         insidePriceLimit = 200;
         outsidePriceLimit = 500;
-        intervalTWAP = 3600;
+        intervalTWAP = 3; //6hours
+        // accumulatedPrice = 0;
+        lastUpdatedTime = block.timestamp;
+        // startIntervalAccumulatedPrice = one;
+        startIntervalTime = lastUpdatedTime;
+        // cachedIntervalAccumulatedPrice = startIntervalAccumulatedPrice;
+        cachedIntervalTime = startIntervalTime;
     }
 
     //=========================================DAO=========================================//
@@ -242,7 +248,6 @@ contract Router {
         _handlePoolReward(_base, outputToken);
         _handleAnchorPriceUpdate(inputToken);
         _handleAnchorPriceUpdate(outputToken);
-        updateTWAPPrice();
     }
 
     //====================================INCENTIVES========================================//
@@ -363,13 +368,14 @@ contract Router {
         if (idx1 != 0) {
             arrayPrices[idx1 - 1] = iUTILS(UTILS()).calcValueInBase(token, one);
         }
+        updateTWAPPrice();
     }
 
     function updateTWAPPrice() public {
         uint _now = block.timestamp;
-        uint _secondsSinceLastUpdate = _now - lastUpdatedPrice;
-        accumulatedPrice = _secondsSinceLastUpdate * getAnchorPrice();
-        lastUpdatedPrice = _now;
+        uint _secondsSinceLastUpdate = _now - lastUpdatedTime;
+        accumulatedPrice += _secondsSinceLastUpdate * getAnchorPrice();
+        lastUpdatedTime = _now;
         if((_now - cachedIntervalTime) > intervalTWAP){ // More than the interval, update interval params
             startIntervalAccumulatedPrice = cachedIntervalAccumulatedPrice; // update price from cache
             startIntervalTime = cachedIntervalTime; // update time from cache
@@ -395,7 +401,11 @@ contract Router {
 
     // TWAP Price of 1 VADER in USD
     function getTWAPPrice() public view returns (uint256) {
-        return (block.timestamp - startIntervalTime) / (accumulatedPrice - startIntervalAccumulatedPrice);
+        if(arrayPrices.length == 0) {
+            return one; // Edge case for first USDV mint
+        } else {
+            return (accumulatedPrice - startIntervalAccumulatedPrice) / (block.timestamp - startIntervalTime) ;
+        }
     }
 
 

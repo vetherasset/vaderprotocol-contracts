@@ -17,6 +17,9 @@ const truffleAssert = require('truffle-assertions')
 
 function BN2Str(BN) { return ((new BigNumber(BN)).toFixed()) }
 function getBN(BN) { return (new BigNumber(BN)) }
+function approx(number){
+  return BN2Str((getBN(number).div(10**16)).integerValue())
+}
 
 function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
@@ -120,8 +123,8 @@ describe("Handle Anchors", function() {
   });
   it("Get prices", async function() {
     expect(BN2Str(await router.getAnchorPrice())).to.equal('990099009900990099')
-    expect(BN2Str(await router.getVADERAmount('100'))).to.equal('99')
-    expect(BN2Str(await router.getUSDVAmount('100'))).to.equal('101')
+    // expect(BN2Str(await router.getVADERAmount('100'))).to.equal('99')
+    // expect(BN2Str(await router.getUSDVAmount('100'))).to.equal('101')
   });
   it("Replace Median", async function() {
     await router.swap('2', vader.address, anchor4.address, {from:acc1})
@@ -129,8 +132,8 @@ describe("Handle Anchors", function() {
     expect(BN2Str(await pools.mapToken_tokenAmount(anchor4.address))).to.equal('102');
     expect(BN2Str(await utils.calcValueInBase(anchor4.address, '100'))).to.equal('100');
     expect(BN2Str(await router.getAnchorPrice())).to.equal('1000000000000000000')
-    expect(BN2Str(await router.getVADERAmount('100'))).to.equal('100')
-    expect(BN2Str(await router.getUSDVAmount('100'))).to.equal('100')
+    // expect(BN2Str(await router.getVADERAmount('100'))).to.equal('100')
+    // expect(BN2Str(await router.getUSDVAmount('100'))).to.equal('100')
   });
   it("Create outlier", async function() {
     await router.swap('10', vader.address, anchor0.address, {from:acc1})
@@ -138,8 +141,8 @@ describe("Handle Anchors", function() {
     expect(BN2Str(await pools.mapToken_tokenAmount(anchor0.address))).to.equal('91');
     expect(BN2Str(await utils.calcValueInBase(anchor0.address, '100'))).to.equal('120');
     expect(BN2Str(await router.getAnchorPrice())).to.equal('1000000000000000000')
-    expect(BN2Str(await router.getVADERAmount('100'))).to.equal('100')
-    expect(BN2Str(await router.getUSDVAmount('100'))).to.equal('100')
+    // expect(BN2Str(await router.getVADERAmount('100'))).to.equal('100')
+    // expect(BN2Str(await router.getUSDVAmount('100'))).to.equal('100')
   });
   it("Replace Outlier", async function() {
     expect(await router.arrayAnchors('0')).to.equal(anchor0.address)
@@ -147,14 +150,44 @@ describe("Handle Anchors", function() {
     expect(BN2Str(await router.getAnchorPrice())).to.equal('1000000000000000000')
     expect(BN2Str(await utils.calcValueInBase(anchor0.address, '1000000000000000000'))).to.equal('1208791208791208791');
     expect(BN2Str(await utils.calcValueInBase(anchor5.address, '1000000000000000000'))).to.equal('1000000000000000000');
-    
     await router.replaceAnchor(anchor0.address, anchor5.address, {from:acc1})
     expect(await router.arrayAnchors('0')).to.equal(anchor5.address)
     expect(BN2Str(await router.getAnchorPrice())).to.equal('1000000000000000000')
-    expect(BN2Str(await router.getVADERAmount('100'))).to.equal('100')
-    expect(BN2Str(await router.getUSDVAmount('100'))).to.equal('100')
-    
+    // expect(BN2Str(await router.getVADERAmount('100'))).to.equal('100')
+    // expect(BN2Str(await router.getUSDVAmount('100'))).to.equal('100')
   });
 
 });
 
+describe("Handle TWAP", function() {
+  it("Get prices", async function() {
+
+    expect(approx(await router.getTWAPPrice())).to.equal('100')
+    await router.swap('10', vader.address, anchor0.address, {from:acc1})
+    await router.swap('10', vader.address, anchor1.address, {from:acc1})
+    await router.swap('10', vader.address, anchor2.address, {from:acc1})
+    await router.swap('10', vader.address, anchor3.address, {from:acc1})
+    await router.swap('10', vader.address, anchor4.address, {from:acc1})
+    expect(approx(await router.getTWAPPrice())).to.equal('108')
+    await sleep(2000)
+    await router.swap('10', anchor0.address, vader.address, {from:acc1})
+    await router.swap('10', anchor1.address, vader.address, {from:acc1})
+    await router.swap('10', anchor2.address, vader.address, {from:acc1})
+    await router.swap('10', anchor3.address, vader.address, {from:acc1})
+    await router.swap('10', anchor4.address, vader.address, {from:acc1})
+    expect(approx(await router.getTWAPPrice())).to.equal('107')
+    await sleep(2000)
+    await router.swap('10', anchor0.address, vader.address, {from:acc1})
+    await router.swap('10', anchor1.address, vader.address, {from:acc1})
+    await router.swap('10', anchor2.address, vader.address, {from:acc1})
+    await router.swap('10', anchor3.address, vader.address, {from:acc1})
+    await router.swap('10', anchor4.address, vader.address, {from:acc1})
+    expect(approx(await router.getTWAPPrice())).to.equal('92')
+    await sleep(2000)
+
+    expect(approx(await router.getAnchorPrice())).to.equal('83')
+
+    expect(BN2Str(await router.getVADERAmount('100'))).to.equal('92')
+    expect(BN2Str(await router.getUSDVAmount('100'))).to.equal('108')
+  });
+});
