@@ -115,14 +115,14 @@ contract Vault {
         uint256 _owed = iRESERVE(RESERVE()).getVaultReward();
         uint256 _rewardsPerSecond = _owed / secondsPerYear; // Deplete over 1 year
         reward = (block.timestamp - mapAsset_lastHarvestedTime[asset]) * _rewardsPerSecond; // Multiply since last harvest
+        if(reward > _owed){
+            reward = _owed; // If too much
+        }
         uint256 _weight = mapAsset_deposit[asset]; // Total Deposit
         if (asset != USDV()) {
             _weight = iUTILS(UTILS()).calcValueInBase(asset, _weight);
         }
         reward = iUTILS(UTILS()).calcShare(_weight, totalWeight, reward); // Share of the reward
-        if(reward > _owed){
-            reward = _owed; // If too much
-        }
         if (asset == USDV()) {
             iRESERVE(RESERVE()).requestFunds(USDV(), address(this), reward);
         } else {
@@ -130,6 +130,7 @@ contract Vault {
             iRESERVE(RESERVE()).requestFunds(USDV(), POOLS(), reward);
             reward = iPOOLS(POOLS()).mintSynth(USDV(), _token, address(this));
         }
+        mapAsset_deposit[asset] = iERC20(asset).balanceOf(address(this)); // sync deposits, now including the reward
         emit Harvests(asset, reward);
     }
 
@@ -157,7 +158,7 @@ contract Vault {
         uint256 _basisPoints
     ) internal returns (uint256 redeemedAmount) {
         require((block.timestamp - mapMemberAsset_lastTime[_member][_asset]) >= minimumDepositTime, "DepositTime"); // stops attacks
-        redeemedAmount = iUTILS(UTILS()).calcPart(_basisPoints, calcDepositValueForMember(_asset, _member)); // BasisPoints
+        redeemedAmount = iUTILS(UTILS()).calcPart(_basisPoints, calcDepositValueForMember(_asset, _member)); // Member share
         mapMemberAsset_deposit[_member][_asset] -= iUTILS(UTILS()).calcPart(_basisPoints, mapMemberAsset_deposit[_member][_asset]); // Reduce for member
         uint256 _redeemedWeight = redeemedAmount;
         if (_asset != USDV()) {
@@ -172,9 +173,9 @@ contract Vault {
 
     // Get the value owed for a member
     function calcDepositValueForMember(address asset, address member) public view returns (uint256 value) {
-        uint256 _balance = iERC20(asset).balanceOf(address(this));
+        uint256 _balance = mapAsset_deposit[asset];
         uint256 _memberDeposit = mapMemberAsset_deposit[member][asset];
-        value = iUTILS(UTILS()).calcShare(_memberDeposit, mapAsset_deposit[asset], _balance); // Share of balance
+        value = iUTILS(UTILS()).calcShare(_memberDeposit, _balance, _balance); // Share of balance
     }
 
     //============================== HELPERS ================================//
