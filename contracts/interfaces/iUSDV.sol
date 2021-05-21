@@ -8,11 +8,11 @@ interface iUSDV {
 
     function setParams(uint256 newDelay) external;
 
-    function convert(uint256 amount) external returns (uint256 convertAmount);
+    function convertToUSDV(uint256 amount) external returns (uint256);
 
-    function convertForMember(address member, uint256 amount) external returns (uint256 convertAmount);
+    function convertToUSDVForMember(address member, uint256 amount) external returns (uint256);
 
-    function redeem(uint256 amount) external returns (uint256 redeemAmount);
+    function convertToUSDVDirectly() external returns (uint256 convertAmount);
 
-    function redeemForMember(address member, uint256 amount) external returns (uint256 redeemAmount);
+    function convertToUSDVForMemberDirectly(address member) external returns (uint256 convertAmount);
 }

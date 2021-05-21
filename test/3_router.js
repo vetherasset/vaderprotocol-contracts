@@ -57,8 +57,9 @@ describe("Deploy Router", function() {
 
     await dao.init(vether.address, vader.address, usdv.address, reserve.address, 
     vault.address, router.address, pools.address, factory.address, utils.address);
-  await vader.init(dao.address)
-  await reserve.init(vader.address)
+ 
+  await vader.changeDAO(dao.address)
+await reserve.init(vader.address)
 
     asset = await Asset.new();
     asset2 = await Asset.new();
@@ -88,7 +89,7 @@ describe("Deploy Router", function() {
     await sleep(2000)
     await dao.finaliseProposal(await dao.proposalCount())
 
-    await usdv.convert('3000', {from:acc1})
+    await vader.convertToUSDV('3000', {from:acc1})
     // await usdv.withdrawToUSDV('10000', {from:acc1})
 
     expect(await vader.DAO()).to.equal(dao.address);

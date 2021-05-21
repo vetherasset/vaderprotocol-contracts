@@ -48,10 +48,12 @@ await utils.init(pools.address)
 await usdv.init(vader.address)
   await dao.init(vether.address, vader.address, usdv.address, reserve.address, 
     vault.address, router.address, pools.address, factory.address, utils.address);
-  await vader.init(dao.address)
-  await reserve.init(vader.address)
+ 
+  await vader.changeDAO(dao.address)
+await reserve.init(vader.address)
   
-    await reserve.init(vader.address)
+    await vader.changeDAO(dao.address)
+await reserve.init(vader.address)
     await vault.init(vader.address)
 await router.init(vader.address);
 await pools.init(vader.address);

@@ -59,8 +59,9 @@ describe("Deploy Router", function() {
      
     await dao.init(vether.address, vader.address, usdv.address, reserve.address, 
     vault.address, router.address, pools.address, factory.address, utils.address);
-  await vader.init(dao.address)
-  await reserve.init(vader.address)
+ 
+  await vader.changeDAO(dao.address)
+await reserve.init(vader.address)
     
     asset = await Asset.new();
     anchor = await Anchor.new();
@@ -83,7 +84,7 @@ describe("Deploy Router", function() {
     await dao.voteProposal(await dao.proposalCount())
     await sleep(2000)
     await dao.finaliseProposal(await dao.proposalCount())
-    await usdv.convert(BN2Str(3000), {from:acc1})
+    await vader.convertToUSDV(BN2Str(3000), {from:acc1})
 
     expect(await vader.DAO()).to.equal(dao.address);
     expect(await dao.UTILS()).to.equal(utils.address);
@@ -237,37 +238,35 @@ describe("Member should deposit Synths for rewards", function() {
     await usdv.transfer(acc0, ('100'), {from:acc1})
     expect(BN2Str(await reserve.reserveUSDV())).to.equal('4187');
     expect(BN2Str(await synth.balanceOf(vault.address))).to.equal(('20'));
-    expect(BN2Str(await vault.calcReward(acc1))).to.equal(('118')); // 666/100
-    expect(BN2Str(await vault.calcCurrentReward(synth.address, acc1))).to.equal(('118')); // * by seconds
+    expect(BN2Str(await vault.calcDepositValueForMember(synth.address, acc1))).to.equal(('20')); // * by seconds
   });
   it("Should harvest", async function() {
     let synth = await Synth.at(await factory.getSynth(asset.address));
     expect(BN2Str(await vault.getMemberWeight(acc1))).to.equal(('20'));
     expect(BN2Str(await vault.totalWeight())).to.equal(('20'));
     await vault.harvest(synth.address, {from:acc1})
-    expect(BN2Str(await vault.getMemberWeight(acc1))).to.equal(('213'));
-    expect(BN2Str(await vault.totalWeight())).to.equal(('213'));
+    expect(BN2Str(await vault.getMemberWeight(acc1))).to.equal(('20'));
+    expect(BN2Str(await vault.totalWeight())).to.equal(('20'));
   });
   it("Should withdraw", async function() {
     let synth = await Synth.at(await factory.getSynth(asset.address));
     expect(BN2Str(await synth.balanceOf(acc1))).to.equal('66');
-    expect(BN2Str(await synth.balanceOf(vault.address))).to.equal('166');
-    expect(BN2Str(await vault.getMemberDeposit(acc1, synth.address))).to.equal('166');
-    expect(BN2Str(await vault.getMemberWeight(acc1))).to.equal('213');
+    expect(BN2Str(await synth.balanceOf(vault.address))).to.equal('20');
+    expect(BN2Str(await vault.getMemberDeposit(acc1, synth.address))).to.equal('20');
+    expect(BN2Str(await vault.getMemberWeight(acc1))).to.equal('20');
     await dao.newActionProposal("EMISSIONS")
     await dao.voteProposal(await dao.proposalCount())
     await sleep(2000)
     await dao.finaliseProposal(await dao.proposalCount())
     let tx = await vault.withdraw(synth.address, "10000",{from:acc1})
     expect(BN2Str(await vault.getMemberDeposit(acc1, synth.address))).to.equal('0');
-    expect(BN2Str(await vault.getMemberSynthWeight(acc1, synth.address))).to.equal('0');
-    expect(BN2Str(await vault.getMemberWeight(acc1))).to.equal('193');
-    expect(BN2Str(await vault.totalWeight())).to.equal('193');
+    expect(BN2Str(await vault.getMemberWeight(acc1))).to.equal('20');
+    expect(BN2Str(await vault.totalWeight())).to.equal('20');
     expect(BN2Str(await synth.balanceOf(vault.address))).to.equal('0');
-    expect(BN2Str(await synth.balanceOf(acc1))).to.equal('232');
+    expect(BN2Str(await synth.balanceOf(acc1))).to.equal('86');
   });
   it("Should deposit Anchor", async function() {
-    expect(BN2Str(await vault.totalWeight())).to.equal(('193'));
+    expect(BN2Str(await vault.totalWeight())).to.equal(('20'));
     await router.swapWithSynths('30', anchor.address, false, anchor.address, true, {from:acc1})
     let synth = await Synth.at(await factory.getSynth(anchor.address));
     expect(BN2Str(await synth.balanceOf(acc1))).to.equal('28');
@@ -276,13 +275,13 @@ describe("Member should deposit Synths for rewards", function() {
     expect(BN2Str(await synth.balanceOf(acc1))).to.equal(('8'));
     expect(BN2Str(await synth.balanceOf(vault.address))).to.equal(('20'));
     expect(BN2Str(await vault.getMemberDeposit(acc1, synth.address))).to.equal(('20'));
-    expect(BN2Str(await vault.getMemberWeight(acc1))).to.equal(('212'));
-    expect(BN2Str(await vault.totalWeight())).to.equal(('212'));
+    expect(BN2Str(await vault.getMemberWeight(acc1))).to.equal(('39'));
+    expect(BN2Str(await vault.totalWeight())).to.equal(('39'));
     await vault.withdraw(synth.address, "5000",{from:acc1})
     expect(BN2Str(await synth.balanceOf(acc1))).to.equal(('18'));
     expect(BN2Str(await synth.balanceOf(vault.address))).to.equal(('10'));
     expect(BN2Str(await vault.getMemberDeposit(acc1, synth.address))).to.equal(('10'));
-    expect(BN2Str(await vault.getMemberWeight(acc1))).to.equal(('203'));
-    expect(BN2Str(await vault.totalWeight())).to.equal(('203'));
+    expect(BN2Str(await vault.getMemberWeight(acc1))).to.equal(('39'));
+    expect(BN2Str(await vault.totalWeight())).to.equal(('39'));
   });
 });

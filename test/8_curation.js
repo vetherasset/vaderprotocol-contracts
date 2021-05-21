@@ -59,8 +59,9 @@ describe("Deploy Router", function() {
      
     await dao.init(vether.address, vader.address, usdv.address, reserve.address, 
     vault.address, router.address, pools.address, factory.address, utils.address);
-  await vader.init(dao.address)
-  await reserve.init(vader.address)
+ 
+  await vader.changeDAO(dao.address)
+await reserve.init(vader.address)
     
     await dao.newActionProposal("EMISSIONS")
     await dao.voteProposal(await dao.proposalCount())
@@ -94,7 +95,7 @@ describe("Deploy Router", function() {
     await dao.voteProposal(await dao.proposalCount())
     await sleep(2000)
     await dao.finaliseProposal(await dao.proposalCount())
-    await usdv.convert(3000, {from:acc1})
+    await vader.convertToUSDV(3000, {from:acc1})
     await usdv.transfer(acc0, '1', {from:acc1})
     await usdv.transfer(acc1, '1', {from:acc0})
 

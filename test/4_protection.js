@@ -59,8 +59,9 @@ describe("Deploy Protection", function() {
   it("Should have right reserves", async function() {
     await dao.init(vether.address, vader.address, usdv.address, reserve.address, 
     vault.address, router.address, pools.address, factory.address, utils.address);
-  await vader.init(dao.address)
-  await reserve.init(vader.address)
+ 
+  await vader.changeDAO(dao.address)
+await reserve.init(vader.address)
     
 
     await dao.newActionProposal("EMISSIONS")
@@ -95,7 +96,7 @@ describe("Deploy Protection", function() {
     await dao.voteProposal(await dao.proposalCount())
     await sleep(2000)
     await dao.finaliseProposal(await dao.proposalCount())
-    await usdv.convert('2000', {from:acc1})
+    await vader.convertToUSDV('2000', {from:acc1})
 
     await asset.transfer(acc1, '2000')
     await asset.approve(router.address, BN2Str(one), {from:acc1})

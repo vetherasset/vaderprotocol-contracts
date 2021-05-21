@@ -43,15 +43,10 @@ contract Vader is iERC20 {
         require(msg.sender == DAO, "!DAO");
         _;
     }
-
-    // Stop flash attacks
-    modifier flashProof() {
-        require(isMature(), "No flash");
+    // Only VAULT can execute
+    modifier onlyVAULT() {
+        require(msg.sender == VAULT(), "!VAULT");
         _;
-    }
-
-    function isMature() public view returns (bool) {
-        return iUSDV(USDV()).isMature();
     }
 
     //=====================================CREATION=========================================//
@@ -60,12 +55,7 @@ contract Vader is iERC20 {
         secondsPerEra = 1; //86400;
         nextEraTime = block.timestamp + secondsPerEra;
         emissionCurve = 10;
-    }
-
-    function init(address _dao) external {
-        if(DAO == address(0)){
-            DAO = _dao;
-        }
+        DAO = msg.sender; // Then call changeDAO() once DAO created
     }
 
     //========================================iERC20=========================================//
@@ -254,24 +244,28 @@ contract Vader is iERC20 {
         _mint(msg.sender, amount * conversionFactor);
     }
 
-    // // Convert to USDV
-    // function convert(uint256 amount) external returns (uint256) {
-    //     _transfer(USDV, amount);
-    //     iUSDV(USDV)
-    //     return convertForMember(msg.sender, amount);
-    // }
-
-    // Directly redeem back to VADER (must have sent USDV first)
-    function redeem() external returns (uint256 redeemAmount) {
-        return redeemToMember(msg.sender);
+    // Convert to USDV
+    function convertToUSDV(uint256 amount) external returns (uint256) {
+        return convertToUSDVForMember(msg.sender, amount);
     }
 
-    // Redeem on behalf of member (must have sent USDV first)
-    function redeemToMember(address member) public flashProof returns (uint256 redeemAmount) {
+    // Convert for members
+    function convertToUSDVForMember(address member, uint256 amount) public returns (uint256 convertAmount) {
+        _transfer(msg.sender, USDV(), amount); // Move funds directly to USDV
+        convertAmount = iUSDV(USDV()).convertToUSDVForMemberDirectly(member); // Ask USDV to convert
+    }
+
+    // Redeem back to VADER
+    function redeemToVADER(uint256 amount) external onlyVAULT returns (uint256 redeemAmount) {
+        return redeemToVADERForMember(msg.sender, amount);
+    }
+
+    // Redeem on behalf of member
+    function redeemToVADERForMember(address member, uint256 amount) public onlyVAULT returns (uint256 redeemAmount) {
         require(minting, "not minting");
-        uint256 _amount = iERC20(USDV()).balanceOf(address(this));
-        iERC20(USDV()).burn(_amount);
-        redeemAmount = iROUTER(ROUTER()).getVADERAmount(_amount); // Critical pricing functionality
+        require(iERC20(USDV()).transferFrom(msg.sender, address(this), amount));
+        iERC20(USDV()).burn(amount);
+        redeemAmount = iROUTER(ROUTER()).getVADERAmount(amount); // Critical pricing functionality
         _mint(member, redeemAmount);
     }
 
@@ -282,6 +276,9 @@ contract Vader is iERC20 {
     }
     function USDV() internal view returns(address){
         return iDAO(DAO).USDV();
+    }
+    function VAULT() internal view returns(address){
+        return iDAO(DAO).VAULT();
     }
     function RESERVE() internal view returns(address){
         return iDAO(DAO).RESERVE();

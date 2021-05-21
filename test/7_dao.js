@@ -63,8 +63,9 @@ describe("Deploy DAO", function() {
      
     await dao.init(vether.address, vader.address, usdv.address, reserve.address, 
     vault.address, router.address, pools.address, factory.address, utils.address);
-  await vader.init(dao.address)
-  await reserve.init(vader.address)
+ 
+  await vader.changeDAO(dao.address)
+await reserve.init(vader.address)
     
     await vader.approve(usdv.address, max, {from:acc1})
     await vether.approve(vader.address, max, {from:acc0})
@@ -96,7 +97,7 @@ describe("Deploy DAO", function() {
     await dao.voteProposal(await dao.proposalCount())
     await sleep(2000)
     await dao.finaliseProposal(await dao.proposalCount())
-    await usdv.convert(200, {from:acc1})
+    await vader.convertToUSDV(200, {from:acc1})
 
     await router.addLiquidity(vader.address, '1000', anchor.address, '1000', {from:acc1})
 
