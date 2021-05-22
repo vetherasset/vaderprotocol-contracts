@@ -401,11 +401,10 @@ contract Router {
 
     // TWAP Price of 1 VADER in USD
     function getTWAPPrice() public view returns (uint256) {
-        if(arrayPrices.length == 0) {
+        if (arrayPrices.length == 0) {
             return one; // Edge case for first USDV mint
-        } else {
-            return (accumulatedPrice - startIntervalAccumulatedPrice) / (block.timestamp - startIntervalTime) ;
         }
+        return (accumulatedPrice - startIntervalAccumulatedPrice) / (block.timestamp - startIntervalTime);
     }
 
 

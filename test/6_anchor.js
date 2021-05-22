@@ -25,26 +25,35 @@ function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
+async function setNextBlockTimestamp(ts) {
+  await ethers.provider.send('evm_setNextBlockTimestamp', [ts])
+  await ethers.provider.send('evm_mine')
+}
+
 const max = '115792089237316195423570985008687907853269984665640564039457584007913129639935'
 
-var utils; 
+var utils;
 var dao; var vader; var vether; var usdv;
 var reserve; var vault; var pools; var anchor; var asset; var router; var factory;
-var anchor0; var anchor1; var anchor2; var anchor3; var anchor4;  var anchor5; 
+var anchor0; var anchor1; var anchor2; var anchor3; var anchor4; var anchor5;
 var acc0; var acc1; var acc2; var acc3; var acc0; var acc5;
+
 const one = 10**18
+const ts0 = 1830297600 // Sat Jan 01 2028 00:00:00 GMT+0000
 
 before(async function() {
+  await setNextBlockTimestamp(ts0)
+
   accounts = await ethers.getSigners();
   acc0 = await accounts[0].getAddress()
   acc1 = await accounts[1].getAddress()
   acc2 = await accounts[2].getAddress()
   acc3 = await accounts[3].getAddress()
 
-    dao = await DAO.new();
+  dao = await DAO.new();
   vether = await Vether.new();
   vader = await Vader.new();
-utils = await Utils.new(vader.address);
+  utils = await Utils.new(vader.address);
   usdv = await USDV.new(vader.address);
   reserve = await RESERVE.new();
   vault = await VAULT.new(vader.address);
@@ -59,28 +68,26 @@ utils = await Utils.new(vader.address);
   anchor3 = await Anchor.new();
   anchor4 = await Anchor.new();
   anchor5 = await Anchor.new()
-
 })
 
 describe("Deploy Anchor", function() {
   it("Should deploy", async function() {
     await sleep(100)
-     
-    await dao.init(vether.address, vader.address, usdv.address, reserve.address, 
+
+    await dao.init(vether.address, vader.address, usdv.address, reserve.address,
     vault.address, router.address, pools.address, factory.address, utils.address);
- 
-  await vader.changeDAO(dao.address)
-await reserve.init(vader.address)
-    
-    
-    await vether.transfer(acc1, BN2Str(6006)) 
+
+    await vader.changeDAO(dao.address)
+    await reserve.init(vader.address)
+
+    await vether.transfer(acc1, BN2Str(6006))
 
     await vader.approve(usdv.address, max, {from:acc1})
     await vether.approve(vader.address, max, {from:acc1})
     await vader.approve(router.address, max, {from:acc1})
     await usdv.approve(router.address, max, {from:acc1})
 
-    await vader.upgrade('6', {from:acc1}) 
+    await vader.upgrade('6', {from:acc1})
 
     await anchor0.transfer(acc1, BN2Str(2000))
     await anchor0.approve(router.address, BN2Str(one), {from:acc1})
@@ -96,7 +103,7 @@ await reserve.init(vader.address)
     await anchor5.approve(router.address, BN2Str(one), {from:acc1})
 
     await sleep(1000)
-  
+
     await router.addLiquidity(vader.address, '100', anchor0.address, '99', {from:acc1})
     await router.addLiquidity(vader.address, '100', anchor1.address, '100', {from:acc1})
     await router.addLiquidity(vader.address, '100', anchor2.address, '101', {from:acc1})
@@ -108,7 +115,6 @@ await reserve.init(vader.address)
     expect(BN2Str(await utils.calcValueInBase(anchor2.address, '100'))).to.equal('99');
     expect(BN2Str(await utils.calcValueInBase(anchor3.address, '100'))).to.equal('98');
     expect(BN2Str(await utils.calcValueInBase(anchor4.address, '100'))).to.equal('97');
-    
   });
 });
 
@@ -161,33 +167,32 @@ describe("Handle Anchors", function() {
 
 describe("Handle TWAP", function() {
   it("Get prices", async function() {
-
-    expect(approx(await router.getTWAPPrice())).to.equal('100')
+    const ts1 = ts0 + 2000
+    await setNextBlockTimestamp(ts1)
+    expect(approx(await router.getTWAPPrice())).to.equal('0')
     await router.swap('10', vader.address, anchor0.address, {from:acc1})
     await router.swap('10', vader.address, anchor1.address, {from:acc1})
     await router.swap('10', vader.address, anchor2.address, {from:acc1})
     await router.swap('10', vader.address, anchor3.address, {from:acc1})
     await router.swap('10', vader.address, anchor4.address, {from:acc1})
-    expect(approx(await router.getTWAPPrice())).to.equal('108')
-    await sleep(2000)
+    await setNextBlockTimestamp(ts1 + 1*15)
+    expect(approx(await router.getTWAPPrice())).to.equal('33')
     await router.swap('10', anchor0.address, vader.address, {from:acc1})
     await router.swap('10', anchor1.address, vader.address, {from:acc1})
     await router.swap('10', anchor2.address, vader.address, {from:acc1})
     await router.swap('10', anchor3.address, vader.address, {from:acc1})
     await router.swap('10', anchor4.address, vader.address, {from:acc1})
-    expect(approx(await router.getTWAPPrice())).to.equal('107')
-    await sleep(2000)
+    await setNextBlockTimestamp(ts1 + 2*15)
+    expect(approx(await router.getTWAPPrice())).to.equal('31')
     await router.swap('10', anchor0.address, vader.address, {from:acc1})
     await router.swap('10', anchor1.address, vader.address, {from:acc1})
     await router.swap('10', anchor2.address, vader.address, {from:acc1})
     await router.swap('10', anchor3.address, vader.address, {from:acc1})
     await router.swap('10', anchor4.address, vader.address, {from:acc1})
-    expect(approx(await router.getTWAPPrice())).to.equal('92')
-    await sleep(2000)
-
+    await setNextBlockTimestamp(ts1 + 3*15)
+    expect(approx(await router.getTWAPPrice())).to.equal('26')
     expect(approx(await router.getAnchorPrice())).to.equal('83')
-
-    expect(BN2Str(await router.getVADERAmount('100'))).to.equal('92')
-    expect(BN2Str(await router.getUSDVAmount('100'))).to.equal('108')
+    expect(BN2Str(await router.getVADERAmount('100'))).to.equal('25')
+    expect(BN2Str(await router.getUSDVAmount('100'))).to.equal('390')
   });
 });
