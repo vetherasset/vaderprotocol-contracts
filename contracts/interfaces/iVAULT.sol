@@ -2,37 +2,33 @@
 pragma solidity 0.8.3;
 
 interface iVAULT {
-    function setParams(
-        uint256 newEra,
-        uint256 newDepositTime,
-        uint256 newGrantTime
-    ) external;
+    function totalWeight() external view returns (uint256);
 
-    function deposit(address synth, uint256 amount) external;
+    function setParams(uint256 newDepositTime) external;
+
+    function deposit(address asset, uint256 amount) external;
 
     function depositForMember(
-        address synth,
+        address asset,
         address member,
         uint256 amount
     ) external;
 
-    function harvest(address synth) external returns (uint256 reward);
+    function harvest(address asset) external returns (uint256 reward);
 
-    function calcCurrentReward(address synth, address member) external view returns (uint256 reward);
+    function calcRewardForAsset(address asset) external view returns(uint256 reward);
 
-    function calcReward(address synth, address member) external view returns (uint256);
+    function withdraw(address asset, uint256 basisPoints) external returns (uint256 redeemedAmount);
 
-    function withdraw(address synth, uint256 basisPoints) external returns (uint256 redeemedAmount);
+    function withdrawToVader(address asset, uint256 basisPoints) external returns (uint256 redeemedAmount);
 
-    function totalWeight() external view returns (uint256);
+    function calcDepositValueForMember(address asset, address member) external view returns (uint256 value);
 
-    function reserveUSDV() external view returns (uint256);
+    function getMemberDeposit(address member, address asset) external view returns (uint256);
 
-    function reserveVADER() external view returns (uint256);
-
-    function getMemberDeposit(address member, address synth) external view returns (uint256);
+    function getMemberLastTime(address member, address asset) external view returns (uint256);
 
     function getMemberWeight(address member) external view returns (uint256);
 
-    function getMemberLastTime(address member, address synth) external view returns (uint256);
+    function getAssetDeposit(address asset) external view returns (uint256);
 }

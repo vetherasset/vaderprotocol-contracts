@@ -205,7 +205,7 @@ contract Pools {
 
     // Should be done with intention, is gas-intensive
     function deploySynth(address token) external {
-        require(token != VADER && token != USDV());
+        require(token != VADER && token != USDV() && !isAnchor(token));
         iFACTORY(FACTORY()).deploySynth(token);
     }
 

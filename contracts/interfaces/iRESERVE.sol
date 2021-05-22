@@ -12,7 +12,7 @@ interface iRESERVE {
 
     function checkReserve() external;
 
-    function getVaultReward() external returns(uint256);
+    function getVaultReward() external view returns(uint256);
 
     function reserveVADER() external view returns (uint256);
 

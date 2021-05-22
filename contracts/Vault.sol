@@ -12,11 +12,13 @@ import "./interfaces/iPOOLS.sol";
 import "./interfaces/iFACTORY.sol";
 import "./interfaces/iSYNTH.sol";
 
+import "hardhat/console.sol";
+
 contract Vault {
     using SafeERC20 for ExternalERC20;
 
     // Parameters
-    uint256 private constant secondsPerYear = 31536000;
+    uint256 private constant secondsPerYear = 1; //31536000;
 
     address public immutable VADER;
 
@@ -24,8 +26,10 @@ contract Vault {
     uint256 public totalWeight;
 
     mapping(address => uint256) private mapAsset_deposit;
+    mapping(address => uint256) private mapAsset_balance;
     mapping(address => uint256) private mapAsset_lastHarvestedTime;
     mapping(address => uint256) private mapMember_weight;
+
     mapping(address => mapping(address => uint256)) private mapMemberAsset_deposit;
     mapping(address => mapping(address => uint256)) private mapMemberAsset_lastTime;
 
@@ -94,6 +98,7 @@ contract Vault {
         mapMemberAsset_lastTime[_member][_asset] = block.timestamp; // Time of deposit
         mapMemberAsset_deposit[_member][_asset] += _amount; // Record deposit for member
         mapAsset_deposit[_asset] += _amount; // Record total deposit
+        mapAsset_balance[_asset] = iERC20(_asset).balanceOf(address(this)); // sync deposits
         if(mapAsset_lastHarvestedTime[_asset] == 0){
             mapAsset_lastHarvestedTime[_asset] = block.timestamp;
         }
@@ -112,6 +117,18 @@ contract Vault {
     
     // Harvest, get reward, increase weight
     function harvest(address asset) external returns (uint256 reward) {
+        reward = calcRewardForAsset(asset); 
+        if (asset == USDV()) {
+            iRESERVE(RESERVE()).requestFunds(USDV(), address(this), reward);
+        } else {
+            iRESERVE(RESERVE()).requestFunds(USDV(), POOLS(), reward);
+            reward = iPOOLS(POOLS()).mintSynth(USDV(), iSYNTH(asset).TOKEN(), address(this));
+        }
+        mapAsset_balance[asset] = iERC20(asset).balanceOf(address(this)); // sync deposits, now including the reward
+        emit Harvests(asset, reward);
+    }
+
+    function calcRewardForAsset(address asset) public view returns(uint256 reward) {
         uint256 _owed = iRESERVE(RESERVE()).getVaultReward();
         uint256 _rewardsPerSecond = _owed / secondsPerYear; // Deplete over 1 year
         reward = (block.timestamp - mapAsset_lastHarvestedTime[asset]) * _rewardsPerSecond; // Multiply since last harvest
@@ -120,18 +137,9 @@ contract Vault {
         }
         uint256 _weight = mapAsset_deposit[asset]; // Total Deposit
         if (asset != USDV()) {
-            _weight = iUTILS(UTILS()).calcValueInBase(asset, _weight);
+            _weight = iUTILS(UTILS()).calcValueInBase(iSYNTH(asset).TOKEN(), _weight);
         }
         reward = iUTILS(UTILS()).calcShare(_weight, totalWeight, reward); // Share of the reward
-        if (asset == USDV()) {
-            iRESERVE(RESERVE()).requestFunds(USDV(), address(this), reward);
-        } else {
-            address _token = iSYNTH(asset).TOKEN();
-            iRESERVE(RESERVE()).requestFunds(USDV(), POOLS(), reward);
-            reward = iPOOLS(POOLS()).mintSynth(USDV(), _token, address(this));
-        }
-        mapAsset_deposit[asset] = iERC20(asset).balanceOf(address(this)); // sync deposits, now including the reward
-        emit Harvests(asset, reward);
     }
 
     //====================================== WITHDRAW ========================================//
@@ -162,10 +170,11 @@ contract Vault {
         mapMemberAsset_deposit[_member][_asset] -= iUTILS(UTILS()).calcPart(_basisPoints, mapMemberAsset_deposit[_member][_asset]); // Reduce for member
         uint256 _redeemedWeight = redeemedAmount;
         if (_asset != USDV()) {
-            _redeemedWeight = iUTILS(UTILS()).calcValueInBase(_asset, redeemedAmount);
+            _redeemedWeight = iUTILS(UTILS()).calcValueInBase(iSYNTH(_asset).TOKEN(), redeemedAmount);
+            uint256 _memberWeight = mapMember_weight[_member];
+            _redeemedWeight = iUTILS(UTILS()).calcShare(_redeemedWeight, _memberWeight, _memberWeight); // Safely reduce member weight
         }
-        uint256 _memberWeight = mapMember_weight[_member];
-        mapMember_weight[_member] -= iUTILS(UTILS()).calcShare(_redeemedWeight, _memberWeight, _memberWeight); // Safely reduce member weight
+        mapMember_weight[_member] -= _redeemedWeight; // Reduce for member
         totalWeight -= _redeemedWeight; // Reduce for total
         emit MemberWithdraws(_asset, _member, redeemedAmount, _redeemedWeight, totalWeight); // Event
         iRESERVE(RESERVE()).checkReserve();
@@ -173,9 +182,10 @@ contract Vault {
 
     // Get the value owed for a member
     function calcDepositValueForMember(address asset, address member) public view returns (uint256 value) {
-        uint256 _balance = mapAsset_deposit[asset];
         uint256 _memberDeposit = mapMemberAsset_deposit[member][asset];
-        value = iUTILS(UTILS()).calcShare(_memberDeposit, _balance, _balance); // Share of balance
+        uint256 _totalDeposit = mapAsset_deposit[asset];
+        uint256 _balance = mapAsset_balance[asset];
+        value = iUTILS(UTILS()).calcShare(_memberDeposit, _totalDeposit, _balance); // Share of balance
     }
 
     //============================== HELPERS ================================//
@@ -202,6 +212,10 @@ contract Vault {
 
     function getAssetDeposit(address asset) external view returns (uint256) {
         return mapAsset_deposit[asset];
+    }
+
+    function getAssetLastTime(address asset) external view returns (uint256) {
+        return mapAsset_lastHarvestedTime[asset];
     }
 
     function DAO() internal view returns(address){
