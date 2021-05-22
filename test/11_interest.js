@@ -40,10 +40,10 @@ before(async function() {
   acc2 = await accounts[2].getAddress()
   acc3 = await accounts[3].getAddress()
 
-    dao = await DAO.new();
+  dao = await DAO.new();
   vether = await Vether.new();
   vader = await Vader.new();
-utils = await Utils.new(vader.address);
+  utils = await Utils.new(vader.address);
   usdv = await USDV.new(vader.address);
   reserve = await RESERVE.new();
   vault = await VAULT.new(vader.address);
@@ -60,8 +60,8 @@ describe("Deploy Router", function() {
     await dao.init(vether.address, vader.address, usdv.address, reserve.address, 
     vault.address, router.address, pools.address, factory.address, utils.address);
  
-  await vader.changeDAO(dao.address)
-await reserve.init(vader.address)
+    await vader.changeDAO(dao.address)
+    await reserve.init(vader.address)
     
     asset = await Asset.new();
     anchor = await Anchor.new();
@@ -107,29 +107,24 @@ describe("Should Borrow Debt", function() {
   it("Borrow", async function() {
     await router.borrow('100', vader.address, anchor.address, {from:acc1})
     await router.borrow('100', usdv.address, asset.address, {from:acc1})
-    await pools.deploySynth(anchor.address)
-    await router.swapWithSynths('250', vader.address, false, anchor.address, true, {from:acc1})
-    let synth = await Synth.at(await factory.getSynth(anchor.address));
-    await synth.approve(router.address, max, {from:acc1})
-    await router.borrow('144', synth.address, anchor.address, {from:acc1})
     await pools.deploySynth(asset.address)
     await router.swapWithSynths('250', usdv.address, false, asset.address, true, {from:acc1})
-    let synth2 = await Synth.at(await factory.getSynth(asset.address));
-    await synth2.approve(router.address, max, {from:acc1})
-    await router.borrow('144', synth2.address, asset.address, {from:acc1})
+    let synth = await Synth.at(await factory.getSynth(asset.address));
+    await synth.approve(router.address, max, {from:acc1})
+    await router.borrow('144', synth.address, asset.address, {from:acc1})
   });
   
 });
 
 describe("Should pay interest", function() {
     it("Pay VADER-ANCHOR interest", async function() {
-      expect(BN2Str(await utils.getDebtLoading(vader.address, anchor.address))).to.equal('662');
+      expect(BN2Str(await utils.getDebtLoading(vader.address, anchor.address))).to.equal('615');
       expect(BN2Str(await utils.getInterestPayment(vader.address, anchor.address))).to.equal('3');
-      expect(BN2Str(await utils.calcValueInBase(anchor.address, '3'))).to.equal('4');
-      expect(BN2Str(await utils.getInterestOwed(vader.address, anchor.address, '31536000'))).to.equal('4');
+      expect(BN2Str(await utils.calcValueInBase(anchor.address, '3'))).to.equal('3');
+      expect(BN2Str(await utils.getInterestOwed(vader.address, anchor.address, '31536000'))).to.equal('3');
 
       expect(BN2Str(await router.getSystemInterestPaid(vader.address, anchor.address))).to.equal('3');
-      expect(BN2Str(await pools.getBaseAmount(anchor.address))).to.equal('1428');
+      expect(BN2Str(await pools.getBaseAmount(anchor.address))).to.equal('1069');
     });
 
 });

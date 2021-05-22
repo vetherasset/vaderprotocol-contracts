@@ -20,9 +20,11 @@ const truffleAssert = require('truffle-assertions')
 function BN2Str(BN) { return ((new BigNumber(BN)).toFixed()) }
 function getBN(BN) { return (new BigNumber(BN)) }
 
-function sleep(ms) {
-  return new Promise(resolve => setTimeout(resolve, ms));
+async function setNextBlockTimestamp(ts) {
+  await ethers.provider.send('evm_setNextBlockTimestamp', [ts])
+  await ethers.provider.send('evm_mine')
 }
+const ts0 = 1830384000 // Sat Jan 02 2028 00:00:00 GMT+0000
 
 const max = '115792089237316195423570985008687907853269984665640564039457584007913129639935'
 
@@ -41,10 +43,10 @@ before(async function() {
   acc2 = await accounts[2].getAddress()
   acc3 = await accounts[3].getAddress()
 
-    dao = await DAO.new();
+  dao = await DAO.new();
   vether = await Vether.new();
   vader = await Vader.new();
-utils = await Utils.new(vader.address);
+  utils = await Utils.new(vader.address);
   usdv = await USDV.new(vader.address);
   reserve = await RESERVE.new();
   vault = await VAULT.new(vader.address);
@@ -64,8 +66,8 @@ describe("Deploy DAO", function() {
     await dao.init(vether.address, vader.address, usdv.address, reserve.address, 
     vault.address, router.address, pools.address, factory.address, utils.address);
  
-  await vader.changeDAO(dao.address)
-await reserve.init(vader.address)
+    await vader.changeDAO(dao.address)
+    await reserve.init(vader.address)
     
     await vader.approve(usdv.address, max, {from:acc1})
     await vether.approve(vader.address, max, {from:acc0})
@@ -75,37 +77,39 @@ await reserve.init(vader.address)
     await vader.approve(router.address, max, {from:acc1})
     await usdv.approve(router.address, max, {from:acc1})
 
-    await anchor.approve(router.address, max, {from:acc1})
+    await asset.approve(router.address, max, {from:acc1})
 
-    await vader.upgrade('3', {from:acc0}) 
+    await vader.upgrade('5', {from:acc0}) 
 
     await dao.newActionProposal("EMISSIONS")
     await dao.voteProposal(await dao.proposalCount())
-    await sleep(2000)
+    await setNextBlockTimestamp(ts0 + 1*15)
     await dao.finaliseProposal(await dao.proposalCount())
     await dao.newParamProposal("VADER_PARAMS", '1', '90', '0', '0')
     await dao.voteProposal(await dao.proposalCount())
-    await sleep(2000)
+    await setNextBlockTimestamp(ts0 + 2*15)
     await dao.finaliseProposal(await dao.proposalCount())
+
     await vader.transfer(acc1, ('100'), {from:acc0})
     await vader.transfer(acc0, ('100'), {from:acc1})
 
     await vader.transfer(acc1, '2000') 
-    await anchor.transfer(acc1, '1110') 
+    await asset.transfer(acc1, '1110') 
 
     await dao.newActionProposal("MINTING")
     await dao.voteProposal(await dao.proposalCount())
-    await sleep(2000)
+    await setNextBlockTimestamp(ts0 + 3*15)
     await dao.finaliseProposal(await dao.proposalCount())
-    await vader.convertToUSDV(200, {from:acc1})
 
-    await router.addLiquidity(vader.address, '1000', anchor.address, '1000', {from:acc1})
+    await vader.convertToUSDV('2000', {from:acc0})
+    await vader.convertToUSDV('2000', {from:acc1})
+    await router.addLiquidity(usdv.address, '1000', asset.address, '1000', {from:acc1})
 
-    await pools.deploySynth(anchor.address)
-    await router.swapWithSynths('110', vader.address, false, anchor.address, true, {from:acc0})
-    await router.swapWithSynths('110', vader.address, false, anchor.address, true, {from:acc1})
+    await pools.deploySynth(asset.address)
+    await router.swapWithSynths('110', usdv.address, false, asset.address, true, {from:acc0})
+    await router.swapWithSynths('110', usdv.address, false, asset.address, true, {from:acc1})
 
-    let synth = await Synth.at(await factory.getSynth(anchor.address));
+    let synth = await Synth.at(await factory.getSynth(asset.address));
 
     await synth.approve(vault.address, max, {from:acc0})
     await synth.approve(vault.address, max, {from:acc1})
@@ -119,12 +123,12 @@ await reserve.init(vader.address)
 describe("DAO Functions", function() {
   it("It should GRANT", async () => {
       await usdv.transfer(vault.address, '100', {from:acc1});
-      assert.equal(BN2Str(await reserve.reserveUSDV()), '130')
+      assert.equal(BN2Str(await reserve.reserveUSDV()), '173')
       await dao.newGrantProposal(acc3, '10', { from: acc1 })
       let proposalCount = BN2Str(await dao.proposalCount())
       await dao.voteProposal(proposalCount, { from: acc0 })
       await dao.voteProposal(proposalCount, { from: acc1 })
-      await sleep(100)
+      await setNextBlockTimestamp(ts0 + 5*15)
       let balanceBefore = getBN(await usdv.balanceOf(acc3))
       await dao.finaliseProposal(proposalCount)
       let balanceAfter = getBN(await usdv.balanceOf(acc3))
@@ -137,7 +141,7 @@ describe("DAO Functions", function() {
     let proposalCount = BN2Str(await dao.proposalCount())
     await dao.voteProposal(proposalCount, { from: acc0 })
     await dao.voteProposal(proposalCount, { from: acc1 })
-    await sleep(2000)
+    await setNextBlockTimestamp(ts0 + 6*15)
     await dao.finaliseProposal(proposalCount)
     assert.equal(await dao.UTILS(), utils2.address)
 })

@@ -38,10 +38,10 @@ before(async function() {
   acc2 = await accounts[2].getAddress()
   acc3 = await accounts[3].getAddress()
 
-    dao = await DAO.new();
+  dao = await DAO.new();
   vether = await Vether.new();
   vader = await Vader.new();
-utils = await Utils.new(vader.address);
+  utils = await Utils.new(vader.address);
   usdv = await USDV.new(vader.address);
   reserve = await RESERVE.new();
   vault = await VAULT.new(vader.address);
@@ -58,8 +58,8 @@ describe("Deploy Router", function() {
     await dao.init(vether.address, vader.address, usdv.address, reserve.address, 
     vault.address, router.address, pools.address, factory.address, utils.address);
  
-  await vader.changeDAO(dao.address)
-await reserve.init(vader.address)
+    await vader.changeDAO(dao.address)
+    await reserve.init(vader.address)
 
     asset = await Asset.new();
     asset2 = await Asset.new();

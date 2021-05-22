@@ -40,10 +40,10 @@ before(async function() {
   acc2 = await accounts[2].getAddress()
   acc3 = await accounts[3].getAddress()
 
-    dao = await DAO.new();
+  dao = await DAO.new();
   vether = await Vether.new();
   vader = await Vader.new();
-utils = await Utils.new(vader.address);
+  utils = await Utils.new(vader.address);
   usdv = await USDV.new(vader.address);
   reserve = await RESERVE.new();
   vault = await VAULT.new(vader.address);
@@ -60,8 +60,8 @@ describe("Deploy Router", function() {
     await dao.init(vether.address, vader.address, usdv.address, reserve.address, 
     vault.address, router.address, pools.address, factory.address, utils.address);
  
-  await vader.changeDAO(dao.address)
-await reserve.init(vader.address)
+    await vader.changeDAO(dao.address)
+    await reserve.init(vader.address)
 
     asset = await Asset.new();
     anchor = await Anchor.new();
@@ -148,17 +148,6 @@ describe("Should Borrow Debt", function() {
     expect(BN2Str(await router.getMemberCollateral(acc1, usdv.address, asset.address))).to.equal('100');
     expect(BN2Str(await router.getMemberDebt(acc1, usdv.address, asset.address))).to.equal('58');
   });
-  it("Borrow ANCHOR with SYNTH-ANCHOR", async function() {
-    await pools.deploySynth(anchor.address)
-    await router.swapWithSynths('250', vader.address, false, anchor.address, true, {from:acc1})
-    let synth = await Synth.at(await factory.getSynth(anchor.address));
-    expect(BN2Str(await synth.balanceOf(acc1))).to.equal('144');
-    expect(BN2Str(await anchor.balanceOf(acc1))).to.equal('1058');
-    await synth.approve(router.address, max, {from:acc1})
-    await router.borrow('144', synth.address, anchor.address, {from:acc1})
-    expect(BN2Str(await synth.balanceOf(acc1))).to.equal('0');
-    expect(BN2Str(await anchor.balanceOf(acc1))).to.equal('1124');
-  });
   it("Borrow ASSET with SYNTH-ASSET", async function() {
     await pools.deploySynth(asset.address)
     await router.swapWithSynths('250', usdv.address, false, asset.address, true, {from:acc1})
@@ -175,8 +164,6 @@ describe("Should Borrow Debt", function() {
     await truffleAssert.reverts(router.borrow('1', usdv.address, anchor.address, {from:acc1}))
     let synth = await Synth.at(await factory.getSynth(asset.address));
     await truffleAssert.reverts(router.borrow('1', synth.address, anchor.address, {from:acc1}))
-    synth = await Synth.at(await factory.getSynth(anchor.address));
-    await truffleAssert.reverts(router.borrow('1', synth.address, asset.address, {from:acc1}))
   });
 });
 
