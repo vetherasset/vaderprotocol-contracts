@@ -54,6 +54,20 @@ contract Pools {
         uint256 swapFee
     );
     event Sync(address indexed token, address indexed pool, uint256 addedAmount);
+    event MintSynth(
+        address indexed member,
+        address indexed base,
+        uint256 baseAmount,
+        address indexed token,
+        uint256 synthAmount
+    );
+    event BurnSynth(
+        address indexed member,
+        address indexed base,
+        uint256 baseAmount,
+        address indexed token,
+        uint256 synthAmount
+    );
     event SynthSync(address indexed token, uint256 burntSynth, uint256 deletedUnits);
 
     //=====================================CREATION=========================================//
@@ -219,17 +233,13 @@ contract Pools {
         require(iROUTER(ROUTER()).isBase(base), "!Base");
         require(iFACTORY(FACTORY()).isSynth(synth), "!synth");
         uint256 _actualInputBase = getAddedAmount(base, token); // Get input
-        uint256 _synthUnits =
-            iUTILS(UTILS()).calcSynthUnits(_actualInputBase, mapToken_baseAmount[token], mapToken_Units[token]); // Get Units
         outputAmount = iUTILS(UTILS()).calcSwapOutput(
             _actualInputBase,
             mapToken_baseAmount[token],
             mapToken_tokenAmount[token]
         ); // Get output
-        mapTokenMember_Units[token][address(this)] += _synthUnits; // Add units for self
-        mapToken_Units[token] += _synthUnits; // Add supply
         mapToken_baseAmount[token] += _actualInputBase; // Add BASE
-        emit AddLiquidity(member, base, _actualInputBase, token, 0, _synthUnits); // Add Liquidity Event
+        emit MintSynth(member, base, _actualInputBase, token, outputAmount); // Mint Synth Event
         iFACTORY(FACTORY()).mintSynth(synth, member, outputAmount); // Ask factory to mint to member
     }
 
@@ -241,22 +251,14 @@ contract Pools {
     ) external returns (uint256 outputBase) {
         address synth = getSynth(token);
         uint256 _actualInputSynth = iERC20(synth).balanceOf(address(this)); // Get input
-        uint256 _unitsToDelete =
-            iUTILS(UTILS()).calcShare(
-                _actualInputSynth,
-                iERC20(synth).totalSupply(),
-                mapTokenMember_Units[token][address(this)]
-            ); // Pro rata
         iERC20(synth).burn(_actualInputSynth); // Burn it
-        mapTokenMember_Units[token][address(this)] -= _unitsToDelete; // Delete units for self
-        mapToken_Units[token] -= _unitsToDelete; // Delete units
         outputBase = iUTILS(UTILS()).calcSwapOutput(
             _actualInputSynth,
             mapToken_tokenAmount[token],
             mapToken_baseAmount[token]
         ); // Get output
         mapToken_baseAmount[token] -= outputBase; // Remove BASE
-        emit RemoveLiquidity(member, base, outputBase, token, 0, _unitsToDelete, mapToken_Units[token]); // Remove liquidity event
+        emit BurnSynth(member, base, outputBase, token, _actualInputSynth); // Burn Synth Event
         transferOut(base, outputBase, member); // Send BASE to member
     }
 
