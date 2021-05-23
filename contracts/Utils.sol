@@ -103,12 +103,15 @@ contract Utils {
 
     function getMemberShare(uint256 basisPoints, address token, address member) external view returns(uint256 units, uint256 outputBase, uint256 outputToken) {
         units = calcPart(basisPoints, iPOOLS(POOLS()).getMemberUnits(token, member));
-        address _synth = iFACTORY(FACTORY()).getSynth(token);
-        uint256 _S = iERC20(_synth).totalSupply();
-        uint256 _P = iPOOLS(POOLS()).getUnits(token);
+        uint256 _totalUnits = iPOOLS(POOLS()).getUnits(token);
+        uint256 _B = iPOOLS(POOLS()).getBaseAmount(token);
         uint256 _T = iPOOLS(POOLS()).getTokenAmount(token);
-        uint256 _totalUnits = _P + calcSynthUnits(_S, _P, _T);
-        outputBase = calcShare(units, _totalUnits, iPOOLS(POOLS()).getBaseAmount(token));
+        address _synth = iFACTORY(FACTORY()).getSynth(token);
+        if(_synth != address(0)){
+            uint256 _S = iERC20(_synth).totalSupply();
+            _totalUnits = _totalUnits + calcSynthUnits(_S, _B, _T);
+        }
+        outputBase = calcShare(units, _totalUnits, _B);
         outputToken = calcShare(units, _totalUnits, _T);
     }
 
@@ -319,11 +322,11 @@ contract Utils {
 
     function calcSynthUnits(
         uint256 S,
-        uint256 P,
+        uint256 B,
         uint256 T
     ) public pure returns (uint256) {
-        // (P * S)/(2 * T)
-        return (P * S) / (2 * T);
+        // (S * B)/(2 * T)
+        return (S * B) / (2 * T);
     }
 
     function calcAsymmetricShare(

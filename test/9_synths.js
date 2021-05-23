@@ -25,7 +25,7 @@ async function setNextBlockTimestamp(ts) {
   await ethers.provider.send('evm_setNextBlockTimestamp', [ts])
   await ethers.provider.send('evm_mine')
 }
-const ts0 = 1830297600 // Sat Jan 01 2028 00:00:00 GMT+0000
+const ts0 = 1830470400 // Sat Jan 03 2028 00:00:00 GMT+0000
 
 const max = '115792089237316195423570985008687907853269984665640564039457584007913129639935'
 
@@ -112,16 +112,19 @@ describe("Should Swap Synths", function() {
 
   it("Swap from Base to Synth", async function() {
     await pools.deploySynth(asset.address)
-    await router.swapWithSynths('250', usdv.address, false, asset.address, true, {from:acc1})
-    expect(BN2Str(await pools.getBaseAmount(asset.address))).to.equal('1250');
-    expect(BN2Str(await pools.getTokenAmount(asset.address))).to.equal('1000');
-    expect(BN2Str(await utils.calcSynthUnits('250', '1000', '1000'))).to.equal('100');
-    expect(BN2Str(await pools.mapTokenMember_Units(asset.address, pools.address))).to.equal('100');
-    expect(BN2Str(await pools.mapToken_Units(asset.address))).to.equal('1100');
-
-    expect(BN2Str(await utils.calcSwapOutput('250', '1000', '1000'))).to.equal('160');
     let synthAddress = await factory.getSynth(asset.address)
     let synth = await Synth.at(synthAddress);
+    await router.swapWithSynths('250', usdv.address, false, asset.address, true, {from:acc1})
+    let S = BN2Str(await synth.totalSupply())
+    let B = BN2Str(await pools.getBaseAmount(asset.address))
+    let T = BN2Str(await pools.getTokenAmount(asset.address))
+    expect(S).to.equal('160');
+    expect(B).to.equal('1250');
+    expect(T).to.equal('1000');
+    expect(BN2Str(await utils.calcSynthUnits(S, B, T))).to.equal('100');
+    expect(BN2Str(await pools.mapToken_Units(asset.address))).to.equal('1000');
+
+    expect(BN2Str(await utils.calcSwapOutput('250', '1000', '1000'))).to.equal('160');
     expect(BN2Str(await synth.balanceOf(acc1))).to.equal('160');
     expect(await synth.name()).to.equal('Token1 - vSynth');
     expect(await synth.symbol()).to.equal('TKN1.v');
@@ -136,8 +139,7 @@ describe("Should Swap Synths", function() {
     expect(BN2Str(await pools.getBaseAmount(asset.address))).to.equal('1165');
     expect(BN2Str(await pools.getTokenAmount(asset.address))).to.equal('1000');
     expect(BN2Str(await utils.calcShare('80', '160', '100'))).to.equal('50');
-    expect(BN2Str(await pools.mapTokenMember_Units(asset.address, pools.address))).to.equal('50');
-    expect(BN2Str(await pools.mapToken_Units(asset.address))).to.equal('1050');
+    expect(BN2Str(await pools.mapToken_Units(asset.address))).to.equal('1000');
   });
 
   it("Swap from Synth to Synth", async function() {
@@ -150,7 +152,6 @@ describe("Should Swap Synths", function() {
     expect(BN2Str(await pools.getBaseAmount(asset2.address))).to.equal('1079');
     expect(BN2Str(await pools.getTokenAmount(asset2.address))).to.equal('1000');
     expect(BN2Str(await utils.calcShare('80', '160', '100'))).to.equal('50');
-    expect(BN2Str(await pools.mapTokenMember_Units(asset.address, pools.address))).to.equal('0');
     expect(BN2Str(await pools.mapToken_Units(asset.address))).to.equal('1000');
     
     expect(BN2Str(await utils.calcSwapOutput('250', '1000', '1000'))).to.equal('160');
