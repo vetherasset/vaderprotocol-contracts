@@ -18,8 +18,8 @@ const truffleAssert = require('truffle-assertions')
 function BN2Str(BN) { return ((new BigNumber(BN)).toFixed()) }
 function getBN(BN) { return (new BigNumber(BN)) }
 
-function sleep(ms) {
-  return new Promise(resolve => setTimeout(resolve, ms));
+async function mine() {
+  await ethers.provider.send('evm_mine')
 }
 
 const max = '115792089237316195423570985008687907853269984665640564039457584007913129639935'
@@ -61,7 +61,7 @@ describe("Deploy Router", function() {
 
     await dao.newActionProposal("EMISSIONS")
     await dao.voteProposal(await dao.proposalCount())
-    await sleep(2000)
+    await mine()
     await dao.finaliseProposal(await dao.proposalCount())
 
     asset = await Asset.new();
@@ -89,7 +89,7 @@ describe("Deploy Router", function() {
 
     await dao.newActionProposal("MINTING")
     await dao.voteProposal(await dao.proposalCount())
-    await sleep(2000)
+    await mine()
     await dao.finaliseProposal(await dao.proposalCount())
     await vader.convertToUSDV(3000, {from:acc1})
     await usdv.transfer(acc0, '1', {from:acc1})
@@ -156,7 +156,7 @@ describe("Should Curate", function() {
   it("Increase limit", async function() {
     await dao.newParamProposal("ROUTER_PARAMS", '1', '1', '2', '0')
     await dao.voteProposal(await dao.proposalCount())
-    await sleep(2000)
+    await mine()
     await dao.finaliseProposal(await dao.proposalCount())
     expect(BN2Str(await router.curatedPoolLimit())).to.equal('2');
     await router.curatePool(asset2.address, {from:acc1})
