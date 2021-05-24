@@ -20,8 +20,8 @@ const max = '1157920892373161954235709850086879078532699846656405640394575840079
 function BN2Str(BN) { return ((new BigNumber(BN)).toFixed()) }
 function getBN(BN) { return (new BigNumber(BN)) }
 
-function sleep(ms) {
-  return new Promise(resolve => setTimeout(resolve, ms));
+async function mine() {
+  await ethers.provider.send('evm_mine')
 }
 
 var utils;
@@ -83,7 +83,7 @@ describe("Deploy Router", function() {
 
     await dao.newActionProposal("MINTING")
     await dao.voteProposal(await dao.proposalCount())
-    await sleep(2000)
+    await mine()
     await dao.finaliseProposal(await dao.proposalCount())
 
     await vader.convertToUSDV('3000', {from:acc1})
