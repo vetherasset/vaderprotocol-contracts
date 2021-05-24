@@ -16,8 +16,8 @@ const truffleAssert = require('truffle-assertions')
 function BN2Str(BN) { return ((new BigNumber(BN)).toFixed()) }
 function getBN(BN) { return (new BigNumber(BN)) }
 
-function sleep(ms) {
-  return new Promise(resolve => setTimeout(resolve, ms));
+async function mine() {
+  await ethers.provider.send('evm_mine')
 }
 
 var utils;
@@ -74,7 +74,7 @@ describe("Convert", function() {
   it("Should convert acc1", async function() {
     await dao.newActionProposal("MINTING")
     await dao.voteProposal(await dao.proposalCount())
-    await sleep(2000)
+    await mine()
     await dao.finaliseProposal(await dao.proposalCount())
 
     await vader.approve(usdv.address, '10000', {from:acc1})
