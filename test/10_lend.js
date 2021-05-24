@@ -26,10 +26,10 @@ function sleep(ms) {
 
 const max = '115792089237316195423570985008687907853269984665640564039457584007913129639935'
 
-var utils; 
+var utils;
 var dao; var vader; var vether; var usdv;
 var reserve; var vault; var pools; var anchor; var asset; var factory; var router;
-var anchor0; var anchor1; var anchor2; var anchor3; var anchor4;  var anchor5; 
+var anchor0; var anchor1; var anchor2; var anchor3; var anchor4;  var anchor5;
 var acc0; var acc1; var acc2; var acc3; var acc0; var acc5;
 const one = 10**18
 
@@ -50,23 +50,20 @@ before(async function() {
   router = await Router.new(vader.address);
   pools = await Pools.new(vader.address);
   factory = await Factory.new(pools.address);
-
 })
-
 
 describe("Deploy Router", function() {
   it("Should deploy", async function() {
-     
-    await dao.init(vether.address, vader.address, usdv.address, reserve.address, 
+    await dao.init(vether.address, vader.address, usdv.address, reserve.address,
     vault.address, router.address, pools.address, factory.address, utils.address);
- 
+
     await vader.changeDAO(dao.address)
     await reserve.init(vader.address)
 
     asset = await Asset.new();
     anchor = await Anchor.new();
 
-    await vether.transfer(acc1, '9409') 
+    await vether.transfer(acc1, '9409')
     await anchor.transfer(acc1, '2000')
 
     await vader.approve(usdv.address, max, {from:acc1})
@@ -75,7 +72,7 @@ describe("Deploy Router", function() {
     await usdv.approve(router.address, max, {from:acc1})
     await anchor.approve(router.address, max, {from:acc1})
 
-    await vader.upgrade('10', {from:acc1}) 
+    await vader.upgrade('10', {from:acc1})
 
     await dao.newActionProposal("EMISSIONS")
     await dao.voteProposal(await dao.proposalCount())
