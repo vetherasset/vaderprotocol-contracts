@@ -26,10 +26,10 @@ function sleep(ms) {
 
 const max = '115792089237316195423570985008687907853269984665640564039457584007913129639935'
 
-var utils; 
+var utils;
 var dao; var vader; var vether; var usdv;
 var reserve; var vault; var pools; var anchor; var asset; var factory; var router;
-var anchor0; var anchor1; var anchor2; var anchor3; var anchor4;  var anchor5; 
+var anchor0; var anchor1; var anchor2; var anchor3; var anchor4;  var anchor5;
 var acc0; var acc1; var acc2; var acc3; var acc0; var acc5;
 const one = 10**18
 
@@ -56,17 +56,17 @@ before(async function() {
 
 describe("Deploy Router", function() {
   it("Should deploy", async function() {
-     
-    await dao.init(vether.address, vader.address, usdv.address, reserve.address, 
+
+    await dao.init(vether.address, vader.address, usdv.address, reserve.address,
     vault.address, router.address, pools.address, factory.address, utils.address);
- 
+
     await vader.changeDAO(dao.address)
     await reserve.init(vader.address)
-    
+
     asset = await Asset.new();
     anchor = await Anchor.new();
 
-    await vether.transfer(acc1, '9409') 
+    await vether.transfer(acc1, '9409')
     await anchor.transfer(acc1, '2000')
 
     await vader.approve(usdv.address, max, {from:acc1})
@@ -76,7 +76,7 @@ describe("Deploy Router", function() {
     await anchor.approve(router.address, max, {from:acc1})
     await asset.approve(router.address, max, {from:acc1})
 
-    await vader.upgrade('10', {from:acc1}) 
+    await vader.upgrade('10', {from:acc1})
     await dao.newActionProposal("EMISSIONS")
     await dao.voteProposal(await dao.proposalCount())
     await sleep(2000)
@@ -113,7 +113,7 @@ describe("Should Borrow Debt", function() {
     await synth.approve(router.address, max, {from:acc1})
     await router.borrow('144', synth.address, asset.address, {from:acc1})
   });
-  
+
 });
 
 describe("Should pay interest", function() {
