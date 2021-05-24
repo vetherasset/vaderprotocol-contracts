@@ -25,10 +25,10 @@ function sleep(ms) {
 
 const max = '115792089237316195423570985008687907853269984665640564039457584007913129639935'
 
-var utils; 
+var utils;
 var dao; var vader; var vether; var usdv;
 var reserve; var vault; var pools; var anchor; var asset; var router; var factory;
-var anchor0; var anchor1; var anchor2; var anchor3; var anchor4;  var anchor5; 
+var anchor0; var anchor1; var anchor2; var anchor3; var anchor4;  var anchor5;
 var acc0; var acc1; var acc2; var acc3; var acc0; var acc5;
 const one = 10**18
 
@@ -39,17 +39,16 @@ before(async function() {
   acc2 = await accounts[2].getAddress()
   acc3 = await accounts[3].getAddress()
 
-    dao = await DAO.new();
+  dao = await DAO.new();
   vether = await Vether.new();
   vader = await Vader.new();
-utils = await Utils.new(vader.address);
+  utils = await Utils.new(vader.address);
   usdv = await USDV.new(vader.address);
   reserve = await RESERVE.new();
   vault = await VAULT.new(vader.address);
   router = await Router.new(vader.address);
   pools = await Pools.new(vader.address);
   factory = await Factory.new(pools.address);
-  
 })
 // acc  | VTH | VADER  | USDV | Anr  |  Ass |
 // pool|   0 | 2000 | 2000 | 1000 | 1000 |
@@ -57,12 +56,11 @@ utils = await Utils.new(vader.address);
 
 describe("Deploy Protection", function() {
   it("Should have right reserves", async function() {
-    await dao.init(vether.address, vader.address, usdv.address, reserve.address, 
-    vault.address, router.address, pools.address, factory.address, utils.address);
- 
-  await vader.changeDAO(dao.address)
-await reserve.init(vader.address)
-    
+    await dao.init(vether.address, vader.address, usdv.address, reserve.address,
+      vault.address, router.address, pools.address, factory.address, utils.address);
+
+    await vader.changeDAO(dao.address)
+    await reserve.init(vader.address)
 
     await dao.newActionProposal("EMISSIONS")
     await dao.voteProposal(await dao.proposalCount())
@@ -72,7 +70,7 @@ await reserve.init(vader.address)
     anchor = await Anchor.new();
     asset = await Asset.new();
 
-    await vether.transfer(acc1, BN2Str(7407)) 
+    await vether.transfer(acc1, BN2Str(7407))
     await anchor.transfer(acc1, BN2Str(2000))
 
     await vader.approve(usdv.address, max, {from:acc1})
@@ -81,7 +79,7 @@ await reserve.init(vader.address)
     await vader.approve(router.address, max, {from:acc1})
     await usdv.approve(router.address, max, {from:acc1})
 
-    await vader.upgrade('8', {from:acc1}) 
+    await vader.upgrade('8', {from:acc1})
     await router.addLiquidity(vader.address, '1000', anchor.address, '1000', {from:acc1})
 
     await dao.newActionProposal("MINTING")
@@ -154,22 +152,18 @@ describe("Should do IL Protection", function() {
     expect(BN2Str(await router.getILProtection(acc1, vader.address, anchor.address, '10000'))).to.equal('183');
     // expect(BN2Str(await reserve.reserveVADER())).to.equal('8');
     // expect(BN2Str(await router.getILProtection(acc1, vader.address, anchor.address, '10000'))).to.equal('8');
-
-    
-
   });
 
   it("RECEIVE protection on 50% ", async function() {
-
     expect(BN2Str(await reserve.reserveVADER())).to.equal('800');
     expect(BN2Str(await vader.balanceOf(acc1))).to.equal('5346');
     expect(BN2Str(await anchor.balanceOf(acc1))).to.equal('100');
 
     let share = await utils.getMemberShare('5000', anchor.address, acc1)
 
-    expect(BN2Str(share.units)).to.equal('500'); 
-    expect(BN2Str(share.outputBase)).to.equal('277'); 
-    expect(BN2Str(share.outputToken)).to.equal('950'); 
+    expect(BN2Str(share.units)).to.equal('500');
+    expect(BN2Str(share.outputBase)).to.equal('277');
+    expect(BN2Str(share.outputToken)).to.equal('950');
 
     let tx = await router.removeLiquidity(vader.address, anchor.address, '5000', {from:acc1})
 
@@ -178,12 +172,7 @@ describe("Should do IL Protection", function() {
     expect(BN2Str(await anchor.balanceOf(acc1))).to.equal('1049'); //+950
 
     expect(BN2Str(await pools.getMemberUnits(anchor.address, acc1))).to.equal('536');
-
-    
-
-
-
-  });  
+  });
 
   it("Small swap, need protection on Asset", async function() {
     // await dao.newActionProposal("EMISSIONS")
@@ -211,6 +200,4 @@ describe("Should do IL Protection", function() {
     expect(BN2Str(await utils.getProtection(acc1, asset.address, "10000", '1'))).to.equal('183');
     expect(Number(await router.getILProtection(acc1, usdv.address, asset.address, '10000'))).to.be.lessThanOrEqual(Number(await reserve.reserveVADER()));
   });
-
 });
-
