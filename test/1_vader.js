@@ -20,7 +20,7 @@ function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-var utils; 
+var utils;
 var dao; var vader; var vether; var usdv;
 var reserve; var vault; var router; var factory;
 var acc0; var acc1; var acc2; var acc3; var acc0; var acc5;
@@ -44,18 +44,16 @@ before(async function() {
   pools = await POOLS.new(vader.address);
   factory = await Factory.new(pools.address);
 
-
-  await dao.init(vether.address, vader.address, usdv.address, reserve.address, 
+  await dao.init(vether.address, vader.address, usdv.address, reserve.address,
     vault.address, router.address, pools.address, factory.address, utils.address);
- 
+
   await vader.changeDAO(dao.address)
-await reserve.init(vader.address)
+  await reserve.init(vader.address)
 
   await vether.transfer(acc1, '1')
 // acc  | VTH | VADER  |
 // acc0 |   0 |    0 |
 // acc1 |1001 |    0 |
-
 })
 
 describe("Deploy Vader", function() {
@@ -76,7 +74,6 @@ describe("Deploy Vader", function() {
 });
 
 describe("Upgrade", function() {
-
   it("Should upgrade acc1", async function() {
     await vether.approve(vader.address, '10000000000000000000000', {from:acc1})
     await vader.upgrade(1, {from:acc1})
@@ -88,7 +85,6 @@ describe("Upgrade", function() {
 // acc  | VTH | VADER  |
 // acc0 |   0 |    0 |
 // acc1 |   0 | 1000 |
-
 });
 
 describe("Be a valid ERC-20", function() {
@@ -97,8 +93,9 @@ describe("Be a valid ERC-20", function() {
     await truffleAssert.reverts(vader.transferFrom(acc1, acc0, "100", {from:acc0}))
     expect(BN2Str(await vader.balanceOf(acc0))).to.equal('0');
   });
+
   it("Should transfer From", async function() {
-    await vader.approve(acc0, "100", {from:acc1}) 
+    await vader.approve(acc0, "100", {from:acc1})
     expect(BN2Str(await vader.allowance(acc1, acc0))).to.equal('100');
     await vader.transferFrom(acc1, acc0, "100", {from:acc0})
     expect(BN2Str(await vader.balanceOf(acc0))).to.equal('100');
@@ -108,7 +105,7 @@ describe("Be a valid ERC-20", function() {
 // acc1 |   0 |  1000 |
 
   it("Should transfer", async function() {
-    await vader.transfer(acc0, "100", {from:acc1}) 
+    await vader.transfer(acc0, "100", {from:acc1})
     expect(BN2Str(await vader.balanceOf(acc0))).to.equal('200');
   });
 // acc  | VTH | VADER  |
@@ -125,7 +122,7 @@ describe("Be a valid ERC-20", function() {
 // acc1 |   0 |  800 |
 
   it("Should burn from", async function() {
-    await vader.approve(acc1, "100", {from:acc0}) 
+    await vader.approve(acc1, "100", {from:acc0})
     expect(BN2Str(await vader.allowance(acc0, acc1))).to.equal('100');
     await vader.burnFrom(acc0, "100", {from:acc1})
     expect(BN2Str(await vader.balanceOf(acc0))).to.equal('0');
@@ -134,7 +131,6 @@ describe("Be a valid ERC-20", function() {
 // acc  | VTH | VADER  |
 // acc0 |   0 |  0   |
 // acc1 |   0 |  800 |
-
 });
 
 describe("DAO Functions", function() {
@@ -158,18 +154,15 @@ describe("DAO Functions", function() {
     await dao.finaliseProposal(await dao.proposalCount())
     expect(await vader.emitting()).to.equal(true);
   });
-
 });
 
 describe("Emissions", function() {
   it("Should emit properly", async function() {
     expect(BN2Str(await vader.getDailyEmission())).to.equal(BN2Str('800'));
-// 
     await vader.transfer(acc0, BN2Str(200), {from:acc1})
     await vader.transfer(acc1, BN2Str(100), {from:acc0})
     expect(BN2Str(await vader.balanceOf(reserve.address))).to.equal(BN2Str('2400'));
     expect(BN2Str(await vader.getDailyEmission())).to.equal(BN2Str('3200'));
-    
     await vader.transfer(acc0, BN2Str(100), {from:acc1})
     expect(BN2Str(await vader.balanceOf(reserve.address))).to.equal(BN2Str('5600'));
     expect(BN2Str(await vader.getDailyEmission())).to.equal(BN2Str('6400'));
@@ -194,11 +187,10 @@ describe("FeeOnTransfer", function() {
     expect(BN2Str(await vader.maxSupply())).to.equal(BN2Str(2 * 10**9 * 10 ** 18));
     expect(BN2Str(await vader.feeOnTransfer())).to.equal('50');
   });
+
   it("Should charge fees", async function() {
     let tx = await vader.transfer(acc1, BN2Str(10000), {from:acc0})
     expect(BN2Str(tx.logs[0].args.value)).to.equal('50');
     expect(BN2Str(tx.logs[1].args.value)).to.equal('9950');
   });
 });
-
-
