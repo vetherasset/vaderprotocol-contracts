@@ -20,8 +20,8 @@ const truffleAssert = require('truffle-assertions')
 function BN2Str(BN) { return ((new BigNumber(BN)).toFixed()) }
 function getBN(BN) { return (new BigNumber(BN)) }
 
-function sleep(ms) {
-  return new Promise(resolve => setTimeout(resolve, ms));
+async function mine() {
+  await ethers.provider.send('evm_mine')
 }
 
 const max = '115792089237316195423570985008687907853269984665640564039457584007913129639935'
@@ -50,13 +50,10 @@ before(async function() {
   router = await Router.new(vader.address);
   pools = await Pools.new(vader.address);
   factory = await Factory.new(pools.address);
-
 })
-
 
 describe("Deploy Router", function() {
   it("Should deploy", async function() {
-
     await dao.init(vether.address, vader.address, usdv.address, reserve.address,
     vault.address, router.address, pools.address, factory.address, utils.address);
 
@@ -79,11 +76,11 @@ describe("Deploy Router", function() {
     await vader.upgrade('10', {from:acc1})
     await dao.newActionProposal("EMISSIONS")
     await dao.voteProposal(await dao.proposalCount())
-    await sleep(2000)
+    await mine()
     await dao.finaliseProposal(await dao.proposalCount())
     await dao.newActionProposal("MINTING")
     await dao.voteProposal(await dao.proposalCount())
-    await sleep(2000)
+    await mine()
     await dao.finaliseProposal(await dao.proposalCount())
     await vader.convertToUSDV('5000', {from:acc1})
 
@@ -91,10 +88,8 @@ describe("Deploy Router", function() {
 
     await vader.transfer(router.address, '1000', {from:acc1})
     await usdv.transfer(router.address, '1000', {from:acc1})
-
   });
 });
-
 
 describe("Add liquidity", function() {
   it("Should add anchor", async function() {
