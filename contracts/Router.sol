@@ -87,6 +87,16 @@ contract Router {
         require(msg.sender == DAO(), "!DAO");
         _;
     }
+    // Only TIMELOCK can execute
+    modifier onlyTIMELOCK() {
+        require(msg.sender == TIMELOCK(), "!TIMELOCK");
+        _;
+    }
+    // Only DAO&&TIMELOCK can execute
+    modifier onlyDAOandTIMELOCK() {
+        require(msg.sender == DAO() || msg.sender == TIMELOCK(), "!DAO && !TIMELOCK");
+        _;
+    }
 
     //=====================================CREATION=========================================//
  
@@ -114,7 +124,7 @@ contract Router {
         uint256 newTime,
         uint256 newLimit,
         uint256 newInterval
-    ) external onlyDAO {
+    ) external onlyDAOandTIMELOCK {
         rewardReductionFactor = newFactor;
         timeForFullProtection = newTime;
         curatedPoolLimit = newLimit;
@@ -125,7 +135,7 @@ contract Router {
         uint256 newLimit,
         uint256 newInside,
         uint256 newOutside
-    ) external onlyDAO {
+    ) external onlyDAOandTIMELOCK {
         anchorLimit = newLimit;
         insidePriceLimit = newInside;
         outsidePriceLimit = newOutside;
@@ -690,6 +700,9 @@ contract Router {
     }
     function UTILS() internal view returns(address){
         return iDAO(iVADER(VADER).DAO()).UTILS();
+    }
+    function TIMELOCK() internal view returns(address){
+        return iDAO(iVADER(VADER).DAO()).TIMELOCK();
     }
 
 }

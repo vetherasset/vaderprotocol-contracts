@@ -58,6 +58,16 @@ contract Vault {
         require(msg.sender == DAO(), "!DAO");
         _;
     }
+    // Only TIMELOCK can execute
+    modifier onlyTIMELOCK() {
+        require(msg.sender == TIMELOCK(), "!TIMELOCK");
+        _;
+    }
+    // Only DAO&&TIMELOCK can execute
+    modifier onlyDAOandTIMELOCK() {
+        require(msg.sender == DAO() || msg.sender == TIMELOCK(), "!DAO && !TIMELOCK");
+        _;
+    }
 
     constructor(address _vader) {
         VADER = _vader;
@@ -68,7 +78,7 @@ contract Vault {
     // Can set params
     function setParams(
         uint256 newDepositTime
-    ) external onlyDAO {
+    ) external onlyDAOandTIMELOCK {
         minimumDepositTime = newDepositTime;
     }
 
@@ -238,5 +248,8 @@ contract Vault {
     }
     function UTILS() public view returns (address) {
         return iDAO(iVADER(VADER).DAO()).UTILS();
+    }
+    function TIMELOCK() public view returns (address) {
+        return iDAO(iVADER(VADER).DAO()).TIMELOCK();
     }
 }

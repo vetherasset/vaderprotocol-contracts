@@ -11,4 +11,5 @@ interface iDAO {
     function POOLS() external view returns(address);
     function FACTORY() external view returns(address);
     function UTILS() external view returns(address);
+    function TIMELOCK() external view returns(address);
 }
