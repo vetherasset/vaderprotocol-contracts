@@ -19,8 +19,8 @@ const { VoidSigner } = require("@ethersproject/abstract-signer");
 function BN2Str(BN) { return ((new BigNumber(BN)).toFixed()) }
 function getBN(BN) { return (new BigNumber(BN)) }
 
-function sleep(ms) {
-  return new Promise(resolve => setTimeout(resolve, ms));
+async function mine() {
+  await ethers.provider.send('evm_mine')
 }
 
 const max = '115792089237316195423570985008687907853269984665640564039457584007913129639935'
@@ -64,11 +64,11 @@ describe("Deploy Rewards", function() {
 
     await dao.newActionProposal("EMISSIONS")
     await dao.voteProposal(await dao.proposalCount())
-    await sleep(2000)
+    await mine()
     await dao.finaliseProposal(await dao.proposalCount())
     await dao.newParamProposal("VADER_PARAMS", '1', '900', '0', '0')
     await dao.voteProposal(await dao.proposalCount())
-    await sleep(2000)
+    await mine()
     await dao.finaliseProposal(await dao.proposalCount())
 
     anchor = await Anchor.new();
@@ -89,7 +89,7 @@ describe("Deploy Rewards", function() {
 
     await dao.newActionProposal("MINTING")
     await dao.voteProposal(await dao.proposalCount())
-    await sleep(2000)
+    await mine()
     await dao.finaliseProposal(await dao.proposalCount())
     await vader.convertToUSDV(BN2Str(1100), {from:acc1})
     // await usdv.withdrawToUSDV('10000', {from:acc1})
@@ -129,7 +129,7 @@ describe("Should do pool rewards", function() {
     let r = '20';
     await dao.newParamProposal("ROUTER_PARAMS", '1', '1', '2', '0')
     await dao.voteProposal(await dao.proposalCount())
-    await sleep(2000)
+    await mine()
     await dao.finaliseProposal(await dao.proposalCount())
     await router.curatePool(asset.address, {from:acc1})
     expect(BN2Str(await reserve.reserveUSDV())).to.equal(r);
