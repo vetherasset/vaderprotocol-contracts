@@ -25,10 +25,10 @@ function sleep(ms) {
 
 const max = '115792089237316195423570985008687907853269984665640564039457584007913129639935'
 
-var utils; 
+var utils;
 var dao; var vader; var vether; var usdv;
 var reserve; var vault; var pools; var anchor; var asset; var router; var factory;
-var anchor0; var anchor1; var anchor2; var anchor3; var anchor4;  var anchor5; 
+var anchor0; var anchor1; var anchor2; var anchor3; var anchor4;  var anchor5;
 var acc0; var acc1; var acc2; var acc3; var acc0; var acc5;
 const one = 10**18
 
@@ -39,10 +39,10 @@ before(async function() {
   acc2 = await accounts[2].getAddress()
   acc3 = await accounts[3].getAddress()
 
-    dao = await DAO.new();
+  dao = await DAO.new();
   vether = await Vether.new();
   vader = await Vader.new();
-utils = await Utils.new(vader.address);
+  utils = await Utils.new(vader.address);
   usdv = await USDV.new(vader.address);
   reserve = await RESERVE.new();
   vault = await VAULT.new(vader.address);
@@ -56,12 +56,12 @@ utils = await Utils.new(vader.address);
 
 describe("Deploy Rewards", function() {
   it("Should have right reserves", async function() {
-    await dao.init(vether.address, vader.address, usdv.address, reserve.address, 
-    vault.address, router.address, pools.address, factory.address, utils.address);
- 
-  await vader.changeDAO(dao.address)
-await reserve.init(vader.address)
-    
+    await dao.init(vether.address, vader.address, usdv.address, reserve.address,
+      vault.address, router.address, pools.address, factory.address, utils.address);
+
+    await vader.changeDAO(dao.address)
+    await reserve.init(vader.address)
+
     await dao.newActionProposal("EMISSIONS")
     await dao.voteProposal(await dao.proposalCount())
     await sleep(2000)
@@ -71,11 +71,10 @@ await reserve.init(vader.address)
     await sleep(2000)
     await dao.finaliseProposal(await dao.proposalCount())
 
-
     anchor = await Anchor.new();
     asset = await Asset.new();
 
-    await vether.transfer(acc1, BN2Str(7407)) 
+    await vether.transfer(acc1, BN2Str(7407))
     await anchor.transfer(acc1, BN2Str(3000))
 
     await vader.approve(usdv.address, max, {from:acc1})
@@ -84,10 +83,10 @@ await reserve.init(vader.address)
     await vader.approve(router.address, max, {from:acc1})
     await usdv.approve(router.address, max, {from:acc1})
 
-    await vader.upgrade('8', {from:acc1}) 
+    await vader.upgrade('8', {from:acc1})
     await vader.transfer(acc0, '100', {from:acc1})
     await vader.transfer(acc1, '100')
-    
+
     await dao.newActionProposal("MINTING")
     await dao.voteProposal(await dao.proposalCount())
     await sleep(2000)
@@ -99,7 +98,7 @@ await reserve.init(vader.address)
 
     await router.addLiquidity(vader.address, '1000', anchor.address, '1000', {from:acc1})
     await router.addLiquidity(usdv.address, '1000', asset.address, '1000', {from:acc1})
-    
+
     expect(BN2Str(await vader.getDailyEmission())).to.equal('7');
     expect(BN2Str(await reserve.reserveVADER())).to.equal('15');
     expect(BN2Str(await reserve.reserveUSDV())).to.equal('16');
@@ -107,7 +106,6 @@ await reserve.init(vader.address)
 });
 
 describe("Should do pool rewards", function() {
-
   it("Swap anchor, get rewards", async function() {
     let r = '15';
     await router.curatePool(anchor.address)
