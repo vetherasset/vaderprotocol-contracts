@@ -16,8 +16,8 @@ const truffleAssert = require('truffle-assertions')
 function BN2Str(BN) { return ((new BigNumber(BN)).toFixed()) }
 function getBN(BN) { return (new BigNumber(BN)) }
 
-function sleep(ms) {
-  return new Promise(resolve => setTimeout(resolve, ms));
+async function mine() {
+  await ethers.provider.send('evm_mine')
 }
 
 var utils;
@@ -141,7 +141,7 @@ describe("DAO Functions", function() {
   it("DAO setParams", async function() {
     await dao.newParamProposal("VADER_PARAMS", '1', '1', '0', '0')
     await dao.voteProposal(await dao.proposalCount())
-    await sleep(2000)
+    await mine()
     await dao.finaliseProposal(await dao.proposalCount())
     expect(BN2Str(await vader.secondsPerEra())).to.equal('1');
     expect(BN2Str(await vader.emissionCurve())).to.equal('1');
@@ -150,7 +150,7 @@ describe("DAO Functions", function() {
   it("DAO start emitting", async function() {
     await dao.newActionProposal("EMISSIONS")
     await dao.voteProposal(await dao.proposalCount())
-    await sleep(2000)
+    await mine()
     await dao.finaliseProposal(await dao.proposalCount())
     expect(await vader.emitting()).to.equal(true);
   });
@@ -178,7 +178,7 @@ describe("FeeOnTransfer", function() {
     await vader.upgrade('999999999999999999999999', {from:acc0})
     await dao.newParamProposal("VADER_PARAMS", '1', '2024', '0', '0')
     await dao.voteProposal(await dao.proposalCount())
-    await sleep(2000)
+    await mine()
     await dao.finaliseProposal(await dao.proposalCount())
     expect(BN2Str(await vader.getDailyEmission())).to.equal(BN2Str('494071146245059288537546'));
     expect(BN2Str(await vader.totalSupply())).to.equal('1000000000000000000000005400');
