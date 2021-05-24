@@ -200,6 +200,7 @@ contract Router {
         bool outSynth,
         uint256 slipLimit
     ) public returns (uint256 outputAmount) {
+        updateTWAPPrice();
         address _member = msg.sender;
         if (!inSynth) {
             moveTokenToPools(inputToken, inputAmount);
@@ -368,7 +369,6 @@ contract Router {
         if (idx1 != 0) {
             arrayPrices[idx1 - 1] = iUTILS(UTILS()).calcValueInBase(token, one);
         }
-        updateTWAPPrice();
     }
 
     function updateTWAPPrice() public {
