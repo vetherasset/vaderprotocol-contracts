@@ -20,14 +20,14 @@ const max = '1157920892373161954235709850086879078532699846656405640394575840079
 function BN2Str(BN) { return ((new BigNumber(BN)).toFixed()) }
 function getBN(BN) { return (new BigNumber(BN)) }
 
-function sleep(ms) {
-  return new Promise(resolve => setTimeout(resolve, ms));
+async function mine() {
+  await ethers.provider.send('evm_mine')
 }
 
-var utils; 
+var utils;
 var dao; var vader; var vether; var usdv;
 var reserve; var vault; var pools; var anchor; var asset; var factory;
-var anchor0; var anchor1; var anchor2; var anchor3; var anchor4;  var anchor5; 
+var anchor0; var anchor1; var anchor2; var anchor3; var anchor4;  var anchor5;
 var acc0; var acc1; var acc2; var acc3; var acc0; var acc5;
 const one = 10**18
 
@@ -48,16 +48,13 @@ before(async function() {
   router = await Router.new(vader.address);
   pools = await Pools.new(vader.address);
   factory = await Factory.new(pools.address);
-
 })
-
 
 describe("Deploy Router", function() {
   it("Should deploy", async function() {
-
-    await dao.init(vether.address, vader.address, usdv.address, reserve.address, 
+    await dao.init(vether.address, vader.address, usdv.address, reserve.address,
     vault.address, router.address, pools.address, factory.address, utils.address);
- 
+
     await vader.changeDAO(dao.address)
     await reserve.init(vader.address)
 
@@ -66,14 +63,14 @@ describe("Deploy Router", function() {
     anchor = await Anchor.new();
     anchor2 = await Anchor.new();
 
-    await vether.transfer(acc1, BN2Str(7407)) 
+    await vether.transfer(acc1, BN2Str(7407))
     await anchor.transfer(acc1, BN2Str(2000))
     await anchor.approve(router.address, BN2Str(one), {from:acc1})
     await anchor2.transfer(acc1, BN2Str(2000))
     await anchor2.approve(router.address, BN2Str(one), {from:acc1})
 
     await vether.approve(vader.address, '7400', {from:acc1})
-    await vader.upgrade('8', {from:acc1}) 
+    await vader.upgrade('8', {from:acc1})
 
     await asset.transfer(acc1, BN2Str(2000))
     await asset2.transfer(acc1, BN2Str(2000))
@@ -86,7 +83,7 @@ describe("Deploy Router", function() {
 
     await dao.newActionProposal("MINTING")
     await dao.voteProposal(await dao.proposalCount())
-    await sleep(2000)
+    await mine()
     await dao.finaliseProposal(await dao.proposalCount())
 
     await vader.convertToUSDV('3000', {from:acc1})
@@ -98,7 +95,6 @@ describe("Deploy Router", function() {
     expect(await dao.USDV()).to.equal(usdv.address);
   });
 });
-
 
 describe("Add liquidity", function() {
   it("Should add anchor", async function() {
@@ -146,17 +142,15 @@ describe("Should Swap VADER Pools", function() {
     expect(BN2Str(await pools.getBaseAmount(anchor.address))).to.equal('1082');
     expect(BN2Str(await vader.balanceOf(acc1))).to.equal('2918');
   });
-
-it("Swap to Other Anchor", async function() {
-  await router.swap('250', anchor.address, anchor2.address, {from:acc1})
-  expect(BN2Str(await anchor.balanceOf(acc1))).to.equal('750');
-  expect(BN2Str(await pools.getTokenAmount(anchor.address))).to.equal('1250');
-  expect(BN2Str(await pools.getBaseAmount(anchor.address))).to.equal('909');
-  expect(BN2Str(await pools.getBaseAmount(anchor2.address))).to.equal('1173');
-  expect(BN2Str(await pools.getTokenAmount(anchor2.address))).to.equal('875');
-  expect(BN2Str(await anchor2.balanceOf(acc1))).to.equal('1125');
-});
-
+  it("Swap to Other Anchor", async function() {
+    await router.swap('250', anchor.address, anchor2.address, {from:acc1})
+    expect(BN2Str(await anchor.balanceOf(acc1))).to.equal('750');
+    expect(BN2Str(await pools.getTokenAmount(anchor.address))).to.equal('1250');
+    expect(BN2Str(await pools.getBaseAmount(anchor.address))).to.equal('909');
+    expect(BN2Str(await pools.getBaseAmount(anchor2.address))).to.equal('1173');
+    expect(BN2Str(await pools.getTokenAmount(anchor2.address))).to.equal('875');
+    expect(BN2Str(await anchor2.balanceOf(acc1))).to.equal('1125');
+  });
 });
 
 describe("Should Swap USDV Pools", function() {
@@ -174,24 +168,21 @@ describe("Should Swap USDV Pools", function() {
     expect(BN2Str(await pools.getBaseAmount(asset.address))).to.equal('1082');
     expect(BN2Str(await usdv.balanceOf(acc1))).to.equal('918');
   });
-
-it("Swap to Other Anchor", async function() {
-  await router.swap('250', asset.address, asset2.address, {from:acc1})
-  expect(BN2Str(await anchor.balanceOf(acc1))).to.equal('750');
-  expect(BN2Str(await pools.getTokenAmount(asset.address))).to.equal('1250');
-  expect(BN2Str(await pools.getBaseAmount(asset.address))).to.equal('909');
-  expect(BN2Str(await pools.getBaseAmount(asset2.address))).to.equal('1173');
-  expect(BN2Str(await pools.getTokenAmount(asset2.address))).to.equal('875');
-  expect(BN2Str(await asset2.balanceOf(acc1))).to.equal('1125');
-});
-
+  it("Swap to Other Anchor", async function() {
+    await router.swap('250', asset.address, asset2.address, {from:acc1})
+    expect(BN2Str(await anchor.balanceOf(acc1))).to.equal('750');
+    expect(BN2Str(await pools.getTokenAmount(asset.address))).to.equal('1250');
+    expect(BN2Str(await pools.getBaseAmount(asset.address))).to.equal('909');
+    expect(BN2Str(await pools.getBaseAmount(asset2.address))).to.equal('1173');
+    expect(BN2Str(await pools.getTokenAmount(asset2.address))).to.equal('875');
+    expect(BN2Str(await asset2.balanceOf(acc1))).to.equal('1125');
+  });
 });
 
 describe("Should Swap Above Limit", function() {
   it("Fail when swap above limit", async function() {
     await truffleAssert.reverts(router.swapWithLimit('250', usdv.address, asset.address, '1', {from:acc1}))
   });
-  
 });
 
 describe("Should remove liquidity", function() {

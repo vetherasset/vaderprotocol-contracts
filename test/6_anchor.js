@@ -21,10 +21,6 @@ function approx(number){
   return BN2Str((getBN(number).div(10**16)).integerValue())
 }
 
-function sleep(ms) {
-  return new Promise(resolve => setTimeout(resolve, ms));
-}
-
 async function setNextBlockTimestamp(ts) {
   await ethers.provider.send('evm_setNextBlockTimestamp', [ts])
   await ethers.provider.send('evm_mine')
@@ -72,8 +68,6 @@ before(async function() {
 
 describe("Deploy Anchor", function() {
   it("Should deploy", async function() {
-    await sleep(100)
-
     await dao.init(vether.address, vader.address, usdv.address, reserve.address,
     vault.address, router.address, pools.address, factory.address, utils.address);
 
@@ -101,8 +95,6 @@ describe("Deploy Anchor", function() {
     await anchor4.approve(router.address, BN2Str(one), {from:acc1})
     await anchor5.transfer(acc1, BN2Str(2000))
     await anchor5.approve(router.address, BN2Str(one), {from:acc1})
-
-    await sleep(1000)
 
     await router.addLiquidity(vader.address, '100', anchor0.address, '99', {from:acc1})
     await router.addLiquidity(vader.address, '100', anchor1.address, '100', {from:acc1})
