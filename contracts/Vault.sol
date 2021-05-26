@@ -190,11 +190,11 @@ contract Vault {
 
     //============================== HELPERS ================================//
 
-    function reserveUSDV() public view returns (uint256) {
+    function reserveUSDV() external view returns (uint256) {
         return iRESERVE(RESERVE()).reserveUSDV(); // Balance
     }
 
-    function reserveVADER() public view returns (uint256) {
+    function reserveVADER() external view returns (uint256) {
         return iRESERVE(RESERVE()).reserveVADER(); // Balance
     }
 
