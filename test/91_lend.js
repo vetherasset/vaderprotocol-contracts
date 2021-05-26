@@ -8,6 +8,7 @@ var RESERVE = artifacts.require('./Reserve')
 var VAULT = artifacts.require('./Vault')
 var Pools = artifacts.require('./Pools')
 var Router = artifacts.require('./Router')
+var Lender = artifacts.require('./Lender')
 var Factory = artifacts.require('./Factory')
 var Synth = artifacts.require('./Synth')
 
@@ -28,7 +29,7 @@ const max = '1157920892373161954235709850086879078532699846656405640394575840079
 
 var utils;
 var dao; var vader; var vether; var usdv;
-var reserve; var vault; var pools; var anchor; var asset; var factory; var router;
+var reserve; var vault; var pools; var anchor; var asset; var factory; var router; var lender;
 var anchor0; var anchor1; var anchor2; var anchor3; var anchor4;  var anchor5;
 var acc0; var acc1; var acc2; var acc3; var acc0; var acc5;
 const one = 10**18
@@ -48,14 +49,15 @@ before(async function() {
   reserve = await RESERVE.new();
   vault = await VAULT.new(vader.address);
   router = await Router.new(vader.address);
+  lender = await Lender.new(vader.address);
   pools = await Pools.new(vader.address);
   factory = await Factory.new(pools.address);
 })
 
-describe("Deploy Router", function() {
+describe("Deploy Lender", function() {
   it("Should deploy", async function() {
     await dao.init(vether.address, vader.address, usdv.address, reserve.address,
-    vault.address, router.address, pools.address, factory.address, utils.address);
+    vault.address, router.address, lender.address, pools.address, factory.address, utils.address);
 
     await vader.changeDAO(dao.address)
     await reserve.init(vader.address)
@@ -126,24 +128,26 @@ describe("Should Borrow Debt", function() {
   it("Borrow ANCHOR with VADER", async function() {
     expect(BN2Str(await vader.balanceOf(acc1))).to.equal('3000');
     expect(BN2Str(await anchor.balanceOf(acc1))).to.equal('1000');
-    await router.borrow('100', vader.address, anchor.address, {from:acc1})
+    await vader.approve(lender.address, max, {from:acc1})
+    await lender.borrow('100', vader.address, anchor.address, {from:acc1})
     expect(BN2Str(await vader.balanceOf(acc1))).to.equal('2900');
     expect(BN2Str(await anchor.balanceOf(acc1))).to.equal('1058');
-    expect(BN2Str(await router.getSystemCollateral(vader.address, anchor.address))).to.equal('97');
-    expect(BN2Str(await router.getSystemDebt(vader.address, anchor.address))).to.equal('58');
-    expect(BN2Str(await router.getMemberCollateral(acc1, vader.address, anchor.address))).to.equal('100');
-    expect(BN2Str(await router.getMemberDebt(acc1, vader.address, anchor.address))).to.equal('58');
+    expect(BN2Str(await lender.getSystemCollateral(vader.address, anchor.address))).to.equal('97');
+    expect(BN2Str(await lender.getSystemDebt(vader.address, anchor.address))).to.equal('58');
+    expect(BN2Str(await lender.getMemberCollateral(acc1, vader.address, anchor.address))).to.equal('100');
+    expect(BN2Str(await lender.getMemberDebt(acc1, vader.address, anchor.address))).to.equal('58');
   });
   it("Borrow ASSET with USDV", async function() {
     expect(BN2Str(await usdv.balanceOf(acc1))).to.equal('3000');
     expect(BN2Str(await asset.balanceOf(acc1))).to.equal('1000');
-    await router.borrow('100', usdv.address, asset.address, {from:acc1})
+    await usdv.approve(lender.address, max, {from:acc1})
+    await lender.borrow('100', usdv.address, asset.address, {from:acc1})
     expect(BN2Str(await usdv.balanceOf(acc1))).to.equal('2900');
     expect(BN2Str(await asset.balanceOf(acc1))).to.equal('1058');
-    expect(BN2Str(await router.getSystemCollateral(usdv.address, asset.address))).to.equal('97');
-    expect(BN2Str(await router.getSystemDebt(usdv.address, asset.address))).to.equal('58');
-    expect(BN2Str(await router.getMemberCollateral(acc1, usdv.address, asset.address))).to.equal('100');
-    expect(BN2Str(await router.getMemberDebt(acc1, usdv.address, asset.address))).to.equal('58');
+    expect(BN2Str(await lender.getSystemCollateral(usdv.address, asset.address))).to.equal('97');
+    expect(BN2Str(await lender.getSystemDebt(usdv.address, asset.address))).to.equal('58');
+    expect(BN2Str(await lender.getMemberCollateral(acc1, usdv.address, asset.address))).to.equal('100');
+    expect(BN2Str(await lender.getMemberDebt(acc1, usdv.address, asset.address))).to.equal('58');
   });
   it("Borrow ASSET with SYNTH-ASSET", async function() {
     await pools.deploySynth(asset.address)
@@ -151,16 +155,16 @@ describe("Should Borrow Debt", function() {
     let synth = await Synth.at(await factory.getSynth(asset.address));
     expect(BN2Str(await synth.balanceOf(acc1))).to.equal('144');
     expect(BN2Str(await asset.balanceOf(acc1))).to.equal('1058');
-    await synth.approve(router.address, max, {from:acc1})
-    await router.borrow('144', synth.address, asset.address, {from:acc1})
+    await synth.approve(lender.address, max, {from:acc1})
+    await lender.borrow('144', synth.address, asset.address, {from:acc1})
     expect(BN2Str(await synth.balanceOf(acc1))).to.equal('0');
     expect(BN2Str(await asset.balanceOf(acc1))).to.equal('1124');
   });
   it("Fail bad combos", async function() {
-    await truffleAssert.reverts(router.borrow('1', vader.address, asset.address, {from:acc1}))
-    await truffleAssert.reverts(router.borrow('1', usdv.address, anchor.address, {from:acc1}))
+    await truffleAssert.reverts(lender.borrow('1', vader.address, asset.address, {from:acc1}))
+    await truffleAssert.reverts(lender.borrow('1', usdv.address, anchor.address, {from:acc1}))
     let synth = await Synth.at(await factory.getSynth(asset.address));
-    await truffleAssert.reverts(router.borrow('1', synth.address, anchor.address, {from:acc1}))
+    await truffleAssert.reverts(lender.borrow('1', synth.address, anchor.address, {from:acc1}))
   });
 });
 

@@ -30,6 +30,7 @@ contract DAO {
     address public RESERVE;
     address public VAULT;
     address public ROUTER;
+    address public LENDER;
     address public POOLS;
     address public FACTORY;
     address public UTILS;
@@ -94,6 +95,7 @@ contract DAO {
         address _reserve,
         address _vault,
         address _router,
+        address _lender,
         address _pools,
         address _factory,
         address _utils
@@ -105,6 +107,7 @@ contract DAO {
             RESERVE = _reserve;
             VAULT = _vault;
             ROUTER = _router;
+            LENDER = _lender;
             POOLS = _pools;
             FACTORY = _factory;
             UTILS = _utils;

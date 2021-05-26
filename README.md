@@ -46,8 +46,8 @@ All contracts need to be initialised for the first time, else the system will no
 await utils.init(pools.address)
  
 await usdv.init(vader.address)
-  await dao.init(vether.address, vader.address, usdv.address, reserve.address, 
-    vault.address, router.address, pools.address, factory.address, utils.address);
+  await dao.init(vether.address, vader.address, usdv.address, reserve.address,
+    vault.address, router.address, lender.address, pools.address, factory.address, utils.address);
  
   await vader.changeDAO(dao.address)
 await reserve.init(vader.address)

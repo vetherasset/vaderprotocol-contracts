@@ -33,7 +33,7 @@ contract Reserve {
     }
 
     function isPermitted(address _address) private view returns(bool _permitted){
-        if(_address == VAULT() || _address == ROUTER()){
+        if(_address == VAULT() || _address == ROUTER() || _address == LENDER()){
             _permitted = true;
         }
     }
@@ -158,6 +158,9 @@ contract Reserve {
     }
     function ROUTER() internal view returns(address){
         return iDAO(iVADER(VADER).DAO()).ROUTER();
+    }
+    function LENDER() internal view returns(address){
+        return iDAO(iVADER(VADER).DAO()).LENDER();
     }
 
 }

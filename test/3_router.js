@@ -8,6 +8,7 @@ var RESERVE = artifacts.require('./Reserve')
 var VAULT = artifacts.require('./Vault')
 var Pools = artifacts.require('./Pools')
 var Router = artifacts.require('./Router')
+var Lender = artifacts.require('./Lender')
 var Factory = artifacts.require('./Factory')
 var Asset = artifacts.require('./Token1')
 var Anchor = artifacts.require('./Token2')
@@ -46,6 +47,7 @@ before(async function() {
   reserve = await RESERVE.new();
   vault = await VAULT.new(vader.address);
   router = await Router.new(vader.address);
+  lender = await Lender.new(vader.address);
   pools = await Pools.new(vader.address);
   factory = await Factory.new(pools.address);
 })
@@ -53,7 +55,7 @@ before(async function() {
 describe("Deploy Router", function() {
   it("Should deploy", async function() {
     await dao.init(vether.address, vader.address, usdv.address, reserve.address,
-    vault.address, router.address, pools.address, factory.address, utils.address);
+    vault.address, router.address, lender.address, pools.address, factory.address, utils.address);
 
     await vader.changeDAO(dao.address)
     await reserve.init(vader.address)

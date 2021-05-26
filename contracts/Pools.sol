@@ -70,6 +70,12 @@ contract Pools {
     );
     event SynthSync(address indexed token, uint256 burntSynth, uint256 deletedUnits);
 
+    // Only ROUTER can execute
+    modifier onlyRouter() {
+        require(msg.sender == ROUTER(), "!ROUTER");
+        _;
+    }
+
     //=====================================CREATION=========================================//
  
     constructor(address _vader) {
@@ -280,25 +286,25 @@ contract Pools {
 
     //======================================LENDING=========================================//
 
-    // Assign units to callee (ie, a LendingRouter)
-    function lockUnits(
-        uint256 units,
-        address token,
-        address member
-    ) external {
-        mapTokenMember_Units[token][member] -= units;
-        mapTokenMember_Units[token][msg.sender] += units; // Assign to protocol
-    }
+    // // Assign units to Router
+    // function lockUnits(
+    //     uint256 units,
+    //     address token,
+    //     address member
+    // ) external onlyRouter {
+    //     mapTokenMember_Units[token][member] -= units;
+    //     mapTokenMember_Units[token][msg.sender] += units; // Assign to Router
+    // }
 
-    // Assign units to callee (ie, a LendingRouter)
-    function unlockUnits(
-        uint256 units,
-        address token,
-        address member
-    ) external {
-        mapTokenMember_Units[token][msg.sender] -= units;
-        mapTokenMember_Units[token][member] += units;
-    }
+    // // Remove units from Router
+    // function unlockUnits(
+    //     uint256 units,
+    //     address token,
+    //     address member
+    // ) external onlyRouter {
+    //     mapTokenMember_Units[token][msg.sender] -= units;
+    //     mapTokenMember_Units[token][member] += units;
+    // }
 
     //======================================HELPERS=========================================//
 
