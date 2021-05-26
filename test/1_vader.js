@@ -7,6 +7,7 @@ var USDV = artifacts.require('./USDV')
 var RESERVE = artifacts.require('./Reserve')
 var VAULT = artifacts.require('./Vault')
 var Router = artifacts.require('./Router')
+var Lender = artifacts.require('./Lender')
 var Factory = artifacts.require('./Factory')
 var POOLS = artifacts.require('./Pools')
 
@@ -22,7 +23,7 @@ async function mine() {
 
 var utils;
 var dao; var vader; var vether; var usdv;
-var reserve; var vault; var router; var factory;
+var reserve; var vault; var router; var lender; var factory;
 var acc0; var acc1; var acc2; var acc3; var acc0; var acc5;
 const one = 10**18
 
@@ -41,11 +42,12 @@ before(async function() {
   reserve = await RESERVE.new();
   vault = await VAULT.new(vader.address);
   router = await Router.new(vader.address);
+  lender = await Lender.new(vader.address);
   pools = await POOLS.new(vader.address);
   factory = await Factory.new(pools.address);
 
   await dao.init(vether.address, vader.address, usdv.address, reserve.address,
-    vault.address, router.address, pools.address, factory.address, utils.address);
+    vault.address, router.address, lender.address, pools.address, factory.address, utils.address);
 
   await vader.changeDAO(dao.address)
   await reserve.init(vader.address)

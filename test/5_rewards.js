@@ -8,6 +8,7 @@ var RESERVE = artifacts.require('./Reserve')
 var VAULT = artifacts.require('./Vault')
 var Pools = artifacts.require('./Pools')
 var Router = artifacts.require('./Router')
+var Lender = artifacts.require('./Lender')
 var Factory = artifacts.require('./Factory')
 var Asset = artifacts.require('./Token1')
 var Anchor = artifacts.require('./Token2')
@@ -27,7 +28,7 @@ const max = '1157920892373161954235709850086879078532699846656405640394575840079
 
 var utils;
 var dao; var vader; var vether; var usdv;
-var reserve; var vault; var pools; var anchor; var asset; var router; var factory;
+var reserve; var vault; var pools; var anchor; var asset; var router; var lender; var factory;
 var anchor0; var anchor1; var anchor2; var anchor3; var anchor4;  var anchor5;
 var acc0; var acc1; var acc2; var acc3; var acc0; var acc5;
 const one = 10**18
@@ -47,6 +48,7 @@ before(async function() {
   reserve = await RESERVE.new();
   vault = await VAULT.new(vader.address);
   router = await Router.new(vader.address);
+  lender = await Lender.new(vader.address);
   pools = await Pools.new(vader.address);
   factory = await Factory.new(pools.address);
 })
@@ -57,7 +59,7 @@ before(async function() {
 describe("Deploy Rewards", function() {
   it("Should have right reserves", async function() {
     await dao.init(vether.address, vader.address, usdv.address, reserve.address,
-      vault.address, router.address, pools.address, factory.address, utils.address);
+    vault.address, router.address, lender.address, pools.address, factory.address, utils.address);
 
     await vader.changeDAO(dao.address)
     await reserve.init(vader.address)

@@ -8,6 +8,7 @@ var RESERVE = artifacts.require('./Reserve')
 var VAULT = artifacts.require('./Vault')
 var Pools = artifacts.require('./Pools')
 var Router = artifacts.require('./Router')
+var Lender = artifacts.require('./Lender')
 var Factory = artifacts.require('./Factory')
 var Synth = artifacts.require('./Synth')
 
@@ -28,7 +29,7 @@ const max = '1157920892373161954235709850086879078532699846656405640394575840079
 
 var utils;
 var dao; var vader; var vether; var usdv;
-var reserve; var vault; var pools; var anchor; var asset; var factory; var router;
+var reserve; var vault; var pools; var anchor; var asset; var factory; var router; var lender;
 var anchor0; var anchor1; var anchor2; var anchor3; var anchor4;  var anchor5;
 var acc0; var acc1; var acc2; var acc3; var acc0; var acc5;
 const one = 10**18
@@ -48,14 +49,15 @@ before(async function() {
   reserve = await RESERVE.new();
   vault = await VAULT.new(vader.address);
   router = await Router.new(vader.address);
+  lender = await Lender.new(vader.address);
   pools = await Pools.new(vader.address);
   factory = await Factory.new(pools.address);
 })
 
-describe("Deploy Router", function() {
+describe("Deploy Interest", function() {
   it("Should deploy", async function() {
     await dao.init(vether.address, vader.address, usdv.address, reserve.address,
-    vault.address, router.address, pools.address, factory.address, utils.address);
+    vault.address, router.address, lender.address, pools.address, factory.address, utils.address);
 
     await vader.changeDAO(dao.address)
     await reserve.init(vader.address)
@@ -100,13 +102,15 @@ describe("Add liquidity", function() {
 
 describe("Should Borrow Debt", function() {
   it("Borrow", async function() {
-    await router.borrow('100', vader.address, anchor.address, {from:acc1})
-    await router.borrow('100', usdv.address, asset.address, {from:acc1})
+    await vader.approve(lender.address, max, {from:acc1})
+    await usdv.approve(lender.address, max, {from:acc1})
+    await lender.borrow('100', vader.address, anchor.address, {from:acc1})
+    await lender.borrow('100', usdv.address, asset.address, {from:acc1})
     await pools.deploySynth(asset.address)
     await router.swapWithSynths('250', usdv.address, false, asset.address, true, {from:acc1})
     let synth = await Synth.at(await factory.getSynth(asset.address));
-    await synth.approve(router.address, max, {from:acc1})
-    await router.borrow('144', synth.address, asset.address, {from:acc1})
+    await synth.approve(lender.address, max, {from:acc1})
+    await lender.borrow('144', synth.address, asset.address, {from:acc1})
   });
 
 });
@@ -118,7 +122,7 @@ describe("Should pay interest", function() {
       expect(BN2Str(await utils.calcValueInBase(anchor.address, '3'))).to.equal('3');
       expect(BN2Str(await utils.getInterestOwed(vader.address, anchor.address, '31536000'))).to.equal('3');
 
-      expect(BN2Str(await router.getSystemInterestPaid(vader.address, anchor.address))).to.equal('3');
+      expect(BN2Str(await lender.getSystemInterestPaid(vader.address, anchor.address))).to.equal('3');
       expect(BN2Str(await pools.getBaseAmount(anchor.address))).to.equal('1069');
     });
 

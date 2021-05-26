@@ -6,6 +6,7 @@ import "./interfaces/iERC20.sol";
 import "./interfaces/iDAO.sol";
 import "./interfaces/iVADER.sol";
 import "./interfaces/iROUTER.sol";
+import "./interfaces/iLENDER.sol";
 import "./interfaces/iPOOLS.sol";
 import "./interfaces/iFACTORY.sol";
 import "./interfaces/iSYNTH.sol";
@@ -195,10 +196,10 @@ contract Utils {
         address collateralAsset,
         address debtAsset
     ) external view returns (uint256, uint256) {
-        uint256 _memberDebt = iROUTER(ROUTER()).getMemberDebt(member, collateralAsset, debtAsset); // Outstanding Debt
-        uint256 _memberCollateral = iROUTER(ROUTER()).getMemberCollateral(member, collateralAsset, debtAsset); // Collateral
-        uint256 _collateral = iROUTER(ROUTER()).getSystemCollateral(collateralAsset, debtAsset);
-        uint256 _interestPaid = iROUTER(ROUTER()).getSystemInterestPaid(collateralAsset, debtAsset);
+        uint256 _memberDebt = iLENDER(LENDER()).getMemberDebt(member, collateralAsset, debtAsset); // Outstanding Debt
+        uint256 _memberCollateral = iLENDER(LENDER()).getMemberCollateral(member, collateralAsset, debtAsset); // Collateral
+        uint256 _collateral = iLENDER(LENDER()).getSystemCollateral(collateralAsset, debtAsset);
+        uint256 _interestPaid = iLENDER(LENDER()).getSystemInterestPaid(collateralAsset, debtAsset);
         uint256 _memberInterestShare = calcShare(_memberCollateral, _collateral, _interestPaid); // Share of interest based on collateral
         uint256 _collateralUnlocked = calcShare(debt, _memberDebt, _memberCollateral);
         return (_collateralUnlocked, _memberInterestShare);
@@ -219,11 +220,11 @@ contract Utils {
 
     function getInterestPayment(address collateralAsset, address debtAsset) public view returns (uint256) {
         uint256 _debtLoading = getDebtLoading(collateralAsset, debtAsset);
-        return (_debtLoading * iROUTER(ROUTER()).getSystemDebt(collateralAsset, debtAsset)) / 10000;
+        return (_debtLoading * iLENDER(LENDER()).getSystemDebt(collateralAsset, debtAsset)) / 10000;
     }
 
     function getDebtLoading(address collateralAsset, address debtAsset) public view returns (uint256) {
-        uint256 _debtIssued = iROUTER(ROUTER()).getSystemDebt(collateralAsset, debtAsset);
+        uint256 _debtIssued = iLENDER(LENDER()).getSystemDebt(collateralAsset, debtAsset);
         uint256 _debtDepth = iPOOLS(POOLS()).getTokenAmount(debtAsset);
         return (_debtIssued * 10000) / _debtDepth;
     }
@@ -394,6 +395,9 @@ contract Utils {
     }
     function ROUTER() internal view returns(address){
         return iDAO(iVADER(VADER).DAO()).ROUTER();
+    }
+    function LENDER() internal view returns(address){
+        return iDAO(iVADER(VADER).DAO()).LENDER();
     }
     function POOLS() internal view returns(address){
         return iDAO(iVADER(VADER).DAO()).POOLS();

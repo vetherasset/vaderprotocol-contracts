@@ -8,6 +8,7 @@ interface iDAO {
     function RESERVE() external view returns(address);
     function VAULT() external view returns(address);
     function ROUTER() external view returns(address);
+    function LENDER() external view returns(address);
     function POOLS() external view returns(address);
     function FACTORY() external view returns(address);
     function UTILS() external view returns(address);
