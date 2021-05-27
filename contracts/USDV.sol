@@ -29,6 +29,16 @@ contract USDV is iERC20 {
         require(msg.sender == DAO(), "!DAO");
         _;
     }
+    // Only TIMELOCK can execute
+    modifier onlyTIMELOCK() {
+        require(msg.sender == TIMELOCK(), "!TIMELOCK");
+        _;
+    }
+    // Only DAO&&TIMELOCK can execute
+    modifier onlyDAOandTIMELOCK() {
+        require(msg.sender == DAO() || msg.sender == TIMELOCK(), "!DAO && !TIMELOCK");
+        _;
+    }
 
     //=====================================CREATION=========================================//
 
@@ -162,7 +172,7 @@ contract USDV is iERC20 {
 
     //=========================================DAO=========================================//
     // Can set params
-    function setParams(uint256 newDelay) external onlyDAO {
+    function setParams(uint256 newDelay) external onlyDAOandTIMELOCK {
         blockDelay = newDelay;
     }
 
@@ -200,5 +210,8 @@ contract USDV is iERC20 {
     }
     function ROUTER() internal view returns (address) {
         return iDAO(iVADER(VADER).DAO()).ROUTER();
+    }
+    function TIMELOCK() internal view returns (address) {
+        return iDAO(iVADER(VADER).DAO()).TIMELOCK();
     }
 }

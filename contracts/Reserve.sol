@@ -26,6 +26,16 @@ contract Reserve {
         require(msg.sender == DAO(), "!DAO");
         _;
     }
+    // Only TIMELOCK can execute
+    modifier onlyTIMELOCK() {
+        require(msg.sender == TIMELOCK(), "!TIMELOCK");
+        _;
+    }
+    // Only DAO&&TIMELOCK can execute
+    modifier onlyDAOandTIMELOCK() {
+        require(msg.sender == DAO() || msg.sender == TIMELOCK(), "!DAO && !TIMELOCK");
+        _;
+    }
     // Only DAO can execute
     modifier onlySystem() {
         require(isPermitted(msg.sender));
@@ -57,14 +67,14 @@ contract Reserve {
     
     //=========================================DAO=========================================//
 
-    function setParams(uint256 newSplit, uint256 newDelay, uint256 newShare) external onlyDAO {
+    function setParams(uint256 newSplit, uint256 newDelay, uint256 newShare) external onlyDAOandTIMELOCK {
         splitForUSDV = newSplit;
         minGrantTime = newDelay;
         vaultShare = newShare;
     }
 
     // Can issue grants
-    function grant(address recipient, uint256 amount) public onlyDAO {
+    function grant(address recipient, uint256 amount) public onlyTIMELOCK {
         require((block.timestamp - lastGranted) >= minGrantTime, "not too fast");
         lastGranted = block.timestamp;
         uint256 _reserveForGrant = reserveUSDV() / 10;
@@ -158,6 +168,9 @@ contract Reserve {
     }
     function ROUTER() internal view returns(address){
         return iDAO(iVADER(VADER).DAO()).ROUTER();
+    }
+    function TIMELOCK() internal view returns(address){
+        return iDAO(iVADER(VADER).DAO()).TIMELOCK();
     }
 
 }

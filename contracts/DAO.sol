@@ -33,6 +33,7 @@ contract DAO {
     address public POOLS;
     address public FACTORY;
     address public UTILS;
+    address public TIMELOCK;
 
     mapping(uint256 => GrantDetails) public mapPID_grant;
     mapping(uint256 => address) public mapPID_address;
@@ -96,7 +97,8 @@ contract DAO {
         address _router,
         address _pools,
         address _factory,
-        address _utils
+        address _utils,
+        address _timelock
     ) external onlyCouncil {
         if(VADER == address(0)){
             VETHER = _vether;
@@ -108,6 +110,7 @@ contract DAO {
             POOLS = _pools;
             FACTORY = _factory;
             UTILS = _utils;
+            TIMELOCK = _timelock;
         }
     }
 
