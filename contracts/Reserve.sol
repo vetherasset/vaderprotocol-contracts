@@ -80,16 +80,13 @@ contract Reserve {
     function requestFunds(address base, address recipient, uint256 amount) external onlySystem returns(uint256) {
         checkReserve();
         uint256 _reserve;
-        if(base == VADER) {
+        if (base == VADER) {
             _reserve = reserveVADER();
-            if(amount > _reserve){
-                amount = _reserve;
-            }
-        } else if(base == USDV()) {
+        } else if (base == USDV()) {
             _reserve = reserveUSDV();
-            if(amount > _reserve){
-                amount = _reserve;
-            }
+        }
+        if (amount > _reserve) {
+            amount = _reserve;
         }
         ExternalERC20(base).safeTransfer(recipient, amount);
         return amount;
