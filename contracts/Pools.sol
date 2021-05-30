@@ -19,8 +19,8 @@ contract Pools {
 
     address public immutable VADER;
 
-    mapping(address => bool) _isAsset;
-    mapping(address => bool) _isAnchor;
+    mapping(address => bool) internal _isAsset;
+    mapping(address => bool) internal _isAnchor;
 
     mapping(address => uint256) public mapToken_Units;
     mapping(address => mapping(address => uint256)) public mapTokenMember_Units;
