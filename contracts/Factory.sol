@@ -26,9 +26,7 @@ contract Factory {
     //Create a synth asset
     function deploySynth(address token) external onlyPOOLS returns (address synth) {
         require(mapToken_Synth[token] == address(0), "CreateErr");
-        Synth newSynth;
-        newSynth = new Synth(token);
-        synth = address(newSynth);
+        synth = address(new Synth(token));
         _addSynth(token, synth);
         emit CreateSynth(token, synth);
     }
