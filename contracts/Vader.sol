@@ -119,7 +119,7 @@ contract Vader is iERC20 {
     }
     //iERC677 approveAndCall
     function approveAndCall(address recipient, uint amount, bytes calldata data) public returns (bool) {
-      _approve(msg.sender, recipient, type(uint256).max); // Give recipient max approval
+      _approve(msg.sender, recipient, amount);
       iERC677(recipient).onTokenApproval(address(this), amount, msg.sender, data); // Amount is passed thru to recipient
       return true;
      }
