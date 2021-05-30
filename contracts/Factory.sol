@@ -10,7 +10,6 @@ contract Factory {
 
     address[] public arraySynths;
     mapping(address => address) private mapToken_Synth;
-    mapping(address => bool) private _isSynth;
 
     event CreateSynth(address indexed token, address indexed pool);
 
@@ -46,12 +45,11 @@ contract Factory {
         return mapToken_Synth[token];
     }
     function isSynth(address token) public view returns (bool _exists){
-        return _isSynth[token];
+        return mapToken_Synth[token] != address(0);
     }
 
     function _addSynth(address _token, address _synth) internal {
         mapToken_Synth[_token] = _synth;
         arraySynths.push(_synth);
-        _isSynth[_synth] = true;
     }
 }
