@@ -255,6 +255,7 @@ contract Pools {
         address token,
         address member
     ) external returns (uint256 outputBase) {
+        require(iROUTER(ROUTER()).isBase(base), "!Base");
         address synth = getSynth(token);
         uint256 _actualInputSynth = iERC20(synth).balanceOf(address(this)); // Get input
         iERC20(synth).burn(_actualInputSynth); // Burn it
