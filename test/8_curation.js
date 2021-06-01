@@ -11,6 +11,7 @@ var Router = artifacts.require('./Router')
 var Factory = artifacts.require('./Factory')
 var Asset = artifacts.require('./Token1')
 var Anchor = artifacts.require('./Token2')
+var Timelock = artifacts.require('./Timelock')
 
 const BigNumber = require('bignumber.js')
 const truffleAssert = require('truffle-assertions')
@@ -25,11 +26,11 @@ function sleep(ms) {
 const max = '115792089237316195423570985008687907853269984665640564039457584007913129639935'
 
 var utils; 
-var dao; var vader; var vether; var usdv;
+var dao; var vader; var vether; var usdv; var timelock;
 var reserve; var vault; var pools; var anchor; var factory; var router;
 var asset; var asset2; var asset3;
 var anchor0; var anchor1; var anchor2; var anchor3; var anchor4;  var anchor5; 
-var acc0; var acc1; var acc2; var acc3; var acc0; var acc5;
+var acc0; var acc1; var acc2; var acc3; var acc0; var acc4;
 const one = 10**18
 
 before(async function() {
@@ -38,6 +39,7 @@ before(async function() {
   acc1 = await accounts[1].getAddress()
   acc2 = await accounts[2].getAddress()
   acc3 = await accounts[3].getAddress()
+  acc4 = await accounts[4].getAddress()
 
     dao = await DAO.new();
   vether = await Vether.new();
@@ -49,6 +51,7 @@ utils = await Utils.new(vader.address);
   router = await Router.new(vader.address);
   pools = await Pools.new(vader.address);
   factory = await Factory.new(pools.address);
+  timelock = await Timelock.new(acc4, 2 * 24 * 60 * 60);
 
 })
 
@@ -58,7 +61,7 @@ describe("Deploy Router", function() {
 
      
     await dao.init(vether.address, vader.address, usdv.address, reserve.address, 
-    vault.address, router.address, pools.address, factory.address, utils.address);
+    vault.address, router.address, pools.address, factory.address, utils.address, timelock.address);
  
   await vader.changeDAO(dao.address)
 await reserve.init(vader.address)

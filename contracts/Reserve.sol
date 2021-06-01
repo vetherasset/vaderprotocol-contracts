@@ -74,7 +74,7 @@ contract Reserve {
     }
 
     // Can issue grants
-    function grant(address recipient, uint256 amount) public onlyTIMELOCK {
+    function grant(address recipient, uint256 amount) public onlyDAOandTIMELOCK {
         require((block.timestamp - lastGranted) >= minGrantTime, "not too fast");
         lastGranted = block.timestamp;
         uint256 _reserveForGrant = reserveUSDV() / 10;

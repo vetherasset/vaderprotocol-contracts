@@ -2,15 +2,19 @@
 pragma solidity 0.8.3;
 pragma experimental ABIEncoderV2;
 
+// Interfaces
+import "../interfaces/iTimeLock.sol";
+import "../interfaces/iVAULT.sol";
+
 contract GovernorAlpha {
     // @notice The name of this contract
     string public constant name = "Vader Governor Alpha";
 
     // @notice The number of votes in support of a proposal required in order for a quorum to be reached and for a vote to succeed
-    function quorumVotes() public pure returns (uint) { return 40000e18; } // 400,000 = 4% of Vader
+    function quorumVotes() public pure returns (uint) { return 4000e18; } // 400,000 = 4% of USDV
 
     // @notice The number of votes required in order for a voter to become a proposer
-    function proposalThreshold() public pure returns (uint) { return 10000e18; } // 100,000 = 1% of Vader
+    function proposalThreshold() public pure returns (uint) { return 1000e18; } // 100,000 = 1% of USDV
 
     // @notice The maximum number of actions that can be included in a proposal
     function proposalMaxOperations() public pure returns (uint) { return 10; } // 10 actions
@@ -22,10 +26,10 @@ contract GovernorAlpha {
     function votingPeriod() public pure returns (uint) { return 17280; } // ~3 days in blocks (assuming 15s blocks)
 
     // @notice The address of the Vader Protocol Timelock
-    TimelockInterface public timelock;
+    iTimeLock public timelock;
 
-    // @notice The address of the Vader governance token
-    VaderInterface public vader;
+    // @notice The address of the Vault
+    iVAULT public vault;
 
     // @notice The address of the Governor Guardian
     address public guardian;
@@ -86,7 +90,7 @@ contract GovernorAlpha {
         bool support;
 
         // @notice The number of votes the voter had, which were cast
-        uint96 votes;
+        uint256 votes;
     }
 
     // @notice Possible states that a proposal may be in
@@ -128,14 +132,18 @@ contract GovernorAlpha {
     // @notice An event emitted when a proposal has been executed in the Timelock
     event ProposalExecuted(uint id);
 
-    constructor(address timelock_, address vader_, address guardian_) public {
-        timelock = TimelockInterface(timelock_);
-        vader = VaderInterface(vader_);
+    constructor(address timelock_, address vault_, address guardian_) public {
+        timelock = iTimeLock(timelock_);
+        vault = iVAULT(vault_);
         guardian = guardian_;
     }
 
+    function getBlockNumber() public view returns (uint256) {
+        return block.number;
+    }
+
     function propose(address[] memory targets, uint[] memory values, string[] memory signatures, bytes[] memory calldatas, string memory description) public returns (uint) {
-        require(vader.getPriorVotes(msg.sender, sub256(block.number, 1)) > proposalThreshold(), "GovernorAlpha::propose: proposer votes below proposal threshold");
+        require(vault.getPriorVotes(msg.sender, sub256(block.number, 1)) > proposalThreshold(), "GovernorAlpha::propose: proposer votes below proposal threshold");
         require(targets.length == values.length && targets.length == signatures.length && targets.length == calldatas.length, "GovernorAlpha::propose: proposal function information arity mismatch");
         require(targets.length != 0, "GovernorAlpha::propose: must provide actions");
         require(targets.length <= proposalMaxOperations(), "GovernorAlpha::propose: too many actions");
@@ -203,7 +211,7 @@ contract GovernorAlpha {
         require(state != ProposalState.Executed, "GovernorAlpha::cancel: cannot cancel executed proposal");
 
         Proposal storage proposal = proposals[proposalId];
-        require(msg.sender == guardian || vader.getPriorVotes(proposal.proposer, sub256(block.number, 1)) < proposalThreshold(), "GovernorAlpha::cancel: proposer above threshold");
+        require(msg.sender == guardian || vault.getPriorVotes(proposal.proposer, sub256(block.number, 1)) < proposalThreshold(), "GovernorAlpha::cancel: proposer above threshold");
 
         proposal.canceled = true;
         for (uint i = 0; i < proposal.targets.length; i++) {
@@ -262,7 +270,7 @@ contract GovernorAlpha {
         Proposal storage proposal = proposals[proposalId];
         Receipt storage receipt = proposal.receipts[voter];
         require(receipt.hasVoted == false, "GovernorAlpha::_castVote: voter already voted");
-        uint96 votes = vader.getPriorVotes(voter, proposal.startBlock);
+        uint256 votes = vault.getPriorVotes(voter, proposal.startBlock);
 
         if (support) {
             proposal.forVotes = add256(proposal.forVotes, votes);
@@ -313,18 +321,4 @@ contract GovernorAlpha {
         assembly { chainId := chainid() }
         return chainId;
     }
-}
-
-interface TimelockInterface {
-    function delay() external view returns (uint);
-    function GRACE_PERIOD() external view returns (uint);
-    function acceptAdmin() external;
-    function queuedTransactions(bytes32 hash) external view returns (bool);
-    function queueTransaction(address target, uint value, string calldata signature, bytes calldata data, uint eta) external returns (bytes32);
-    function cancelTransaction(address target, uint value, string calldata signature, bytes calldata data, uint eta) external;
-    function executeTransaction(address target, uint value, string calldata signature, bytes calldata data, uint eta) external payable returns (bytes memory);
-}
-
-interface VaderInterface {
-    function getPriorVotes(address account, uint blockNumber) external view returns (uint96);
 }

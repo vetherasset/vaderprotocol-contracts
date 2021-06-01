@@ -19,6 +19,7 @@
     "hardhat": "^2.2.0",
     "hardhat-truffle5": "^1.0.1",
     "hardhat-waffle": "^0.0.1-security",
+    "keccak256": "^1.0.2",
     "lodash.template": "^4.5.0",
     "truffle": "^5.1.24",
     "truffle-assertions": "^0.9.2",
