@@ -239,7 +239,7 @@ contract Vader is iERC20 {
     }
 
     // Can change DAO
-    function changeDAO(address newDAO) external onlyTIMELOCK {
+    function changeDAO(address newDAO) external onlyDAO {
         require(newDAO != address(0), "address err");
         DAO = newDAO;
     }

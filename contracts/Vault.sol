@@ -391,6 +391,10 @@ contract Vault {
         return mapAsset_lastHarvestedTime[asset];
     }
 
+    function getUSDVTotalSupply() external view returns (uint256) {
+        return iERC20(USDV()).totalSupply();
+    }
+
     function DAO() internal view returns(address){
         return iVADER(VADER).DAO();
     }

@@ -67,7 +67,7 @@ before(async function() {
   pools = await Pools.new(vader.address);
   factory = await Factory.new(pools.address);
   timelock = await Timelock.new(acc4, 2 * 24 * 60 * 60);
-  governor = await Governor.new(address(0), vault.address, address(0));
+  governor = await Governor.new(timelock.address, vault.address, address(0));
 
   asset = await Asset.new();
   anchor = await Anchor.new();
@@ -77,20 +77,20 @@ describe("Deploy Governor Alpha", function() {
   it("Should deploy right", async function() {
     await dao.init(vether.address, vader.address, usdv.address, reserve.address, 
       vault.address, router.address, pools.address, factory.address, utils.address, timelock.address);
+    await vader.changeDAO(dao.address)
 
     assert.equal(await governor.name(), "Vader Governor Alpha");
-    assert.equal(await governor.quorumVotes(), 4000e18);
-    assert.equal(await governor.proposalThreshold(), 1000e18);
+    assert.equal(await governor.quorumVotes(), 0);
+    assert.equal(await governor.proposalThreshold(), 0);
     assert.equal(await governor.proposalMaxOperations(), 10);
     assert.equal(await governor.votingDelay(), 1);
     assert.equal(await governor.votingPeriod(), 17280);
-    assert.equal(await governor.timelock(), address(0));
+    assert.equal(await governor.timelock(), timelock.address);
     assert.equal(await governor.vault(), vault.address);
     assert.equal(await governor.guardian(), address(0));
     assert.equal(await governor.DOMAIN_TYPEHASH(), "0x" + keccak256("EIP712Domain(string name,uint256 chainId,address verifyingContract)").toString('hex'));
     assert.equal(await governor.BALLOT_TYPEHASH(), "0x" + keccak256("Ballot(uint256 proposalId,bool support)").toString('hex'));
 
-    await vader.changeDAO(dao.address)
     await reserve.init(vader.address)
     
     asset = await Asset.new();
@@ -122,6 +122,8 @@ describe("Deploy Governor Alpha", function() {
     await vault.depositForMember(usdv.address, root, BN2Str(4000e18), {from:acc1});
     await vault.delegate(root);
     // await setNextBlockTimestamp(ts0 + 5*15)
+    assert.equal((await governor.quorumVotes()).toString(), 160e18); // 4% of 4000e18 USDV
+    assert.equal((await governor.proposalThreshold()).toString(), 40e18); // 1% of 4000e18 USDV
     
     await mineBlock();
     await mineBlock();
@@ -157,10 +159,6 @@ describe("Deploy Governor Alpha", function() {
     it("ForVotes and AgainstVotes are initialized to zero", async () => {
       expect(trivialProposal.forVotes.toString()).to.equal("0");
       expect(trivialProposal.againstVotes.toString()).to.equal("0");
-    });
-
-    xit("Voters is initialized to the empty set", async () => {
-      test.todo('mmm probably nothing to prove here unless we add a counter or something');
     });
 
     it("Executed and Canceled flags are initialized to false", async () => {

@@ -35,4 +35,6 @@ interface iVAULT {
     function getMemberWeight(address member) external view returns (uint256);
 
     function getAssetDeposit(address asset) external view returns (uint256);
+    
+    function getUSDVTotalSupply() external view returns (uint256);
 }

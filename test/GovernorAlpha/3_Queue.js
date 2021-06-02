@@ -172,15 +172,12 @@ describe("GovernorAlpha#queue", function() {
       await governor.castVote(proposalId2, true, {from: acc3});
       await governor.castVote(proposalId2, true, {from: acc1});
       await governor.castVote(proposalId2, true, {from: root});
-      console.log(await blockNumber())
+
       const mineBlockCalls = [];
       for (let i = 0; i < 20000; i += 1) {
         mineBlockCalls.push(mineBlock());
       }
       await Promise.all(mineBlockCalls);
-
-      console.log(await blockNumber())
-      console.log((await governor.state(proposalId1)).toString())
 
       await timelock.queueTransaction(targets[0], values[0], signatures[0], calldatas[0], ts0 + 2 * 24 * 60 * 60 + 30000);
       await expect(
