@@ -11,10 +11,10 @@ contract GovernorAlpha {
     string public constant name = "Vader Governor Alpha";
 
     // @notice The number of votes in support of a proposal required in order for a quorum to be reached and for a vote to succeed
-    function quorumVotes() public pure returns (uint) { return 4000e18; } // 400,000 = 4% of USDV
+    function quorumVotes() public pure returns (uint) { return 4000e18; } // 4,000 USDV
 
     // @notice The number of votes required in order for a voter to become a proposer
-    function proposalThreshold() public pure returns (uint) { return 1000e18; } // 100,000 = 1% of USDV
+    function proposalThreshold() public pure returns (uint) { return 1000e18; } // 1,000 USDV
 
     // @notice The maximum number of actions that can be included in a proposal
     function proposalMaxOperations() public pure returns (uint) { return 10; } // 10 actions
