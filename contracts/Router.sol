@@ -106,9 +106,10 @@ contract Router {
         iRESERVE(RESERVE()).checkReserve();
         uint256 _actualInputBase = moveTokenToPools(base, inputBase);
         uint256 _actualInputToken = moveTokenToPools(token, inputToken);
-        addDepositData(msg.sender, token, _actualInputBase, _actualInputToken);
+        address _member = msg.sender;
+        addDepositData(_member, token, _actualInputBase, _actualInputToken);
         updateTWAPPrice();
-        return iPOOLS(POOLS()).addLiquidity(base, token, msg.sender);
+        return iPOOLS(POOLS()).addLiquidity(base, token, _member);
     }
 
     function removeLiquidity(
@@ -116,14 +117,15 @@ contract Router {
         address token,
         uint256 basisPoints
     ) external returns (uint256 units, uint256 amountBase, uint256 amountToken) {
-        uint256 _protection = getILProtection(msg.sender, base, token, basisPoints);
+        address _member = msg.sender;
+        uint256 _protection = getILProtection(_member, base, token, basisPoints);
         if(_protection > 0){
             iRESERVE(RESERVE()).requestFunds(base, POOLS(), _protection);
-            iPOOLS(POOLS()).addLiquidity(base, token, msg.sender);
-            mapMemberToken_depositBase[msg.sender][token] += _protection;
+            iPOOLS(POOLS()).addLiquidity(base, token, _member);
+            mapMemberToken_depositBase[_member][token] += _protection;
         }
-        (units, amountBase, amountToken) = iPOOLS(POOLS()).removeLiquidity(base, token, basisPoints);
-        removeDepositData(msg.sender, token, basisPoints, _protection);
+        (units, amountBase, amountToken) = iPOOLS(POOLS()).removeLiquidity(base, token, basisPoints, _member);
+        removeDepositData(_member, token, basisPoints, _protection);
         iRESERVE(RESERVE()).checkReserve();
     }
 
