@@ -167,37 +167,37 @@ describe("Should Swap Synths", function() {
 
   it("Swap from token to Synth", async function() {
     let synth = await Synth.at(await factory.getSynth(asset2.address));
-    expect(BN2Str(await anchor.balanceOf(acc1))).to.equal('1000');
+    expect(BN2Str(await asset.balanceOf(acc1))).to.equal('1000');
     expect(BN2Str(await synth.balanceOf(acc1))).to.equal('67');
 
-    await router.swapWithSynths('80', anchor.address, false, asset2.address, true, {from:acc1})
+    await router.swapWithSynths('80', asset.address, false, asset2.address, true, {from:acc1})
 
-    expect(BN2Str(await anchor.balanceOf(acc1))).to.equal('920');
-    expect(BN2Str(await synth.balanceOf(acc1))).to.equal('122');
+    expect(BN2Str(await asset.balanceOf(acc1))).to.equal('920');
+    expect(BN2Str(await synth.balanceOf(acc1))).to.equal('127');
   });
   it("Swap from Synth to token", async function() {
     let synth = await Synth.at(await factory.getSynth(asset2.address));
     await synth.approve(router.address, max, {from:acc1})
 
-    expect(BN2Str(await synth.balanceOf(acc1))).to.equal('122');
-    expect(BN2Str(await anchor.balanceOf(acc1))).to.equal('920');
+    expect(BN2Str(await synth.balanceOf(acc1))).to.equal('127');
+    expect(BN2Str(await asset.balanceOf(acc1))).to.equal('920');
 
-    await router.swapWithSynths('50', asset2.address, true, anchor.address, false, {from:acc1})
+    await router.swapWithSynths('50', asset2.address, true, asset.address, false, {from:acc1})
 
-    expect(BN2Str(await synth.balanceOf(acc1))).to.equal('72');
-    expect(BN2Str(await anchor.balanceOf(acc1))).to.equal('974');
+    expect(BN2Str(await synth.balanceOf(acc1))).to.equal('77');
+    expect(BN2Str(await asset.balanceOf(acc1))).to.equal('970');
     
   });
   it("Swap from Token to its own Synth", async function() {
     let synth = await Synth.at(await factory.getSynth(asset2.address));
     await synth.approve(router.address, max, {from:acc1})
     expect(BN2Str(await asset2.balanceOf(acc1))).to.equal('1000');
-    expect(BN2Str(await synth.balanceOf(acc1))).to.equal('72');
+    expect(BN2Str(await synth.balanceOf(acc1))).to.equal('77');
 
     await router.swapWithSynths('10', asset2.address, false, asset2.address, true, {from:acc1})
 
     expect(BN2Str(await asset2.balanceOf(acc1))).to.equal('990');
-    expect(BN2Str(await synth.balanceOf(acc1))).to.equal('81');
+    expect(BN2Str(await synth.balanceOf(acc1))).to.equal('86');
   });
 
 });
@@ -222,7 +222,7 @@ describe("Member should deposit Synths for rewards", function() {
     let synth = await Synth.at(await factory.getSynth(asset2.address));
     await synth.approve(vault.address, max, {from:acc1})
     await vault.deposit(synth.address, '20', {from:acc1})
-    expect(BN2Str(await synth.balanceOf(acc1))).to.equal(('61'));
+    expect(BN2Str(await synth.balanceOf(acc1))).to.equal(('66'));
     expect(BN2Str(await synth.balanceOf(vault.address))).to.equal(('20'));
     expect(BN2Str(await vault.getMemberDeposit(acc1, synth.address))).to.equal(('20'));
     expect(BN2Str(await vault.getMemberWeight(acc1))).to.equal(('20'));
@@ -254,7 +254,7 @@ describe("Member should deposit Synths for rewards", function() {
   });
   it("Should withdraw", async function() {
     let synth = await Synth.at(await factory.getSynth(asset2.address));
-    expect(BN2Str(await synth.balanceOf(acc1))).to.equal('61');
+    expect(BN2Str(await synth.balanceOf(acc1))).to.equal('66');
     expect(BN2Str(await synth.balanceOf(vault.address))).to.equal('261');
     expect(BN2Str(await vault.getMemberDeposit(acc1, synth.address))).to.equal('20');
     expect(BN2Str(await vault.getMemberWeight(acc1))).to.equal('20');
@@ -269,7 +269,7 @@ describe("Member should deposit Synths for rewards", function() {
     expect(BN2Str(await vault.getMemberWeight(acc1))).to.equal('0');
     expect(BN2Str(await vault.totalWeight())).to.equal('0');
     expect(BN2Str(await synth.balanceOf(vault.address))).to.equal('0');
-    expect(BN2Str(await synth.balanceOf(acc1))).to.equal('322');
+    expect(BN2Str(await synth.balanceOf(acc1))).to.equal('327');
   });
  
 });

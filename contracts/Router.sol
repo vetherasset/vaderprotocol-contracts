@@ -193,7 +193,7 @@ contract Router {
             if (!outSynth) {
                 outputAmount = iPOOLS(POOLS()).swap(_base, outputToken, _member, false);
             } else {
-                outputAmount = iPOOLS(POOLS()).mintSynth(_base, outputToken, _member);
+                outputAmount = iPOOLS(POOLS()).mintSynth(outputToken, _member);
             }
         } else { // !isBase(inputToken) && !isBase(outputToken)
             // Token||Synth -> Token||Synth
@@ -208,7 +208,7 @@ contract Router {
             if (!outSynth) {
                 outputAmount = iPOOLS(POOLS()).swap(_base, outputToken, _member, false);
             } else {
-                outputAmount = iPOOLS(POOLS()).mintSynth(_base, outputToken, _member);
+                outputAmount = iPOOLS(POOLS()).mintSynth(outputToken, _member);
             }
         }
         _handlePoolReward(_base, inputToken);

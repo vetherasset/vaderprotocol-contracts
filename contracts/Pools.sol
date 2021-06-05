@@ -197,21 +197,19 @@ contract Pools {
 
     // Mint a Synth against its own pool
     function mintSynth(
-        address base,
         address token,
         address member
     ) external onlySystem returns (uint256 outputAmount) {
         address synth = getSynth(token);
-        require(iROUTER(ROUTER()).isBase(base), "!Base");
         require(iFACTORY(FACTORY()).isSynth(synth), "!Synth");
-        uint256 _actualInputBase = getAddedAmount(base, token); // Get input
+        uint256 _actualInputBase = getAddedAmount(USDV(), token); // Get input
         outputAmount = iUTILS(UTILS()).calcSwapOutput(
             _actualInputBase,
             mapToken_baseAmount[token],
             mapToken_tokenAmount[token]
         ); // Get output
         mapToken_baseAmount[token] += _actualInputBase; // Add BASE
-        emit MintSynth(member, base, _actualInputBase, token, outputAmount); // Mint Synth Event
+        emit MintSynth(member, USDV(), _actualInputBase, token, outputAmount); // Mint Synth Event
         iFACTORY(FACTORY()).mintSynth(synth, member, outputAmount); // Ask factory to mint to member
     }
 
