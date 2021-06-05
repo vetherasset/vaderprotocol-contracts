@@ -183,8 +183,6 @@ contract Pools {
             mapToken_baseAmount[pool] += _actualInput;
         } else {
             mapToken_tokenAmount[pool] += _actualInput;
-            // } else if(isSynth()){
-            //     //burnSynth && deleteUnits
         }
         emit Sync(token, pool, _actualInput);
     }
@@ -289,6 +287,7 @@ contract Pools {
             pooledUSDV = _balance;
         } else {
             // Want to know added Asset/Anchor
+            require((isAsset(_token) || isAnchor(_token)), '!POOL');
             require(_token == _pool, "!pool");
             addedAmount = _balance - mapToken_tokenAmount[_pool];
         }
