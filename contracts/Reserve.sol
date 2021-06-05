@@ -134,12 +134,12 @@ contract Reserve {
         return iERC20(USDV()).balanceOf(address(this));
     }
 
+    // Want to get part of the reserve that is not allocated
     function unallocatedVADER() public view returns (uint256 amount) {
-        if(reserveVADER() < allocatedVADER){
-            amount = reserveVADER();
-        } else {
-            amount = reserveVADER() - allocatedVADER;
+        if(reserveVADER() > allocatedVADER){
+            amount = reserveVADER() - allocatedVADER; // The difference
         }
+        // Else 0
     }
 
     //============================== HELPERS ================================//
