@@ -10,6 +10,7 @@ import "./interfaces/iVADER.sol";
 import "./interfaces/iRESERVE.sol";
 import "./interfaces/iPOOLS.sol";
 import "./interfaces/iSYNTH.sol";
+import "./interfaces/iFACTORY.sol";
 
 import "hardhat/console.sol";
 
@@ -302,6 +303,7 @@ contract Router {
     function listAnchor(address token) external {
         require(arrayAnchors.length < anchorLimit); // Limit
         require(iPOOLS(POOLS()).isAnchor(token)); // Must be anchor
+        require(!iFACTORY(FACTORY()).isSynth(token), "Synth!"); // Must not be synth
         arrayAnchors.push(token); // Add
         mapAnchorAddress_arrayAnchorsIndex1[token] = arrayAnchors.length; // Store 1-based index
         arrayPrices.push(iUTILS(UTILS()).calcValueInBase(token, one));
@@ -313,7 +315,8 @@ contract Router {
         require(newToken != oldToken, "New token not new");
         uint idx1 = mapAnchorAddress_arrayAnchorsIndex1[oldToken];
         require(idx1 != 0, "No such old token");
-        require(iPOOLS(POOLS()).isAnchor(newToken), "Not anchor");
+        require(iPOOLS(POOLS()).isAnchor(newToken), "!Anchor"); // Must be anchor
+        require(!iFACTORY(FACTORY()).isSynth(newToken), "Synth!"); // Must not be synth
         require((iPOOLS(POOLS()).getBaseAmount(newToken) > iPOOLS(POOLS()).getBaseAmount(oldToken)), "Not deeper");
         iUTILS(UTILS()).requirePriceBounds(oldToken, outsidePriceLimit, false, getAnchorPrice()); // if price oldToken >5%
         iUTILS(UTILS()).requirePriceBounds(newToken, insidePriceLimit, true, getAnchorPrice()); // if price newToken <2%
@@ -491,6 +494,9 @@ contract Router {
     }
     function POOLS() internal view returns(address){
         return iDAO(iVADER(VADER).DAO()).POOLS();
+    }
+    function FACTORY() internal view returns(address){
+        return iDAO(iVADER(VADER).DAO()).FACTORY();
     }
     function UTILS() internal view returns(address){
         return iDAO(iVADER(VADER).DAO()).UTILS();
