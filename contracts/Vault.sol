@@ -154,7 +154,7 @@ contract Vault {
     function withdrawToVader(address asset, uint256 basisPoints) external returns (uint256 redeemedAmount) {
         redeemedAmount = _processWithdraw(asset, msg.sender, basisPoints); // Get amount to withdraw
         if(asset != USDV()){
-            redeemedAmount = iPOOLS(POOLS()).burnSynth(USDV(), asset, address(this)); // Burn to USDV
+            redeemedAmount = iPOOLS(POOLS()).burnSynth(asset, address(this)); // Burn to USDV
         }
         iERC20(USDV()).approve(VADER, type(uint256).max);
         iVADER(VADER).redeemToVADERForMember(msg.sender, redeemedAmount); // Redeem to VADER for Member

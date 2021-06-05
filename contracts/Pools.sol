@@ -217,7 +217,6 @@ contract Pools {
 
     // Burn a Synth to get out BASE
     function burnSynth(
-        address base,
         address token,
         address member
     ) external onlySystem returns (uint256 outputBase) {
@@ -230,8 +229,8 @@ contract Pools {
             mapToken_baseAmount[token]
         ); // Get output
         mapToken_baseAmount[token] -= outputBase; // Remove BASE
-        emit BurnSynth(member, base, outputBase, token, _actualInputSynth); // Burn Synth Event
-        transferOut(base, outputBase, member); // Send BASE to member
+        emit BurnSynth(member, USDV(), outputBase, token, _actualInputSynth); // Burn Synth Event
+        transferOut(USDV(), outputBase, member); // Send USDV to member
     }
 
     // Remove a synth, make other LPs richer
