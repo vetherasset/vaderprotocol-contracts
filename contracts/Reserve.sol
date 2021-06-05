@@ -137,8 +137,6 @@ contract Reserve {
     function unallocatedVADER() public view returns (uint256 amount) {
         if(reserveVADER() < allocatedVADER){
             amount = reserveVADER();
-        } else {
-            amount = reserveVADER() - allocatedVADER;
         }
     }
 
