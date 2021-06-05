@@ -197,27 +197,24 @@ contract Pools {
 
     // Mint a Synth against its own pool
     function mintSynth(
-        address base,
         address token,
         address member
     ) external onlySystem returns (uint256 outputAmount) {
         address synth = getSynth(token);
-        require(iROUTER(ROUTER()).isBase(base), "!Base");
         require(iFACTORY(FACTORY()).isSynth(synth), "!Synth");
-        uint256 _actualInputBase = getAddedAmount(base, token); // Get input
+        uint256 _actualInputBase = getAddedAmount(USDV(), token); // Get input
         outputAmount = iUTILS(UTILS()).calcSwapOutput(
             _actualInputBase,
             mapToken_baseAmount[token],
             mapToken_tokenAmount[token]
         ); // Get output
         mapToken_baseAmount[token] += _actualInputBase; // Add BASE
-        emit MintSynth(member, base, _actualInputBase, token, outputAmount); // Mint Synth Event
+        emit MintSynth(member, USDV(), _actualInputBase, token, outputAmount); // Mint Synth Event
         iFACTORY(FACTORY()).mintSynth(synth, member, outputAmount); // Ask factory to mint to member
     }
 
     // Burn a Synth to get out BASE
     function burnSynth(
-        address base,
         address token,
         address member
     ) external onlySystem returns (uint256 outputBase) {
@@ -230,8 +227,8 @@ contract Pools {
             mapToken_baseAmount[token]
         ); // Get output
         mapToken_baseAmount[token] -= outputBase; // Remove BASE
-        emit BurnSynth(member, base, outputBase, token, _actualInputSynth); // Burn Synth Event
-        transferOut(base, outputBase, member); // Send BASE to member
+        emit BurnSynth(member, USDV(), outputBase, token, _actualInputSynth); // Burn Synth Event
+        transferOut(USDV(), outputBase, member); // Send USDV to member
     }
 
     // Remove a synth, make other LPs richer

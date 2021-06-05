@@ -186,7 +186,7 @@ contract Router {
             if (!inSynth) {
                 outputAmount = iPOOLS(POOLS()).swap(_base, inputToken, _member, true);
             } else {
-                outputAmount = iPOOLS(POOLS()).burnSynth(_base, inputToken, _member);
+                outputAmount = iPOOLS(POOLS()).burnSynth(inputToken, _member);
             }
         } else if (isBase(inputToken)) {
             // BASE -> Token||Synth
@@ -194,7 +194,7 @@ contract Router {
             if (!outSynth) {
                 outputAmount = iPOOLS(POOLS()).swap(_base, outputToken, _member, false);
             } else {
-                outputAmount = iPOOLS(POOLS()).mintSynth(_base, outputToken, _member);
+                outputAmount = iPOOLS(POOLS()).mintSynth(outputToken, _member);
             }
         } else { // !isBase(inputToken) && !isBase(outputToken)
             // Token||Synth -> Token||Synth
@@ -203,13 +203,13 @@ contract Router {
             if (!inSynth) {
                 _intermediaryAmount = iPOOLS(POOLS()).swap(_base, inputToken, POOLS(), true);
             } else {
-                _intermediaryAmount = iPOOLS(POOLS()).burnSynth(_base, inputToken, POOLS());
+                _intermediaryAmount = iPOOLS(POOLS()).burnSynth(inputToken, POOLS());
             }
             require(iUTILS(UTILS()).calcSwapSlip(_intermediaryAmount, iPOOLS(POOLS()).getBaseAmount(outputToken)) <= slipLimit);
             if (!outSynth) {
                 outputAmount = iPOOLS(POOLS()).swap(_base, outputToken, _member, false);
             } else {
-                outputAmount = iPOOLS(POOLS()).mintSynth(_base, outputToken, _member);
+                outputAmount = iPOOLS(POOLS()).mintSynth(outputToken, _member);
             }
         }
         _handlePoolReward(_base, inputToken);

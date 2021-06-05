@@ -31,13 +31,11 @@ interface iPOOLS {
     function deploySynth(address token) external;
 
     function mintSynth(
-        address base,
         address token,
         address member
     ) external returns (uint256 outputAmount);
 
     function burnSynth(
-        address base,
         address token,
         address member
     ) external returns (uint256 outputBase);
