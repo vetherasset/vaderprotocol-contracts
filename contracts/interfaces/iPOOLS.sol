@@ -12,15 +12,11 @@ interface iPOOLS {
         address member
     ) external returns (uint256 liquidityUnits);
 
-    function addLiquidityDirectly(
-        address base,
-        address token
-    ) external returns (uint256 liquidityUnits);
-
     function removeLiquidity(
         address base,
         address token,
-        uint256 basisPoints
+        uint256 basisPoints,
+        address member
     ) external returns (uint256 units, uint256 outputBase, uint256 outputToken);
 
     function sync(address token, address pool) external;

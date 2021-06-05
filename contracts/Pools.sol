@@ -70,9 +70,9 @@ contract Pools {
     );
     event SynthSync(address indexed token, uint256 burntSynth, uint256 deletedUnits);
 
-    // Only ROUTER can execute
-    modifier onlyRouter() {
-        require(msg.sender == ROUTER(), "!ROUTER");
+    // Only SYSTEM can execute
+    modifier onlySystem() {
+        require((msg.sender == ROUTER() || msg.sender == VAULT() || msg.sender == LENDER()), "!SYSTEM");
         _;
     }
 
@@ -84,11 +84,11 @@ contract Pools {
 
     //====================================LIQUIDITY=========================================//
 
-    function _addLiquidity(
+    function addLiquidity(
         address base,
         address token,
         address member
-    ) internal returns (uint256 liquidityUnits) {
+    ) external onlySystem returns (uint256 liquidityUnits) {
         require(iROUTER(ROUTER()).isBase(base), "!Base");
         require(token != USDV() && token != VADER); // Prohibited
         uint256 _actualInputBase;
@@ -120,44 +120,12 @@ contract Pools {
         emit AddLiquidity(member, base, _actualInputBase, token, _actualInputToken, liquidityUnits);
     }
 
-    function addLiquidity(
-        address base,
-        address token,
-        address member
-    ) external returns (uint256 liquidityUnits) {
-        require(msg.sender == ROUTER(), "Not ROUTER");
-        return _addLiquidity(base, token, member);
-    }
-
-    function addLiquidityDirectly(
-        address base,
-        address token
-    ) external returns (uint256 liquidityUnits) {
-        return _addLiquidity(base, token, msg.sender);
-    }
-
     function removeLiquidity(
-        address base,
-        address token,
-        uint256 basisPoints
-    ) external returns (uint256, uint256, uint256) {
-        return _removeLiquidity(base, token, basisPoints, tx.origin); // Because this contract is wrapped by a router
-    }
-
-    function removeLiquidityDirectly(
-        address base,
-        address token,
-        uint256 basisPoints
-    ) external returns (uint256, uint256, uint256) {
-        return _removeLiquidity(base, token, basisPoints, msg.sender); // If want to interact directly
-    }
-
-    function _removeLiquidity(
         address base,
         address token,
         uint256 basisPoints,
         address member
-    ) internal returns (uint256 units, uint256 outputBase, uint256 outputToken) {
+    ) external onlySystem returns (uint256 units, uint256 outputBase, uint256 outputToken) {
         require(iROUTER(ROUTER()).isBase(base), "!Base");
         (units, outputBase, outputToken) = iUTILS(UTILS()).getMemberShare(basisPoints, token, member);
         mapToken_Units[token] -= units;
@@ -171,13 +139,13 @@ contract Pools {
 
     //=======================================SWAP===========================================//
 
-    // Designed to be called by a router, but can be called directly
+    // Called only by a router
     function swap(
         address base,
         address token,
         address member,
         bool toBase
-    ) external returns (uint256 outputAmount) {
+    ) external onlySystem returns (uint256 outputAmount) {
         require(iROUTER(ROUTER()).isBase(base), "!Base");
         if (toBase) {
             uint256 _actualInput = getAddedAmount(token, token);
@@ -234,10 +202,10 @@ contract Pools {
         address base,
         address token,
         address member
-    ) external returns (uint256 outputAmount) {
+    ) external onlySystem returns (uint256 outputAmount) {
         address synth = getSynth(token);
         require(iROUTER(ROUTER()).isBase(base), "!Base");
-        require(iFACTORY(FACTORY()).isSynth(synth), "!synth");
+        require(iFACTORY(FACTORY()).isSynth(synth), "!Synth");
         uint256 _actualInputBase = getAddedAmount(base, token); // Get input
         outputAmount = iUTILS(UTILS()).calcSwapOutput(
             _actualInputBase,
@@ -254,7 +222,7 @@ contract Pools {
         address base,
         address token,
         address member
-    ) external returns (uint256 outputBase) {
+    ) external onlySystem returns (uint256 outputBase) {
         address synth = getSynth(token);
         uint256 _actualInputSynth = iERC20(synth).balanceOf(address(this)); // Get input
         iERC20(synth).burn(_actualInputSynth); // Burn it
@@ -291,7 +259,7 @@ contract Pools {
     //     uint256 units,
     //     address token,
     //     address member
-    // ) external onlyRouter {
+    // ) external onlySystem {
     //     mapTokenMember_Units[token][member] -= units;
     //     mapTokenMember_Units[token][msg.sender] += units; // Assign to Router
     // }
@@ -301,7 +269,7 @@ contract Pools {
     //     uint256 units,
     //     address token,
     //     address member
-    // ) external onlyRouter {
+    // ) external onlySystem {
     //     mapTokenMember_Units[token][msg.sender] -= units;
     //     mapTokenMember_Units[token][member] += units;
     // }
@@ -382,6 +350,12 @@ contract Pools {
     }
     function ROUTER() internal view returns(address){
         return iDAO(iVADER(VADER).DAO()).ROUTER();
+    }
+    function VAULT() internal view returns(address){
+        return iDAO(iVADER(VADER).DAO()).VAULT();
+    }
+    function LENDER() internal view returns(address){
+        return iDAO(iVADER(VADER).DAO()).LENDER();
     }
     function FACTORY() internal view returns(address){
         return iDAO(iVADER(VADER).DAO()).FACTORY();
