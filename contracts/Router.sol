@@ -323,20 +323,19 @@ contract Router {
     function snapshotNewAnchor(address oldToken, address newToken) external {
         if((block.timestamp - mapToken_snapshotTime[newToken]) > intervalTWAP){ // Only if more than an interval ago 
             uint256 _timeNow = block.timestamp;
-            uint256 _accumulatedDepth = mapToken_accumulatedDepth[newToken];
             mapToken_snapshotTime[newToken] = _timeNow;
-            mapToken_snapshotDepth[newToken] = _accumulatedDepth;
+            mapToken_snapshotDepth[newToken] = mapToken_accumulatedDepth[newToken];
             mapTokenToken_snapshotTime[oldToken][newToken] = _timeNow; // Also need to snapshot old token
-            mapTokenToken_snapshotDepth[oldToken][newToken] = _accumulatedDepth;
+            mapTokenToken_snapshotDepth[oldToken][newToken] = mapToken_accumulatedDepth[oldToken];
         }
     }
 
     function replaceAnchor(address oldToken, address newToken) external {
         require(newToken != oldToken, "New token not new");
-        require(iPOOLS(POOLS()).isAnchor(newToken), "!Anchor"); // Must be anchor
-        require(!iFACTORY(FACTORY()).isSynth(newToken), "Synth!"); // Must not be synth
         uint idx1 = mapAnchorAddress_arrayAnchorsIndex1[oldToken];
         require(idx1 != 0, "No such old token");
+        require(iPOOLS(POOLS()).isAnchor(newToken), "!Anchor"); // Must be anchor
+        require(!iFACTORY(FACTORY()).isSynth(newToken), "Synth!"); // Must not be synth
         require((block.timestamp - mapToken_snapshotTime[newToken]) > intervalTWAP, 'Too quick');
         require((getDepthSinceSnapshot(newToken) > getPairedDepthSinceSnapshot(oldToken, newToken)), "Not deeper");
         iUTILS(UTILS()).requirePriceBounds(oldToken, outsidePriceLimit, false, getAnchorPrice()); // if price oldToken >5%
