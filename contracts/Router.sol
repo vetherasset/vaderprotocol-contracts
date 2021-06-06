@@ -42,6 +42,13 @@ contract Router {
     uint256 public startIntervalTime;
     uint256 public cachedIntervalAccumulatedPrice;
     uint256 public cachedIntervalTime;
+    
+    mapping(address => uint256) public mapToken_lastTime;
+    mapping(address => uint256) public mapToken_accumulatedDepth;
+    mapping(address => uint256) public mapToken_snapshotTime;
+    mapping(address => uint256) public mapToken_snapshotDepth;
+    mapping(address => mapping(address => uint256)) public mapTokenToken_snapshotTime;
+    mapping(address => mapping(address => uint256)) public mapTokenToken_snapshotDepth;
 
     mapping(address => mapping(address => uint256)) public mapMemberToken_depositBase;
     mapping(address => mapping(address => uint256)) public mapMemberToken_depositToken;
@@ -109,7 +116,7 @@ contract Router {
         uint256 _actualInputToken = moveTokenToPools(token, inputToken);
         address _member = msg.sender;
         addDepositData(_member, token, _actualInputBase, _actualInputToken);
-        updateTWAPPrice();
+        updateTWAP();
         return iPOOLS(POOLS()).addLiquidity(base, token, _member);
     }
 
@@ -167,7 +174,7 @@ contract Router {
         bool outSynth,
         uint256 slipLimit
     ) public returns (uint256 outputAmount) {
-        updateTWAPPrice();
+        updateTWAP();
         address _member = msg.sender;
         if (!inSynth) {
             moveTokenToPools(inputToken, inputAmount);
@@ -216,6 +223,8 @@ contract Router {
         _handlePoolReward(_base, outputToken);
         _handleAnchorPriceUpdate(inputToken);
         _handleAnchorPriceUpdate(outputToken);
+        _handleDepthAccumulation(inputToken);
+        _handleDepthAccumulation(outputToken);
     }
 
     //====================================INCENTIVES========================================//
@@ -311,13 +320,25 @@ contract Router {
         updateAnchorPrice(token);
     }
 
+    function snapshotNewAnchor(address oldToken, address newToken) external {
+        if((block.timestamp - mapToken_snapshotTime[newToken]) > intervalTWAP){ // Only if more than an interval ago 
+            uint256 _timeNow = block.timestamp;
+            uint256 _accumulatedDepth = mapToken_accumulatedDepth[newToken];
+            mapToken_snapshotTime[newToken] = _timeNow;
+            mapToken_snapshotDepth[newToken] = _accumulatedDepth;
+            mapTokenToken_snapshotTime[oldToken][newToken] = _timeNow; // Also need to snapshot old token
+            mapTokenToken_snapshotDepth[oldToken][newToken] = _accumulatedDepth;
+        }
+    }
+
     function replaceAnchor(address oldToken, address newToken) external {
         require(newToken != oldToken, "New token not new");
-        uint idx1 = mapAnchorAddress_arrayAnchorsIndex1[oldToken];
-        require(idx1 != 0, "No such old token");
         require(iPOOLS(POOLS()).isAnchor(newToken), "!Anchor"); // Must be anchor
         require(!iFACTORY(FACTORY()).isSynth(newToken), "Synth!"); // Must not be synth
-        require((iPOOLS(POOLS()).getBaseAmount(newToken) > iPOOLS(POOLS()).getBaseAmount(oldToken)), "Not deeper");
+        uint idx1 = mapAnchorAddress_arrayAnchorsIndex1[oldToken];
+        require(idx1 != 0, "No such old token");
+        require((block.timestamp - mapToken_snapshotTime[newToken]) > intervalTWAP, 'Too quick');
+        require((getDepthSinceSnapshot(newToken) > getPairedDepthSinceSnapshot(oldToken, newToken)), "Not deeper");
         iUTILS(UTILS()).requirePriceBounds(oldToken, outsidePriceLimit, false, getAnchorPrice()); // if price oldToken >5%
         iUTILS(UTILS()).requirePriceBounds(newToken, insidePriceLimit, true, getAnchorPrice()); // if price newToken <2%
         _isCurated[oldToken] = false;
@@ -325,6 +346,27 @@ contract Router {
         arrayAnchors[idx1 - 1] = newToken;
         updateAnchorPrice(newToken);
     }
+
+    function _handleDepthAccumulation(address _token) internal {
+        if (iPOOLS(POOLS()).isAnchor(_token)) {
+            uint256 _timeSince = block.timestamp - mapToken_lastTime[_token]; // Get elapsed time
+            mapToken_accumulatedDepth[_token] += _timeSince * iPOOLS(POOLS()).getBaseAmount(_token); // Accumulate against depth
+            mapToken_lastTime[_token] = block.timestamp; // Reset
+        }
+    }
+
+    // Depth of Pool
+    function getDepthSinceSnapshot(address token) public view returns (uint256) {
+        uint256 _timeSince = block.timestamp - mapToken_snapshotTime[token];  
+        return mapToken_snapshotDepth[token] / _timeSince;
+    }
+    // Depth of Base
+    function getPairedDepthSinceSnapshot(address base, address token) public view returns (uint256) {
+        uint256 _timeSince = block.timestamp - mapTokenToken_snapshotTime[base][token];  
+        return mapTokenToken_snapshotDepth[base][token] / _timeSince;
+    }
+
+       //====================================== PRICING =========================================//    
 
     function _handleAnchorPriceUpdate(address _token) internal {
         if (iPOOLS(POOLS()).isAnchor(_token)) {
@@ -340,19 +382,6 @@ contract Router {
         }
     }
 
-    function updateTWAPPrice() public {
-        uint _now = block.timestamp;
-        uint _secondsSinceLastUpdate = _now - lastUpdatedTime;
-        accumulatedPrice += _secondsSinceLastUpdate * getAnchorPrice();
-        lastUpdatedTime = _now;
-        if((_now - cachedIntervalTime) > intervalTWAP){ // More than the interval, update interval params
-            startIntervalAccumulatedPrice = cachedIntervalAccumulatedPrice; // update price from cache
-            startIntervalTime = cachedIntervalTime; // update time from cache
-            cachedIntervalAccumulatedPrice = accumulatedPrice; // reset cache
-            cachedIntervalTime = _now; // reset cache
-        }
-    }
-
     // Price of 1 VADER in USD
     function getAnchorPrice() public view returns (uint256 anchorPrice) {
         // if array len odd  3/2 = 1; 5/2 = 2
@@ -365,6 +394,19 @@ contract Router {
             anchorPrice = _sortedAnchorFeed[_anchorMiddle]; // Return the middle
         } else { // arrayPrices.length is even
             anchorPrice = (_sortedAnchorFeed[_anchorMiddle] / 2) + (_sortedAnchorFeed[_anchorMiddle - 1] / 2); // Return the average of middle pair
+        }
+    }
+
+    function updateTWAP() public {
+        uint _now = block.timestamp;
+        uint _secondsSinceLastUpdate = _now - lastUpdatedTime;
+        accumulatedPrice += _secondsSinceLastUpdate * getAnchorPrice();
+        lastUpdatedTime = _now;
+        if((_now - cachedIntervalTime) > intervalTWAP){ // More than the interval, update interval params
+            startIntervalAccumulatedPrice = cachedIntervalAccumulatedPrice; // update price from cache
+            startIntervalTime = cachedIntervalTime; // update time from cache
+            cachedIntervalAccumulatedPrice = accumulatedPrice; // reset cache
+            cachedIntervalTime = _now; // reset cache
         }
     }
 
