@@ -10,7 +10,6 @@ contract Factory {
 
     address[] public arraySynths;
     mapping(address => address) private mapToken_Synth;
-    mapping(address => bool) private _isSynth;
 
     event CreateSynth(address indexed token, address indexed pool);
 
@@ -26,7 +25,15 @@ contract Factory {
     //Create a synth asset
     function deploySynth(address token) external onlyPOOLS returns (address synth) {
         require(mapToken_Synth[token] == address(0), "CreateErr");
-        synth = address(new Synth(token));
+
+        bytes memory bytecode = type(Synth).creationCode;
+        bytes32 salt = keccak256(abi.encodePacked(token, address(this)));
+        assembly {
+            synth := create2(0, add(bytecode, 32), mload(bytecode), salt)
+        }
+
+        Synth(token).initialize(token);
+
         _addSynth(token, synth);
         emit CreateSynth(token, synth);
     }
@@ -44,12 +51,11 @@ contract Factory {
         return mapToken_Synth[token];
     }
     function isSynth(address token) public view returns (bool _exists){
-        return _isSynth[token];
+        return mapToken_Synth[token] != address(0);
     }
 
     function _addSynth(address _token, address _synth) internal {
         mapToken_Synth[_token] = _synth;
         arraySynths.push(_synth);
-        _isSynth[_synth] = true;
     }
 }
