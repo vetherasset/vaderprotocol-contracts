@@ -26,16 +26,15 @@ contract Synth is iERC20 {
     }
 
     // Minting event
-    constructor() {
-        FACTORY = msg.sender;
-    }
-    function initialize((address _token) onlyFACTORY {
+    constructor(address _token) {
         TOKEN = _token;
+        FACTORY = msg.sender;
         string memory synthName = " - vSynth";
         string memory synthSymbol = ".v";
         name = string(abi.encodePacked(iERC20(_token).name(), synthName));
         symbol = string(abi.encodePacked(iERC20(_token).symbol(), synthSymbol));
     }
+
     //========================================iERC20=========================================//
     function balanceOf(address account) external view override returns (uint256) {
         return _balances[account];

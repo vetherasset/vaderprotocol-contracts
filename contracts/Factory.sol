@@ -25,15 +25,7 @@ contract Factory {
     //Create a synth asset
     function deploySynth(address token) external onlyPOOLS returns (address synth) {
         require(mapToken_Synth[token] == address(0), "CreateErr");
-
-        bytes memory bytecode = type(Synth).creationCode;
-        bytes32 salt = keccak256(abi.encodePacked(token, address(this)));
-        assembly {
-            synth := create2(0, add(bytecode, 32), mload(bytecode), salt)
-        }
-
-        Synth(token).initialize(token);
-
+        synth = address(new Synth(token));
         _addSynth(token, synth);
         emit CreateSynth(token, synth);
     }
