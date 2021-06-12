@@ -201,7 +201,6 @@ contract Pools {
         address member
     ) external onlySystem returns (uint256 outputAmount) {
         address synth = getSynth(token);
-        require(synth != address(0), "!Synth");
         uint256 _actualInputBase = getAddedAmount(USDV(), token); // Get input
         outputAmount = iUTILS(UTILS()).calcSwapOutput(
             _actualInputBase,

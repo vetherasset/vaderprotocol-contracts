@@ -108,10 +108,8 @@ contract Utils {
         uint256 _B = iPOOLS(POOLS()).getBaseAmount(token);
         uint256 _T = iPOOLS(POOLS()).getTokenAmount(token);
         address _synth = iFACTORY(FACTORY()).getSynth(token);
-        if(_synth != address(0)){
-            uint256 _S = iERC20(_synth).totalSupply();
-            _totalUnits = _totalUnits + calcSynthUnits(_S, _B, _T);
-        }
+        uint256 _S = iERC20(_synth).totalSupply();
+        _totalUnits = _totalUnits + calcSynthUnits(_S, _B, _T);
         outputBase = calcShare(units, _totalUnits, _B);
         outputToken = calcShare(units, _totalUnits, _T);
     }
