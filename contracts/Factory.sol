@@ -42,7 +42,7 @@ contract Factory {
     function getSynth(address token) external view returns (address synth){
         return mapToken_Synth[token];
     }
-    function isSynth(address token) public view returns (bool _exists){
+    function isSynth(address token) public view returns (bool) {
         return mapToken_Synth[token] != address(0);
     }
 
