@@ -4,7 +4,7 @@ pragma solidity 0.8.3;
 // Interfaces
 import "./interfaces/iERC20.sol";
 import "./interfaces/iERC677.sol"; 
-import "./interfaces/iDAO.sol";
+import "./interfaces/iGovernorAlpha.sol";
 import "./interfaces/iUTILS.sol";
 import "./interfaces/iUSDV.sol";
 import "./interfaces/iROUTER.sol";
@@ -32,15 +32,31 @@ contract Vader is iERC20 {
     uint256 public nextEraTime;
     uint256 public feeOnTransfer;
 
-    address public DAO;
+    address private governorAlpha;
+    address private admin;
 
     address public constant burnAddress = 0x0111011001100001011011000111010101100101;
 
     event NewEra(uint256 nextEraTime, uint256 emission);
 
-    // Only DAO can execute
-    modifier onlyDAO() {
-        require(msg.sender == DAO, "!DAO");
+    // Only TIMELOCK can execute
+    modifier onlyTIMELOCK() {
+        require(msg.sender == TIMELOCK(), "!TIMELOCK");
+        _;
+    }
+    // Only ADMIN can execute
+    modifier onlyADMIN() {
+        require(msg.sender == admin, "!ADMIN");
+        _;
+    }
+    // Only GovernorAlpha or TIMELOCK can execute
+    modifier onlyGovernorAlphaOrTIMELOCK() {
+        require(msg.sender == governorAlpha || msg.sender == TIMELOCK(), "!GovernorAlpha && !TIMELOCK");
+        _;
+    }
+    // Only Admin or TIMELOCK can execute
+    modifier onlyAdminOrTIMELOCK() {
+        require(msg.sender == admin || msg.sender == TIMELOCK(), "!Admin && !TIMELOCK");
         _;
     }
     // Only VAULT can execute
@@ -55,7 +71,8 @@ contract Vader is iERC20 {
         secondsPerEra = 1; //86400;
         nextEraTime = block.timestamp + secondsPerEra;
         emissionCurve = 10;
-        DAO = msg.sender; // Then call changeDAO() once DAO created
+        governorAlpha = msg.sender; // Then call changeGovernorAlpha() once GovernorAlpha created
+        admin = msg.sender;
     }
 
     //========================================iERC20=========================================//
@@ -181,32 +198,43 @@ contract Vader is iERC20 {
         emit Transfer(account, address(0), amount);
     }
 
-    //=========================================DAO=========================================//
+    //===================================== TIMELOCK ====================================//
     // Can start
-    function flipEmissions() external onlyDAO {
+    function flipEmissions() external onlyTIMELOCK {
         emitting = !emitting;
     }
 
     // Can stop
-    function flipMinting() external onlyDAO {
+    function flipMinting() external onlyADMIN {
         minting = !minting;
     }
 
     // Can set params
-    function setParams(uint256 newEra, uint256 newCurve) external onlyDAO {
+    function setParams(uint256 newEra, uint256 newCurve) external onlyTIMELOCK {
         secondsPerEra = newEra;
         emissionCurve = newCurve;
     }
 
-    // Can change DAO
-    function changeDAO(address newDAO) external onlyDAO {
-        require(newDAO != address(0), "address err");
-        DAO = newDAO;
+    // Can change GovernorAlpha
+    function changeGovernorAlpha(address newGovernorAlpha) external onlyGovernorAlphaOrTIMELOCK {
+        require(newGovernorAlpha != address(0), "address err");
+        governorAlpha = newGovernorAlpha;
     }
 
-    // Can purge DAO
-    function purgeDAO() external onlyDAO {
-        DAO = address(0);
+    // Can change Admin
+    function changeAdmin(address newAdmin) external onlyAdminOrTIMELOCK {
+        require(newAdmin != address(0), "address err");
+        admin = newAdmin;
+    }
+
+    // Can purge GovernorAlpha
+    function purgeGovernorAlpha() external onlyTIMELOCK {
+        governorAlpha = address(0);
+    }
+
+    // Can purge Admin
+    function purgeAdmin() external onlyTIMELOCK {
+        admin = address(0);
     }
 
     //======================================EMISSION========================================//
@@ -269,25 +297,33 @@ contract Vader is iERC20 {
         _mint(member, redeemAmount);
     }
 
-    //====================================== HELPERS ========================================//
+    //============================== HELPERS ================================//
 
+    function GovernorAlpha() external view returns(address){
+        return governorAlpha;
+    }
+    function Admin() external view returns(address){
+        return admin;
+    }
     function VETHER() internal view returns(address){
-        return iDAO(DAO).VETHER();
+        return iGovernorAlpha(governorAlpha).VETHER();
     }
     function USDV() internal view returns(address){
-        return iDAO(DAO).USDV();
+        return iGovernorAlpha(governorAlpha).USDV();
     }
     function VAULT() internal view returns(address){
-        return iDAO(DAO).VAULT();
+        return iGovernorAlpha(governorAlpha).VAULT();
     }
     function RESERVE() internal view returns(address){
-        return iDAO(DAO).RESERVE();
+        return iGovernorAlpha(governorAlpha).RESERVE();
     }
     function ROUTER() internal view returns(address){
-        return iDAO(DAO).ROUTER();
+        return iGovernorAlpha(governorAlpha).ROUTER();
     }
     function UTILS() internal view returns(address){
-        return iDAO(DAO).UTILS();
+        return iGovernorAlpha(governorAlpha).UTILS();
     }
-
+    function TIMELOCK() internal view returns(address){
+        return iGovernorAlpha(governorAlpha).TIMELOCK();
+    }
 }

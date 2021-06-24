@@ -4,7 +4,7 @@ pragma solidity 0.8.3;
 // Interfaces
 import "./interfaces/SafeERC20.sol";
 import "./interfaces/iERC20.sol";
-import "./interfaces/iDAO.sol";
+import "./interfaces/iGovernorAlpha.sol";
 import "./interfaces/iUTILS.sol";
 import "./interfaces/iVADER.sol";
 import "./interfaces/iROUTER.sol";
@@ -340,24 +340,27 @@ contract Pools {
     function isSynth(address token) external view returns (bool) {
         return iFACTORY(FACTORY()).isSynth(token);
     }
-    
+
+    function GovernorAlpha() internal view returns(address){
+        return iVADER(VADER).GovernorAlpha();
+    }
     function USDV() internal view returns(address){
-        return iDAO(iVADER(VADER).DAO()).USDV();
+        return iGovernorAlpha(GovernorAlpha()).USDV();
     }
     function ROUTER() internal view returns(address){
-        return iDAO(iVADER(VADER).DAO()).ROUTER();
+        return iGovernorAlpha(GovernorAlpha()).ROUTER();
     }
     function VAULT() internal view returns(address){
-        return iDAO(iVADER(VADER).DAO()).VAULT();
+        return iGovernorAlpha(GovernorAlpha()).VAULT();
     }
     function LENDER() internal view returns(address){
-        return iDAO(iVADER(VADER).DAO()).LENDER();
+        return iGovernorAlpha(GovernorAlpha()).LENDER();
     }
     function FACTORY() internal view returns(address){
-        return iDAO(iVADER(VADER).DAO()).FACTORY();
+        return iGovernorAlpha(GovernorAlpha()).FACTORY();
     }
     function UTILS() public view returns (address) {
-        return iDAO(iVADER(VADER).DAO()).UTILS();
+        return iGovernorAlpha(GovernorAlpha()).UTILS();
     }
 
 }

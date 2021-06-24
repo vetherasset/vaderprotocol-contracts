@@ -4,7 +4,7 @@ pragma solidity 0.8.3;
 // Interfaces
 import "./interfaces/SafeERC20.sol";
 import "./interfaces/iERC20.sol";
-import "./interfaces/iDAO.sol";
+import "./interfaces/iGovernorAlpha.sol";
 import "./interfaces/iUTILS.sol";
 import "./interfaces/iVADER.sol";
 import "./interfaces/iRESERVE.sol";
@@ -50,9 +50,9 @@ contract Router {
     event PoolReward(address indexed base, address indexed token, uint256 amount);
     event Curated(address indexed curator, address indexed token);
 
-    // Only DAO can execute
-    modifier onlyDAO() {
-        require(msg.sender == DAO(), "!DAO");
+    // Only TIMELOCK can execute
+    modifier onlyTIMELOCK() {
+        require(msg.sender == TIMELOCK(), "!TIMELOCK");
         _;
     }
 
@@ -72,14 +72,14 @@ contract Router {
         cachedIntervalTime = startIntervalTime;
     }
 
-    //=========================================DAO=========================================//
+    //====================================== TIMELOCK =====================================//
     // Can set params
     function setParams(
         uint256 newFactor,
         uint256 newTime,
         uint256 newLimit,
         uint256 newInterval
-    ) external onlyDAO {
+    ) external onlyTIMELOCK {
         rewardReductionFactor = newFactor;
         timeForFullProtection = newTime;
         curatedPoolLimit = newLimit;
@@ -90,7 +90,7 @@ contract Router {
         uint256 newLimit,
         uint256 newInside,
         uint256 newOutside
-    ) external onlyDAO {
+    ) external onlyTIMELOCK {
         anchorLimit = newLimit;
         insidePriceLimit = newInside;
         outsidePriceLimit = newOutside;
@@ -311,7 +311,7 @@ contract Router {
         updateAnchorPrice(token);
     }
 
-    function replaceAnchor(address oldToken, address newToken) external {
+    function replaceAnchor(address oldToken, address newToken) external onlyTIMELOCK {
         require(newToken != oldToken, "New token not new");
         uint idx1 = mapAnchorAddress_arrayAnchorsIndex1[oldToken];
         require(idx1 != 0, "No such old token");
@@ -483,23 +483,28 @@ contract Router {
         return mapMemberToken_lastDeposited[member][token];
     }
 
-    function DAO() internal view returns(address){
-        return iVADER(VADER).DAO();
+    //============================== HELPERS ================================//
+
+    function GovernorAlpha() internal view returns(address){
+        return iVADER(VADER).GovernorAlpha();
     }
     function USDV() internal view returns(address){
-        return iDAO(iVADER(VADER).DAO()).USDV();
+        return iGovernorAlpha(GovernorAlpha()).USDV();
     }
     function RESERVE() internal view returns(address){
-        return iDAO(iVADER(VADER).DAO()).RESERVE();
+        return iGovernorAlpha(GovernorAlpha()).RESERVE();
     }
     function POOLS() internal view returns(address){
-        return iDAO(iVADER(VADER).DAO()).POOLS();
+        return iGovernorAlpha(GovernorAlpha()).POOLS();
     }
     function FACTORY() internal view returns(address){
-        return iDAO(iVADER(VADER).DAO()).FACTORY();
+        return iGovernorAlpha(GovernorAlpha()).FACTORY();
     }
     function UTILS() internal view returns(address){
-        return iDAO(iVADER(VADER).DAO()).UTILS();
+        return iGovernorAlpha(GovernorAlpha()).UTILS();
+    }
+    function TIMELOCK() internal view returns(address){
+        return iGovernorAlpha(GovernorAlpha()).TIMELOCK();
     }
 
 }

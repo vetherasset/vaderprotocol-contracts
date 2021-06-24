@@ -4,7 +4,7 @@ pragma solidity 0.8.3;
 // Interfaces
 import "./interfaces/iERC20.sol";
 import "./interfaces/iERC677.sol"; 
-import "./interfaces/iDAO.sol";
+import "./interfaces/iGovernorAlpha.sol";
 import "./interfaces/iVADER.sol";
 import "./interfaces/iROUTER.sol";
 
@@ -24,9 +24,9 @@ contract USDV is iERC20 {
 
     address public immutable VADER;
 
-    // Only DAO can execute
-    modifier onlyDAO() {
-        require(msg.sender == DAO(), "!DAO");
+    // Only TIMELOCK can execute
+    modifier onlyTIMELOCK() {
+        require(msg.sender == TIMELOCK(), "!TIMELOCK");
         _;
     }
 
@@ -160,9 +160,9 @@ contract USDV is iERC20 {
         emit Transfer(account, address(0), amount);
     }
 
-    //=========================================DAO=========================================//
+    //======================================== TIMELOCK =========================================//
     // Can set params
-    function setParams(uint256 newDelay) external onlyDAO {
+    function setParams(uint256 newDelay) external onlyTIMELOCK {
         blockDelay = newDelay;
     }
 
@@ -195,10 +195,13 @@ contract USDV is iERC20 {
 
     //============================== HELPERS ================================//
 
-    function DAO() internal view returns (address) {
-        return iVADER(VADER).DAO();
+    function GovernorAlpha() internal view returns(address){
+        return iVADER(VADER).GovernorAlpha();
     }
     function ROUTER() internal view returns (address) {
-        return iDAO(iVADER(VADER).DAO()).ROUTER();
+        return iGovernorAlpha(GovernorAlpha()).ROUTER();
+    }
+    function TIMELOCK() internal view returns (address) {
+        return iGovernorAlpha(GovernorAlpha()).TIMELOCK();
     }
 }

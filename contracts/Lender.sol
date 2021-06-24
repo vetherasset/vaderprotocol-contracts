@@ -4,7 +4,7 @@ pragma solidity 0.8.3;
 // Interfaces
 import "./interfaces/SafeERC20.sol";
 import "./interfaces/iERC20.sol";
-import "./interfaces/iDAO.sol";
+import "./interfaces/iGovernorAlpha.sol";
 import "./interfaces/iUTILS.sol";
 import "./interfaces/iVADER.sol";
 import "./interfaces/iRESERVE.sol";
@@ -280,17 +280,22 @@ contract Lender {
         return mapCollateralAsset_NextEra[collateralAsset][debtAsset];
     }
 
+    //============================== HELPERS ================================//
+
+    function GovernorAlpha() internal view returns(address){
+        return iVADER(VADER).GovernorAlpha();
+    }
     function USDV() internal view returns(address){
-        return iDAO(iVADER(VADER).DAO()).USDV();
+        return iGovernorAlpha(GovernorAlpha()).USDV();
     }
     function RESERVE() internal view returns(address){
-        return iDAO(iVADER(VADER).DAO()).RESERVE();
+        return iGovernorAlpha(GovernorAlpha()).RESERVE();
     }
     function POOLS() internal view returns(address){
-        return iDAO(iVADER(VADER).DAO()).POOLS();
+        return iGovernorAlpha(GovernorAlpha()).POOLS();
     }
     function UTILS() internal view returns(address){
-        return iDAO(iVADER(VADER).DAO()).UTILS();
+        return iGovernorAlpha(GovernorAlpha()).UTILS();
     }
 
 }

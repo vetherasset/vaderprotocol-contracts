@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.3;
 
-interface iDAO {
+interface iGovernorAlpha {
     function VETHER() external view returns(address);
     function VADER() external view returns(address);
     function USDV() external view returns(address);
@@ -12,4 +12,5 @@ interface iDAO {
     function POOLS() external view returns(address);
     function FACTORY() external view returns(address);
     function UTILS() external view returns(address);
+    function TIMELOCK() external view returns(address);
 }

@@ -3,7 +3,7 @@ pragma solidity 0.8.3;
 
 // Interfaces
 import "./interfaces/iERC20.sol";
-import "./interfaces/iDAO.sol";
+import "./interfaces/iGovernorAlpha.sol";
 import "./interfaces/iVADER.sol";
 import "./interfaces/iROUTER.sol";
 import "./interfaces/iLENDER.sol";
@@ -390,20 +390,22 @@ contract Utils {
 
     //============================== HELPERS ================================//
 
+    function GovernorAlpha() internal view returns(address){
+        return iVADER(VADER).GovernorAlpha();
+    }
     function USDV() internal view returns(address){
-        return iDAO(iVADER(VADER).DAO()).USDV();
+        return iGovernorAlpha(GovernorAlpha()).USDV();
     }
     function ROUTER() internal view returns(address){
-        return iDAO(iVADER(VADER).DAO()).ROUTER();
+        return iGovernorAlpha(GovernorAlpha()).ROUTER();
     }
     function LENDER() internal view returns(address){
-        return iDAO(iVADER(VADER).DAO()).LENDER();
+        return iGovernorAlpha(GovernorAlpha()).LENDER();
     }
     function POOLS() internal view returns(address){
-        return iDAO(iVADER(VADER).DAO()).POOLS();
+        return iGovernorAlpha(GovernorAlpha()).POOLS();
     }
     function FACTORY() internal view returns(address){
-        return iDAO(iVADER(VADER).DAO()).FACTORY();
+        return iGovernorAlpha(GovernorAlpha()).FACTORY();
     }
-
 }

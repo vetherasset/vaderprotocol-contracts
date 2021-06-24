@@ -4,7 +4,7 @@ pragma solidity 0.8.3;
 // Interfaces
 import "./interfaces/SafeERC20.sol";
 import "./interfaces/iERC20.sol";
-import "./interfaces/iDAO.sol";
+import "./interfaces/iGovernorAlpha.sol";
 import "./interfaces/iVADER.sol";
 import "./interfaces/iUSDV.sol";
 
@@ -21,12 +21,12 @@ contract Reserve {
     uint256 public allocatedVADER;
     uint256 public vaultShare;
 
-    // Only DAO can execute
-    modifier onlyDAO() {
-        require(msg.sender == DAO(), "!DAO");
+    // Only TIMELOCK can execute
+    modifier onlyTIMELOCK() {
+        require(msg.sender == TIMELOCK(), "!TIMELOCK");
         _;
     }
-    // Only DAO can execute
+    // Only System can execute
     modifier onlySystem() {
         require(isPermitted(msg.sender));
         _;
@@ -55,16 +55,16 @@ contract Reserve {
         }
     }
     
-    //=========================================DAO=========================================//
+    //======================================= TIMELOCK =========================================//
 
-    function setParams(uint256 newSplit, uint256 newDelay, uint256 newShare) external onlyDAO {
+    function setParams(uint256 newSplit, uint256 newDelay, uint256 newShare) external onlyTIMELOCK {
         splitForUSDV = newSplit;
         minGrantTime = newDelay;
         vaultShare = newShare;
     }
 
     // Can issue grants
-    function grant(address recipient, uint256 amount) public onlyDAO {
+    function grant(address recipient, uint256 amount) public onlyTIMELOCK {
         require((block.timestamp - lastGranted) >= minGrantTime, "not too fast");
         lastGranted = block.timestamp;
         uint256 _reserveForGrant = reserveUSDV() / 10;
@@ -144,20 +144,23 @@ contract Reserve {
 
     //============================== HELPERS ================================//
 
-    function DAO() internal view returns(address){
-        return iVADER(VADER).DAO();
+    function GovernorAlpha() internal view returns(address){
+        return iVADER(VADER).GovernorAlpha();
     }
     function USDV() internal view returns(address){
-        return iDAO(iVADER(VADER).DAO()).USDV();
+        return iGovernorAlpha(GovernorAlpha()).USDV();
     }
     function VAULT() internal view returns(address){
-        return iDAO(iVADER(VADER).DAO()).VAULT();
+        return iGovernorAlpha(GovernorAlpha()).VAULT();
     }
     function ROUTER() internal view returns(address){
-        return iDAO(iVADER(VADER).DAO()).ROUTER();
+        return iGovernorAlpha(GovernorAlpha()).ROUTER();
     }
     function LENDER() internal view returns(address){
-        return iDAO(iVADER(VADER).DAO()).LENDER();
+        return iGovernorAlpha(GovernorAlpha()).LENDER();
+    }
+    function TIMELOCK() internal view returns(address){
+        return iGovernorAlpha(GovernorAlpha()).TIMELOCK();
     }
 
 }
