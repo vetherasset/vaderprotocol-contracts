@@ -3,7 +3,7 @@ pragma solidity 0.8.3;
 
 // Interfaces
 import "./interfaces/iERC20.sol";
-import "./interfaces/iERC677.sol"; 
+import "./interfaces/iERC677.sol";
 import "./interfaces/iGovernorAlpha.sol";
 import "./interfaces/iUTILS.sol";
 import "./interfaces/iUSDV.sol";
@@ -95,10 +95,12 @@ contract Vader is iERC20 {
         _approve(msg.sender, spender, amount);
         return true;
     }
+
     function increaseAllowance(address spender, uint256 addedValue) public virtual returns (bool) {
         _approve(msg.sender, spender, _allowances[msg.sender][spender]+(addedValue));
         return true;
     }
+
     function decreaseAllowance(address spender, uint256 subtractedValue) public virtual returns (bool) {
         uint256 currentAllowance = _allowances[msg.sender][spender];
         require(currentAllowance >= subtractedValue, "allowance err");
@@ -134,19 +136,20 @@ contract Vader is iERC20 {
         }
         return true;
     }
+
     //iERC677 approveAndCall
     function approveAndCall(address recipient, uint amount, bytes calldata data) public returns (bool) {
-      _approve(msg.sender, recipient, amount);
-      iERC677(recipient).onTokenApproval(address(this), amount, msg.sender, data); // Amount is passed thru to recipient
-      return true;
-     }
+        _approve(msg.sender, recipient, amount);
+        iERC677(recipient).onTokenApproval(address(this), amount, msg.sender, data); // Amount is passed thru to recipient
+        return true;
+    }
 
-      //iERC677 transferAndCall
+    //iERC677 transferAndCall
     function transferAndCall(address recipient, uint amount, bytes calldata data) public returns (bool) {
-      _transfer(msg.sender, recipient, amount);
-      iERC677(recipient).onTokenTransfer(address(this), amount, msg.sender, data); // Amount is passed thru to recipient 
-      return true;
-     }
+        _transfer(msg.sender, recipient, amount);
+        iERC677(recipient).onTokenTransfer(address(this), amount, msg.sender, data); // Amount is passed thru to recipient 
+        return true;
+    }
 
     // Internal transfer function
     function _transfer(
@@ -157,8 +160,9 @@ contract Vader is iERC20 {
         require(sender != address(0), "sender");
         require(recipient != address(this), "recipient");
         require(_balances[sender] >= amount, "balance err");
-        uint _fee = iUTILS(UTILS()).calcPart(feeOnTransfer, amount);  // Critical functionality
-        if(_fee <= amount){                            // Stops reverts if UTILS corrupted
+        uint _fee = iUTILS(UTILS()).calcPart(feeOnTransfer, amount); // Critical functionality
+        if (_fee <= amount) {
+            // Stops reverts if UTILS corrupted
             amount -= _fee;
             _burn(sender, _fee);
         }
@@ -268,7 +272,7 @@ contract Vader is iERC20 {
     //======================================ASSET MINTING========================================//
     // VETHER Owners to Upgrade
     function upgrade(uint256 amount) external {
-        require(iERC20(VETHER()).transferFrom(msg.sender, burnAddress, amount)); // safeERC20 not needed; vether trusted
+        require(iERC20(VETHER()).transferFrom(msg.sender, burnAddress, amount), "!Transfer"); // safeERC20 not needed; vether trusted
         _mint(msg.sender, amount * conversionFactor);
     }
 
@@ -291,7 +295,7 @@ contract Vader is iERC20 {
     // Redeem on behalf of member
     function redeemToVADERForMember(address member, uint256 amount) public onlyVAULT returns (uint256 redeemAmount) {
         require(minting, "not minting");
-        require(iERC20(USDV()).transferFrom(msg.sender, address(this), amount));
+        require(iERC20(USDV()).transferFrom(msg.sender, address(this), amount), "!Transfer");
         iERC20(USDV()).burn(amount);
         redeemAmount = iROUTER(ROUTER()).getVADERAmount(amount); // Critical pricing functionality
         _mint(member, redeemAmount);
@@ -299,31 +303,39 @@ contract Vader is iERC20 {
 
     //============================== HELPERS ================================//
 
-    function GovernorAlpha() external view returns(address){
+    function GovernorAlpha() external view returns (address) {
         return governorAlpha;
     }
-    function Admin() external view returns(address){
+
+    function Admin() external view returns (address) {
         return admin;
     }
-    function VETHER() internal view returns(address){
+
+    function VETHER() internal view returns (address) {
         return iGovernorAlpha(governorAlpha).VETHER();
     }
-    function USDV() internal view returns(address){
+
+    function USDV() internal view returns (address) {
         return iGovernorAlpha(governorAlpha).USDV();
     }
-    function VAULT() internal view returns(address){
+
+    function VAULT() internal view returns (address) {
         return iGovernorAlpha(governorAlpha).VAULT();
     }
-    function RESERVE() internal view returns(address){
+
+    function RESERVE() internal view returns (address) {
         return iGovernorAlpha(governorAlpha).RESERVE();
     }
-    function ROUTER() internal view returns(address){
+
+    function ROUTER() internal view returns (address) {
         return iGovernorAlpha(governorAlpha).ROUTER();
     }
-    function UTILS() internal view returns(address){
+
+    function UTILS() internal view returns (address) {
         return iGovernorAlpha(governorAlpha).UTILS();
     }
-    function TIMELOCK() internal view returns(address){
+
+    function TIMELOCK() internal view returns (address) {
         return iGovernorAlpha(governorAlpha).TIMELOCK();
     }
 }

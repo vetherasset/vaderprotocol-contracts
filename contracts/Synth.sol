@@ -3,7 +3,7 @@ pragma solidity 0.8.3;
 
 // Interfaces
 import "./interfaces/iERC20.sol";
-import "./interfaces/iERC677.sol"; 
+import "./interfaces/iERC677.sol";
 
 // Synth Contract
 contract Synth is iERC20 {
@@ -55,10 +55,12 @@ contract Synth is iERC20 {
         _approve(msg.sender, spender, amount);
         return true;
     }
+
     function increaseAllowance(address spender, uint256 addedValue) public virtual returns (bool) {
-        _approve(msg.sender, spender, _allowances[msg.sender][spender]+(addedValue));
+        _approve(msg.sender, spender, _allowances[msg.sender][spender] + (addedValue));
         return true;
     }
+
     function decreaseAllowance(address spender, uint256 subtractedValue) public virtual returns (bool) {
         uint256 currentAllowance = _allowances[msg.sender][spender];
         require(currentAllowance >= subtractedValue, "allowance err");
@@ -73,7 +75,8 @@ contract Synth is iERC20 {
     ) internal virtual {
         require(owner != address(0), "sender");
         require(spender != address(0), "spender");
-        if (_allowances[owner][spender] < type(uint256).max) { // No need to re-approve if already max
+        if (_allowances[owner][spender] < type(uint256).max) {
+            // No need to re-approve if already max
             _allowances[owner][spender] = amount;
             emit Approval(owner, spender, amount);
         }
@@ -94,19 +97,20 @@ contract Synth is iERC20 {
         }
         return true;
     }
+
     //iERC677 approveAndCall
     function approveAndCall(address recipient, uint amount, bytes calldata data) public returns (bool) {
-      _approve(msg.sender, recipient, amount);
-      iERC677(recipient).onTokenApproval(address(this), amount, msg.sender, data); // Amount is passed thru to recipient
-      return true;
-     }
+        _approve(msg.sender, recipient, amount);
+        iERC677(recipient).onTokenApproval(address(this), amount, msg.sender, data); // Amount is passed thru to recipient
+        return true;
+    }
 
-      //iERC677 transferAndCall
+    //iERC677 transferAndCall
     function transferAndCall(address recipient, uint amount, bytes calldata data) public returns (bool) {
-      _transfer(msg.sender, recipient, amount);
-      iERC677(recipient).onTokenTransfer(address(this), amount, msg.sender, data); // Amount is passed thru to recipient 
-      return true;
-     }
+        _transfer(msg.sender, recipient, amount);
+        iERC677(recipient).onTokenTransfer(address(this), amount, msg.sender, data); // Amount is passed thru to recipient
+        return true;
+    }
 
     // Internal transfer function
     function _transfer(

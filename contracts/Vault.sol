@@ -43,10 +43,10 @@ contract Vault {
     }
 
     // @notice A record of votes checkpoints for each account, by index
-    mapping (address => mapping (uint32 => Checkpoint)) public checkpoints;
+    mapping(address => mapping(uint32 => Checkpoint)) public checkpoints;
 
     // @notice The number of checkpoints for each account
-    mapping (address => uint32) public numCheckpoints;
+    mapping(address => uint32) public numCheckpoints;
 
     // @notice The EIP-712 typehash for the contract's domain
     bytes32 public constant DOMAIN_TYPEHASH = keccak256("EIP712Domain(string name,uint256 chainId,address verifyingContract)");
@@ -55,7 +55,7 @@ contract Vault {
     bytes32 public constant DELEGATION_TYPEHASH = keccak256("Delegation(address delegatee,uint256 nonce,uint256 expiry)");
 
     // @notice A record of states for signing / validating signatures
-    mapping (address => uint) public nonces;
+    mapping(address => uint) public nonces;
 
     // Events
     // @notice An event thats emitted when an account changes its delegate
@@ -105,7 +105,7 @@ contract Vault {
     //======================================DEPOSITS========================================//
 
     // Deposit USDV or SYNTHS
-    function deposit(address asset, uint256 amount) external  returns(uint256) {
+    function deposit(address asset, uint256 amount) external  returns (uint256) {
         return depositForMember(asset, msg.sender, amount);
     }
 
@@ -114,7 +114,7 @@ contract Vault {
         address asset,
         address member,
         uint256 amount
-    ) public returns(uint256){
+    ) public returns (uint256) {
         require(((iFACTORY(FACTORY()).isSynth(asset)) || asset == USDV()), "!Permitted"); // Only Synths or USDV
         require(iERC20(asset).transferFrom(msg.sender, address(this), amount));
         return _deposit(asset, member, amount);
@@ -124,15 +124,15 @@ contract Vault {
         address _asset,
         address _member,
         uint256 _amount
-    ) internal returns(uint256 weight){
+    ) internal returns (uint256 weight) {
         mapMemberAsset_lastTime[_member][_asset] = block.timestamp; // Time of deposit
         mapMemberAsset_deposit[_member][_asset] += _amount; // Record deposit for member
         mapAsset_deposit[_asset] += _amount; // Record total deposit
         mapAsset_balance[_asset] = iERC20(_asset).balanceOf(address(this)); // sync deposits
-        if(mapAsset_lastHarvestedTime[_asset] == 0){
+        if (mapAsset_lastHarvestedTime[_asset] == 0) {
             mapAsset_lastHarvestedTime[_asset] = block.timestamp;
         }
-        if(_asset == USDV()){
+        if (_asset == USDV()) {
             weight = _amount;
         } else {
             weight = iUTILS(UTILS()).calcSwapValueInBase(iSYNTH(_asset).TOKEN(), _amount);
@@ -159,11 +159,11 @@ contract Vault {
         emit Harvests(asset, reward);
     }
 
-    function calcRewardForAsset(address asset) public view returns(uint256 reward) {
+    function calcRewardForAsset(address asset) public view returns (uint256 reward) {
         uint256 _owed = iRESERVE(RESERVE()).getVaultReward();
         uint256 _rewardsPerSecond = _owed / secondsPerYear; // Deplete over 1 year
         reward = (block.timestamp - mapAsset_lastHarvestedTime[asset]) * _rewardsPerSecond; // Multiply since last harvest
-        if(reward > _owed){
+        if (reward > _owed) {
             reward = _owed; // If too much
         }
         uint256 _weight = mapAsset_deposit[asset]; // Total Deposit
@@ -184,7 +184,7 @@ contract Vault {
     // Withdraw to VADER
     function withdrawToVader(address asset, uint256 basisPoints) external returns (uint256 redeemedAmount) {
         redeemedAmount = _processWithdraw(asset, msg.sender, basisPoints); // Get amount to withdraw
-        if(asset != USDV()){
+        if (asset != USDV()) {
             redeemedAmount = iPOOLS(POOLS()).burnSynth(asset, address(this)); // Burn to USDV
         }
         iERC20(USDV()).approve(VADER, type(uint256).max);
@@ -244,9 +244,9 @@ contract Vault {
         bytes32 structHash = keccak256(abi.encode(DELEGATION_TYPEHASH, delegatee, nonce, expiry));
         bytes32 digest = keccak256(abi.encodePacked("\x19\x01", domainSeparator, structHash));
         address signatory = ecrecover(digest, v, r, s);
-        require(signatory != address(0), "Vault::delegateBySig: invalid signature");
-        require(nonce == nonces[signatory]++, "Vault::delegateBySig: invalid nonce");
-        require(block.timestamp <= expiry, "Vault::delegateBySig: signature expired");
+        require(signatory != address(0), "invalid signature");
+        require(nonce == nonces[signatory]++, "invalid nonce");
+        require(block.timestamp <= expiry, "signature expired");
         return _delegate(signatory, delegatee);
     }
 
@@ -268,7 +268,7 @@ contract Vault {
      * @return The number of votes the account had as of the given block
      */
     function getPriorVotes(address account, uint blockNumber) external view returns (uint256) {
-        require(blockNumber < block.number, "Vault::getPriorVotes: not yet determined");
+        require(blockNumber < block.number, "not yet determined");
 
         uint32 nCheckpoints = numCheckpoints[account];
         if (nCheckpoints == 0) {
@@ -303,7 +303,7 @@ contract Vault {
 
     function _delegate(address delegator, address delegatee) internal {
         address currentDelegate = delegates[delegator];
-        uint256 delegatorBalance = this.getMemberWeight(delegator);
+        uint256 delegatorBalance = mapMember_weight[delegator];
         delegates[delegator] = delegatee;
 
         emit DelegateChanged(delegator, currentDelegate, delegatee);
@@ -330,7 +330,7 @@ contract Vault {
     }
 
     function _writeCheckpoint(address delegatee, uint32 nCheckpoints, uint256 oldVotes, uint256 newVotes) internal {
-        uint32 blockNumber = safe32(block.number, "Vault::_writeCheckpoint: block number exceeds 32 bits");
+        uint32 blockNumber = safe32(block.number, "block number exceeds 32 bits");
 
         if (nCheckpoints > 0 && checkpoints[delegatee][nCheckpoints - 1].fromBlock == blockNumber) {
             checkpoints[delegatee][nCheckpoints - 1].votes = newVotes;
@@ -387,29 +387,34 @@ contract Vault {
         return iERC20(USDV()).totalSupply();
     }
 
-    //============================== HELPERS ================================//
-
-    function GovernorAlpha() internal view returns(address){
+    function GovernorAlpha() internal view returns (address) {
         return iVADER(VADER).GovernorAlpha();
     }
-    function USDV() internal view returns(address){
+
+    function USDV() internal view returns (address) {
         return iGovernorAlpha(GovernorAlpha()).USDV();
     }
-    function RESERVE() internal view returns(address){
+
+    function RESERVE() internal view returns (address) {
         return iGovernorAlpha(GovernorAlpha()).RESERVE();
     }
-    function ROUTER() internal view returns(address){
+
+    function ROUTER() internal view returns (address) {
         return iGovernorAlpha(GovernorAlpha()).ROUTER();
     }
-    function POOLS() internal view returns(address){
+
+    function POOLS() internal view returns (address) {
         return iGovernorAlpha(GovernorAlpha()).POOLS();
     }
-    function FACTORY() internal view returns(address){
+
+    function FACTORY() internal view returns (address) {
         return iGovernorAlpha(GovernorAlpha()).FACTORY();
     }
+
     function UTILS() public view returns (address) {
         return iGovernorAlpha(GovernorAlpha()).UTILS();
     }
+
     function TIMELOCK() public view returns (address) {
         return iGovernorAlpha(GovernorAlpha()).TIMELOCK();
     }

@@ -5,7 +5,6 @@ import "./Synth.sol";
 
 // Factory Contract
 contract Factory {
-
     address public immutable POOLS;
 
     address[] public arraySynths;
@@ -39,10 +38,11 @@ contract Factory {
         return true;
     }
 
-    function getSynth(address token) external view returns (address synth){
+    function getSynth(address token) external view returns (address synth) {
         return mapToken_Synth[token];
     }
-    function isSynth(address token) public view returns (bool _exists){
+
+    function isSynth(address token) public view returns (bool _exists) {
         return mapToken_Synth[token] != address(0);
     }
 

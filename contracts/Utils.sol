@@ -108,7 +108,7 @@ contract Utils {
         uint256 _B = iPOOLS(POOLS()).getBaseAmount(token);
         uint256 _T = iPOOLS(POOLS()).getTokenAmount(token);
         address _synth = iFACTORY(FACTORY()).getSynth(token);
-        if(_synth != address(0)){
+        if (_synth != address(0)) {
             uint256 _S = iERC20(_synth).totalSupply();
             _totalUnits = _totalUnits + calcSynthUnits(_S, _B, _T);
         }
@@ -390,22 +390,27 @@ contract Utils {
 
     //============================== HELPERS ================================//
 
-    function GovernorAlpha() internal view returns(address){
+    function GovernorAlpha() internal view returns (address) {
         return iVADER(VADER).GovernorAlpha();
     }
-    function USDV() internal view returns(address){
+
+    function USDV() internal view returns (address) {
         return iGovernorAlpha(GovernorAlpha()).USDV();
     }
-    function ROUTER() internal view returns(address){
+
+    function ROUTER() internal view returns (address) {
         return iGovernorAlpha(GovernorAlpha()).ROUTER();
     }
-    function LENDER() internal view returns(address){
+
+    function LENDER() internal view returns (address) {
         return iGovernorAlpha(GovernorAlpha()).LENDER();
     }
-    function POOLS() internal view returns(address){
+
+    function POOLS() internal view returns (address) {
         return iGovernorAlpha(GovernorAlpha()).POOLS();
     }
-    function FACTORY() internal view returns(address){
+
+    function FACTORY() internal view returns (address) {
         return iGovernorAlpha(GovernorAlpha()).FACTORY();
     }
 }

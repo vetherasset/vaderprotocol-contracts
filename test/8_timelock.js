@@ -67,7 +67,7 @@ describe('Timelock', () => {
 
   describe('setDelay', () => {
     it('requires msg.sender to be Timelock', async () => {
-      await expect(timelock.setDelay(delay, { from: root })).to.be.revertedWith('Timelock::setDelay: Call must come from Timelock.');
+      await expect(timelock.setDelay(delay, { from: root })).to.be.revertedWith('Call must come from Timelock.');
     });
   });
 
@@ -75,7 +75,7 @@ describe('Timelock', () => {
     it('requires msg.sender to be Timelock', async () => {
       await expect(
         timelock.setPendingAdmin(newAdmin, { from: root })
-      ).to.be.revertedWith('Timelock::setPendingAdmin: Call must come from Timelock.');
+      ).to.be.revertedWith('Call must come from Timelock.');
     });
   });
 
@@ -83,7 +83,7 @@ describe('Timelock', () => {
     it('requires msg.sender to be pendingAdmin', async () => {
       await expect(
         timelock.acceptAdmin({ from: notAdmin })
-      ).to.be.revertedWith('Timelock::acceptAdmin: Call must come from pendingAdmin.');
+      ).to.be.revertedWith('Call must come from pendingAdmin.');
     });
   });
 
@@ -91,7 +91,7 @@ describe('Timelock', () => {
     it('requires admin to be msg.sender', async () => {
       await expect(
         timelock.queueTransaction(target, value, signature, data, eta, { from: notAdmin })
-      ).to.be.revertedWith('Timelock::queueTransaction: Call must come from admin.');
+      ).to.be.revertedWith('Call must come from admin.');
     });
 
     it('requires eta to exceed delay', async () => {
@@ -99,7 +99,7 @@ describe('Timelock', () => {
 
       await expect(
         timelock.queueTransaction(target, value, signature, data, etaLessThanDelay, { from: root })
-      ).to.be.revertedWith('Timelock::queueTransaction: Estimated execution block must satisfy delay.');
+      ).to.be.revertedWith('Estimated execution block must satisfy delay.');
     });
 
     it('sets hash as true in queuedTransactions mapping', async () => {
@@ -134,7 +134,7 @@ describe('Timelock', () => {
     it('requires admin to be msg.sender', async () => {
       await expect(
         timelock.cancelTransaction(target, value, signature, data, eta, { from: notAdmin })
-      ).to.be.revertedWith('Timelock::cancelTransaction: Call must come from admin.');
+      ).to.be.revertedWith('Call must come from admin.');
     });
 
     it('sets hash from true to false in queuedTransactions mapping', async () => {
@@ -185,7 +185,7 @@ describe('Timelock', () => {
 
       await expect(
         timelock.executeTransaction(target, value, signature, data, eta, { from: notAdmin })
-      ).to.be.revertedWith('Timelock::executeTransaction: Call must come from admin.');
+      ).to.be.revertedWith('Call must come from admin.');
     });
 
     it('requires transaction to be queued', async () => {
@@ -195,7 +195,7 @@ describe('Timelock', () => {
       const differentEta = eta.plus(1);
       await expect(
         timelock.executeTransaction(target, value, signature, data, differentEta, { from: root })
-      ).to.be.revertedWith("Timelock::executeTransaction: Transaction hasn't been queued.");
+      ).to.be.revertedWith("Transaction hasn't been queued.");
     });
 
     it('requires timestamp to be greater than or equal to eta', async () => {
@@ -207,7 +207,7 @@ describe('Timelock', () => {
 
       await expect(
         timelock.executeTransaction(target, value, signature, data, eta, { from: root })
-      ).to.be.revertedWith("Timelock::executeTransaction: Transaction hasn't surpassed time lock.");
+      ).to.be.revertedWith("Transaction hasn't surpassed time lock.");
     });
 
     it('requires timestamp to be less than eta plus gracePeriosd', async () => {
@@ -221,7 +221,7 @@ describe('Timelock', () => {
 
       await expect(
         timelock.executeTransaction(target, value, signature, data, eta, { from: root })
-      ).to.be.revertedWith('Timelock::executeTransaction: Transaction is stale.');
+      ).to.be.revertedWith('Transaction is stale.');
     });
 
     it('requires target.call transaction to succeed', async () => {
@@ -234,7 +234,7 @@ describe('Timelock', () => {
 
       await expect(
         timelock.executeTransaction(target, value, signature, revertData, eta, { from: root })
-      ).to.be.revertedWith('Timelock::executeTransaction: Transaction execution reverted.');
+      ).to.be.revertedWith('Transaction execution reverted.');
     });
 
     it('sets hash from true to false in queuedTransactions mapping, updates delay, and emits ExecuteTransaction event', async () => {
@@ -306,7 +306,7 @@ describe('Timelock', () => {
 
       await expect(
         timelock.executeTransaction(target, value, signature, data, eta, { from: notAdmin })
-      ).to.be.revertedWith('Timelock::executeTransaction: Call must come from admin.');
+      ).to.be.revertedWith('Call must come from admin.');
     });
 
     it('requires transaction to be queued', async () => {
@@ -316,7 +316,7 @@ describe('Timelock', () => {
       const differentEta = eta.plus(1);
       await expect(
         timelock.executeTransaction(target, value, signature, data, differentEta, { from: root })
-      ).to.be.revertedWith("Timelock::executeTransaction: Transaction hasn't been queued.");
+      ).to.be.revertedWith("Transaction hasn't been queued.");
     });
 
     it('requires timestamp to be greater than or equal to eta', async () => {
@@ -327,7 +327,7 @@ describe('Timelock', () => {
 
       await expect(
         timelock.executeTransaction(target, value, signature, data, eta, { from: root })
-      ).to.be.revertedWith("Timelock::executeTransaction: Transaction hasn't surpassed time lock.");
+      ).to.be.revertedWith("Transaction hasn't surpassed time lock.");
     });
 
     it('requires timestamp to be less than eta plus gracePeriod', async () => {
@@ -340,7 +340,7 @@ describe('Timelock', () => {
 
       await expect(
         timelock.executeTransaction(target, value, signature, data, eta, { from: root })
-      ).to.be.revertedWith('Timelock::executeTransaction: Transaction is stale.');
+      ).to.be.revertedWith('Transaction is stale.');
     });
 
     it('sets hash from true to false in queuedTransactions mapping, updates admin, and emits ExecuteTransaction event', async () => {

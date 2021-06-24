@@ -109,13 +109,13 @@ describe("governorAlpha#castVote", function () {
 
   describe("We must revert if:", () => {
     it("There does not exist a proposal with matching proposal id where the current block number is between the proposal's start block (exclusive) and end block (inclusive)", async () => {
-      await expect(governor.castVote(proposalId, true)).to.be.revertedWith("revert GovernorAlpha::_castVote: voting is closed");
+      await expect(governor.castVote(proposalId, true)).to.be.revertedWith("voting is closed");
     });
 
     it("Such proposal already has an entry in its voters set matching the sender", async () => {
       await mineBlock();
       await governor.castVote(proposalId, true, { from: acc4 });
-      await expect(governor.castVote(proposalId, true, { from: acc4 })).to.be.revertedWith("revert GovernorAlpha::_castVote: voter already voted");
+      await expect(governor.castVote(proposalId, true, { from: acc4 })).to.be.revertedWith("voter already voted");
     });
   });
 
@@ -158,7 +158,7 @@ describe("governorAlpha#castVote", function () {
 
     describe('castVoteBySig', () => {
       it('reverts if the signatory is invalid', async () => {
-        await expect(governor.castVoteBySig(proposalId, false, 0, '0xbad', '0xbad')).to.be.revertedWith("revert GovernorAlpha::castVoteBySig: invalid signature");
+        await expect(governor.castVoteBySig(proposalId, false, 0, '0xbad', '0xbad')).to.be.revertedWith("invalid signature");
       });
     });
   });

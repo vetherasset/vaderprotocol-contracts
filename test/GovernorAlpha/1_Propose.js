@@ -198,32 +198,32 @@ describe("Deploy Governor Alpha", function () {
     it("the length of the values, signatures or calldatas arrays are not the same length", async () => {
       await expect(
         governor.propose(targets.concat(root), values, signatures, callDatas, "do nothing", { from: acc4 })
-      ).to.be.revertedWith("GovernorAlpha::propose: proposal function information arity mismatch");
+      ).to.be.revertedWith("proposal function information arity mismatch");
 
       await expect(
         governor.propose(targets, values.concat(values), signatures, callDatas, "do nothing", { from: acc4 })
-      ).to.be.revertedWith("GovernorAlpha::propose: proposal function information arity mismatch");
+      ).to.be.revertedWith("proposal function information arity mismatch");
 
       await expect(
         governor.propose(targets, values, signatures.concat(signatures), callDatas, "do nothing", { from: acc4 })
-      ).to.be.revertedWith("GovernorAlpha::propose: proposal function information arity mismatch");
+      ).to.be.revertedWith("proposal function information arity mismatch");
 
       await expect(
         governor.propose(targets, values, signatures, callDatas.concat(callDatas), "do nothing", { from: acc4 })
-      ).to.be.revertedWith("GovernorAlpha::propose: proposal function information arity mismatch");
+      ).to.be.revertedWith("proposal function information arity mismatch");
     });
 
     it("or if that length is zero or greater than Max Operations", async () => {
       await expect(
         governor.propose([], [], [], [], "do nothing", { from: acc4 })
-      ).to.be.revertedWith("GovernorAlpha::propose: must provide actions");
+      ).to.be.revertedWith("must provide actions");
     });
 
     describe("Additionally, if there exists a pending or active proposal from the same proposer, we must revert.", () => {
       it("reverts with active", async () => {
         await expect(
           governor.propose(targets, values, signatures, callDatas, "do nothing", { from: acc4 })
-        ).to.be.revertedWith("GovernorAlpha::propose: one live proposal per proposer, found an already active proposal");
+        ).to.be.revertedWith("one live proposal per proposer, found an already active proposal");
       });
     });
   });

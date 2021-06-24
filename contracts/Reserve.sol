@@ -28,18 +28,18 @@ contract Reserve {
     }
     // Only System can execute
     modifier onlySystem() {
-        require(isPermitted(msg.sender));
+        require(isPermitted(msg.sender), "!Permitted");
         _;
     }
 
-    function isPermitted(address _address) private view returns(bool _permitted){
-        if(_address == VAULT() || _address == ROUTER() || _address == LENDER()){
+    function isPermitted(address _address) private view returns (bool _permitted) {
+        if (_address == VAULT() || _address == ROUTER() || _address == LENDER()) {
             _permitted = true;
         }
     }
 
     //=====================================CREATION=========================================//
- 
+
     constructor() {
         minGrantTime = 2592000;
         splitForUSDV = 6700;
@@ -48,13 +48,13 @@ contract Reserve {
 
     // Can only be called once
     function init(address _vader) external {
-        if(VADER == address(0)){
+        if (VADER == address(0)) {
             VADER = _vader;
             nextEraTime = block.timestamp + iVADER(VADER).secondsPerEra();
             iERC20(VADER).approve(USDV(), type(uint).max);
         }
     }
-    
+
     //======================================= TIMELOCK =========================================//
 
     function setParams(uint256 newSplit, uint256 newDelay, uint256 newShare) external onlyTIMELOCK {
@@ -68,7 +68,7 @@ contract Reserve {
         require((block.timestamp - lastGranted) >= minGrantTime, "not too fast");
         lastGranted = block.timestamp;
         uint256 _reserveForGrant = reserveUSDV() / 10;
-        if(amount > _reserveForGrant){
+        if (amount > _reserveForGrant) {
             amount = _reserveForGrant;
         }
         iERC20(USDV()).transfer(recipient, amount); // safeErc20 not needed; USDV trusted
@@ -95,9 +95,9 @@ contract Reserve {
     // System addresses can request an amount up to the balance
     function requestFundsStrict(address base, address recipient, uint256 amount) external onlySystem returns(uint256) {
         checkReserve();
-        if(base == VADER) {
+        if (base == VADER) {
             require(reserveVADER() > amount, "Insufficient VADER Reserve");
-        } else if(base == USDV()) {
+        } else if (base == USDV()) {
             require(reserveUSDV() > amount, "Insufficient USDV Reserve");
         }
         ExternalERC20(base).safeTransfer(recipient, amount);
@@ -120,7 +120,7 @@ contract Reserve {
         }
     }
 
-    function getVaultReward() external view returns(uint256) {
+    function getVaultReward() external view returns (uint256) {
         return reserveUSDV() / vaultShare;
     }
 
@@ -136,7 +136,7 @@ contract Reserve {
 
     // Want to get part of the reserve that is not allocated
     function unallocatedVADER() public view returns (uint256 amount) {
-        if(reserveVADER() > allocatedVADER){
+        if (reserveVADER() > allocatedVADER){
             amount = reserveVADER() - allocatedVADER; // The difference
         }
         // Else 0
@@ -144,23 +144,27 @@ contract Reserve {
 
     //============================== HELPERS ================================//
 
-    function GovernorAlpha() internal view returns(address){
+    function GovernorAlpha() internal view returns (address) {
         return iVADER(VADER).GovernorAlpha();
     }
-    function USDV() internal view returns(address){
+
+    function USDV() internal view returns (address) {
         return iGovernorAlpha(GovernorAlpha()).USDV();
     }
-    function VAULT() internal view returns(address){
+
+    function VAULT() internal view returns (address) {
         return iGovernorAlpha(GovernorAlpha()).VAULT();
     }
-    function ROUTER() internal view returns(address){
+
+    function ROUTER() internal view returns (address) {
         return iGovernorAlpha(GovernorAlpha()).ROUTER();
     }
-    function LENDER() internal view returns(address){
+
+    function LENDER() internal view returns (address) {
         return iGovernorAlpha(GovernorAlpha()).LENDER();
     }
-    function TIMELOCK() internal view returns(address){
+
+    function TIMELOCK() internal view returns (address) {
         return iGovernorAlpha(GovernorAlpha()).TIMELOCK();
     }
-
 }

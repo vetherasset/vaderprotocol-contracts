@@ -14,7 +14,6 @@ import "./interfaces/iSYNTH.sol";
 import "hardhat/console.sol";
 
 contract Lender {
-
     using SafeERC20 for ExternalERC20;
 
     address public immutable VADER;
@@ -145,11 +144,11 @@ contract Lender {
         }
     }
 
-    function checkLiquidate() external {
+    // function checkLiquidate() external {
         // get member remaining Collateral: originalDeposit - shareOfInterestPayments
         // if remainingCollateral <= 101% * debtValueInCollateral
         // purge, send remaining collateral to liquidator
-    }
+    // }
 
     // function purgeMember() public {
 
@@ -185,7 +184,7 @@ contract Lender {
         mapCollateralDebt_Collateral[_collateralAsset][_debtAsset] -= _collateral; // Record collateral
     }
 
-     //======================================ASSETS=========================================//   
+    //======================================ASSETS=========================================//
 
     // Move funds in
     function moveTokenToPools(address _token, uint256 _amount) internal returns (uint256 safeAmount) {
@@ -220,7 +219,7 @@ contract Lender {
         uint256 _amount
     ) internal {
         if (isBase(_collateralAsset) || iPOOLS(POOLS()).isSynth(_collateralAsset)) {
-            require(iERC20(_collateralAsset).transfer(_member, _amount)); // Send Base
+            require(iERC20(_collateralAsset).transfer(_member, _amount), "!Transfer"); // Send Base
         } else if (isPool(_collateralAsset)) {
             iPOOLS(POOLS()).unlockUnits(_amount, _collateralAsset, _member); // Unlock units to member
         }
@@ -229,10 +228,9 @@ contract Lender {
     // @dev Assumes `_token` is trusted (is a base asset or synth) and supports
     function _getFunds(address _token, uint256 _amount) internal returns (uint256) {
         uint256 _balance = iERC20(_token).balanceOf(address(this));
-        require(iERC20(_token).transferFrom(msg.sender, address(this), _amount)); // safeErc20 not needed; _token trusted
+        require(iERC20(_token).transferFrom(msg.sender, address(this), _amount), "!Transfer"); // safeErc20 not needed; _token trusted
         return iERC20(_token).balanceOf(address(this)) - _balance;
     }
-
 
     //======================================HELPERS=========================================//
 
@@ -280,23 +278,23 @@ contract Lender {
         return mapCollateralAsset_NextEra[collateralAsset][debtAsset];
     }
 
-    //============================== HELPERS ================================//
-
-    function GovernorAlpha() internal view returns(address){
+    function GovernorAlpha() internal view returns (address) {
         return iVADER(VADER).GovernorAlpha();
     }
-    function USDV() internal view returns(address){
+
+    function USDV() internal view returns (address) {
         return iGovernorAlpha(GovernorAlpha()).USDV();
     }
-    function RESERVE() internal view returns(address){
+
+    function RESERVE() internal view returns (address) {
         return iGovernorAlpha(GovernorAlpha()).RESERVE();
     }
-    function POOLS() internal view returns(address){
+
+    function POOLS() internal view returns (address) {
         return iGovernorAlpha(GovernorAlpha()).POOLS();
     }
-    function UTILS() internal view returns(address){
+
+    function UTILS() internal view returns (address) {
         return iGovernorAlpha(GovernorAlpha()).UTILS();
     }
-
 }
-    

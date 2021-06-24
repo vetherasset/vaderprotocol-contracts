@@ -126,7 +126,7 @@ describe("GovernorAlpha#queue", function () {
       const proposalId = await governor.latestProposalIds(acc1);
       await advanceBlocks(20000);
 
-      await expect(governor.queue(proposalId)).to.be.revertedWith("GovernorAlpha::queue: proposal can only be queued if it is succeeded");
+      await expect(governor.queue(proposalId)).to.be.revertedWith("proposal can only be queued if it is succeeded");
     });
 
     it("queueing actions in different proposals works", async () => {
