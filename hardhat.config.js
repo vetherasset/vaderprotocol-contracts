@@ -2,7 +2,21 @@ require("@nomiclabs/hardhat-waffle");
 require("@nomiclabs/hardhat-truffle5");
 require("@nomiclabs/hardhat-ethers");
 require("@nomiclabs/hardhat-etherscan");
-const secret = require("./.secret.json");
+
+const networks = { hardhat: {} };
+const etherscan = {};
+try {
+  const secret = require("./.secret.json");
+  for (const network in secret.networks) {
+    networks[network] = {
+      url: secret.networks[network].url,
+      accounts: [secret.privateKey]
+    };
+  }
+  etherscan.apiKey = secret.etherscanKey;
+} catch (e) {
+  console.log("Couldn't find .secret.json file. You will need it when you deploy contracts");
+}
 
 task("accounts", "Prints the list of accounts", async () => {
   const accounts = await ethers.getSigners();
@@ -15,26 +29,7 @@ task("accounts", "Prints the list of accounts", async () => {
 
 module.exports = {
   defaultNetwork: "hardhat",
-  networks: {
-    hardhat: {
-    },
-    mainnet: {
-      url: secret.mainnet.url,
-      accounts: [secret.privateKey]
-    },
-    ropsten: {
-      url: secret.ropsten.url,
-      accounts: [secret.privateKey]
-    },
-    kovan: {
-      url: secret.kovan.url,
-      accounts: [secret.privateKey]
-    },
-    rinkeby: {
-      url: secret.rinkeby.url,
-      accounts: [secret.privateKey]
-    }
-  },
+  networks,
   solidity: {
     version: "0.8.3",
     settings: {
@@ -52,7 +47,5 @@ module.exports = {
   mocha: {
     timeout: 20000
   },
-  etherscan: {
-    apiKey: secret.etherscanKey
-  },
+  etherscan
 }
