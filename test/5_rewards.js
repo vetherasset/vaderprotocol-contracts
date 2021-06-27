@@ -64,15 +64,6 @@ describe("Deploy Rewards", function() {
     await vader.changeDAO(dao.address)
     await reserve.init(vader.address)
 
-    await dao.newActionProposal("EMISSIONS")
-    await dao.voteForProposal()
-    await mine()
-    await dao.executeProposal()
-    await dao.newParamProposal("VADER_PARAMS", '1', '900', '0', '0')
-    await dao.voteForProposal()
-    await mine()
-    await dao.executeProposal()
-
     anchor = await Anchor.new();
     asset = await Asset.new();
 
@@ -86,30 +77,41 @@ describe("Deploy Rewards", function() {
     await usdv.approve(router.address, max, {from:acc1})
 
     await vader.upgrade('8', {from:acc1})
-    await vader.transfer(acc0, '100', {from:acc1})
-    await vader.transfer(acc1, '100')
 
     await dao.newActionProposal("MINTING")
     await dao.voteForProposal()
     await mine()
     await dao.executeProposal()
+    await dao.newActionProposal("EMISSIONS")
+    await dao.voteForProposal()
+    await mine()
+    await dao.executeProposal()
+    await dao.newParamProposal("VADER_PARAMS", '1', '1', '365', '0')
+    await dao.voteForProposal()
+    await mine()
+    await dao.executeProposal()
+
     await vader.convertToUSDV(BN2Str(1100), {from:acc1})
-    // await usdv.withdrawToUSDV('10000', {from:acc1})
+
     await asset.transfer(acc1, BN2Str(2000))
     await asset.approve(router.address, BN2Str(one), {from:acc1})
 
     await router.addLiquidity(vader.address, '1000', anchor.address, '1000', {from:acc1})
     await router.addLiquidity(usdv.address, '1000', asset.address, '1000', {from:acc1})
 
-    expect(BN2Str(await vader.getDailyEmission())).to.equal('7');
-    expect(BN2Str(await reserve.reserveVADER())).to.equal('15');
-    expect(BN2Str(await reserve.reserveUSDV())).to.equal('16');
+    await vader.transfer(acc0, '100', {from:acc1})
+    await vader.transfer(acc1, '100')
+    await vader.transfer(acc0, '100', {from:acc1})
+
+    expect(BN2Str(await vader.getDailyEmission())).to.equal('21');
+    expect(BN2Str(await reserve.reserveVADER())).to.equal('91');
+    expect(BN2Str(await reserve.reserveUSDV())).to.equal('14');
   });
 });
 
 describe("Should do pool rewards", function() {
   it("Swap anchor, get rewards", async function() {
-    let r = '15';
+    let r = '91';
 
     await dao.newAddressProposal("CURATE_POOL", anchor.address, anchor.address)
     await dao.voteForProposal()
@@ -122,18 +124,18 @@ describe("Should do pool rewards", function() {
     expect(BN2Str(await utils.getReducedShare(r, '1'))).to.equal(r);
     expect(BN2Str(await pools.getBaseAmount(anchor.address))).to.equal('1000');
     let tx = await router.swap('100', vader.address, anchor.address, {from:acc1})
-    expect(BN2Str(tx.logs[0].args.amount)).to.equal('22');
-    expect(BN2Str(await pools.getBaseAmount(anchor.address))).to.equal('1118');
+    expect(BN2Str(tx.logs[0].args.amount)).to.equal('112');
+    expect(BN2Str(await pools.getBaseAmount(anchor.address))).to.equal('1156');
     expect(BN2Str(await reserve.reserveVADER())).to.equal('0');
     expect(BN2Str(await utils.getRewardShare(anchor.address, '1'))).to.equal('0');
     expect(BN2Str(await utils.getReducedShare('0', '1'))).to.equal('0');
 
     expect(BN2Str(await reserve.reserveVADER())).to.equal('0');
-    expect(BN2Str(await reserve.reserveUSDV())).to.equal('20');
+    expect(BN2Str(await reserve.reserveUSDV())).to.equal('70');
   });
 
   it("Swap asset, get rewards", async function() {
-    let r = '20';
+    let r = '70';
     await dao.newParamProposal("ROUTER_PARAMS", '1', '1', '2', '0')
     await dao.voteForProposal()
     await mine()

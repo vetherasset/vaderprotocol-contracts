@@ -92,10 +92,11 @@ describe("Deploy Protection", function() {
     await dao.voteForProposal()
     await mine()
     await dao.executeProposal()
-    await dao.newParamProposal("VADER_PARAMS", '1', '1', '0', '0')
+    await dao.newParamProposal("VADER_PARAMS", '1', '1', '365', '0')
     await dao.voteForProposal()
     await mine()
     await dao.executeProposal()
+    
     await vader.convertToUSDV('2000', {from:acc1})
 
     await asset.transfer(acc1, '2000')
@@ -109,9 +110,9 @@ describe("Deploy Protection", function() {
 
     // console.log(BN2Str(await vader.getDailyEmission()))
 
-    expect(BN2Str(await vader.getDailyEmission())).to.equal('6800');
-    expect(BN2Str(await reserve.reserveVADER())).to.equal('800');
-    expect(BN2Str(await vader.balanceOf(reserve.address))).to.equal('800');
+    expect(BN2Str(await vader.getDailyEmission())).to.equal('7');
+    expect(BN2Str(await reserve.reserveVADER())).to.equal('7');
+    expect(BN2Str(await vader.balanceOf(reserve.address))).to.equal('7');
     // await dao.newActionProposal("EMISSIONS")
     // await dao.voteForProposal()
     // await mine()
@@ -155,13 +156,13 @@ describe("Should do IL Protection", function() {
     expect(BN2Str(coverage)).to.equal('183');
     expect(BN2Str(await utils.getProtection(acc1, anchor.address, "10000", '1'))).to.equal('183');
     // let reserveVADER = BN2Str(await reserve.reserveVADER())
-    expect(BN2Str(await router.getILProtection(acc1, vader.address, anchor.address, '10000'))).to.equal('183');
+    expect(BN2Str(await router.getILProtection(acc1, vader.address, anchor.address, '10000'))).to.equal('7');
     // expect(BN2Str(await reserve.reserveVADER())).to.equal('8');
     // expect(BN2Str(await router.getILProtection(acc1, vader.address, anchor.address, '10000'))).to.equal('8');
   });
 
   it("RECEIVE protection on 50% ", async function() {
-    expect(BN2Str(await reserve.reserveVADER())).to.equal('800');
+    expect(BN2Str(await reserve.reserveVADER())).to.equal('7');
     expect(BN2Str(await vader.balanceOf(acc1))).to.equal('5346');
     expect(BN2Str(await anchor.balanceOf(acc1))).to.equal('100');
 
@@ -173,11 +174,11 @@ describe("Should do IL Protection", function() {
 
     let tx = await router.removeLiquidity(vader.address, anchor.address, '5000', {from:acc1})
 
-    expect(BN2Str(await reserve.reserveVADER())).to.equal('709');
-    expect(BN2Str(await vader.balanceOf(acc1))).to.equal('5668'); //+322
+    expect(BN2Str(await reserve.reserveVADER())).to.equal('0');
+    expect(BN2Str(await vader.balanceOf(acc1))).to.equal('5626'); //+322
     expect(BN2Str(await anchor.balanceOf(acc1))).to.equal('1049'); //+950
 
-    expect(BN2Str(await pools.getMemberUnits(anchor.address, acc1))).to.equal('536');
+    expect(BN2Str(await pools.getMemberUnits(anchor.address, acc1))).to.equal('503');
   });
 
   it("Small swap, need protection on Asset", async function() {

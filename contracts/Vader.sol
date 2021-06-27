@@ -9,12 +9,15 @@ import "./interfaces/iUTILS.sol";
 import "./interfaces/iUSDV.sol";
 import "./interfaces/iROUTER.sol";
 
+import "hardhat/console.sol";
+
 contract Vader is iERC20 {
     // ERC-20 Parameters
     string public constant override name = "VADER PROTOCOL TOKEN";
     string public constant override symbol = "VADER";
     uint8 public constant override decimals = 18;
     uint256 public override totalSupply;
+    uint256 public constant maxSupply = 2 * 10**9 * 10**decimals; //2bn
 
     // ERC-20 Mappings
     mapping(address => uint256) private _balances;
@@ -25,10 +28,13 @@ contract Vader is iERC20 {
     bool public emitting;
     bool public minting;
     uint256 public constant conversionFactor = 1000;
-    uint256 public constant baseline = 10**9 * 10**decimals; //1bn;
-    uint256 public constant maxSupply = 2 * baseline; //2bn
+
     uint256 public emissionCurve;
     uint256 public secondsPerEra;
+    uint256 public era;
+    uint256 public eraTailEmissions;
+    uint256 public dailyEmission;
+
     uint256 public nextEraTime;
     uint256 public feeOnTransfer;
 
@@ -36,7 +42,7 @@ contract Vader is iERC20 {
 
     address public constant burnAddress = 0x0111011001100001011011000111010101100101;
 
-    event NewEra(uint256 nextEraTime, uint256 emission);
+    event NewEra(uint256 era, uint256 nextEraTime, uint256 emission);
 
     // Only DAO can execute
     modifier onlyDAO() {
@@ -54,7 +60,8 @@ contract Vader is iERC20 {
     constructor() {
         secondsPerEra = 1; //86400;
         nextEraTime = block.timestamp + secondsPerEra;
-        emissionCurve = 10;
+        emissionCurve = 3;
+        eraTailEmissions = 365;
         DAO = msg.sender; // Then call changeDAO() once DAO created
     }
 
@@ -193,9 +200,10 @@ contract Vader is iERC20 {
     }
 
     // Can set params
-    function setParams(uint256 newEra, uint256 newCurve) external onlyDAO {
-        secondsPerEra = newEra;
+    function setParams(uint256 newSeconds, uint256 newCurve, uint256 newTailEmissionEra) external onlyDAO {
+        secondsPerEra = newSeconds;
         emissionCurve = newCurve;
+        eraTailEmissions = newTailEmissionEra;
     }
 
     // Can change DAO
@@ -216,25 +224,24 @@ contract Vader is iERC20 {
             // If new Era and allowed to emit
             nextEraTime = block.timestamp + secondsPerEra; // Set next Era time
             uint256 _emission = getDailyEmission(); // Get Daily Dmission
+            dailyEmission = _emission;
             _mint(RESERVE(), _emission); // Mint to the RESERVE Address
             feeOnTransfer = iUTILS(UTILS()).getFeeOnTransfer(totalSupply, maxSupply); // UpdateFeeOnTransfer
             if (feeOnTransfer > 1000) {
                 feeOnTransfer = 1000;
             } // Max 10% if UTILS corrupted
-            emit NewEra(nextEraTime, _emission); // Emit Event
+            era += 1;
+            emit NewEra(era, nextEraTime, _emission); // Emit Event
         }
     }
 
     // Calculate Daily Emission
     function getDailyEmission() public view returns (uint256) {
-        uint256 _adjustedMax;
-        if (totalSupply <= baseline) {
-            // If less than 1bn, then adjust cap down
-            _adjustedMax = (maxSupply * totalSupply) / baseline; // 2bn * 0.5m / 1m = 2m * 50% = 1.5m
+        if(era < eraTailEmissions && emitting){
+            return totalSupply / emissionCurve / 365; // Target inflation prior
         } else {
-            _adjustedMax = maxSupply; // 2bn
+            return dailyEmission;
         }
-        return (_adjustedMax - totalSupply) / (emissionCurve); // outstanding / curve
     }
 
     //======================================ASSET MINTING========================================//
