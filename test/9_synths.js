@@ -130,6 +130,7 @@ describe("Should Swap Synths", function() {
     expect(BN2Str(await synth.balanceOf(acc1))).to.equal('160');
     expect(await synth.name()).to.equal('Token1 - vSynth');
     expect(await synth.symbol()).to.equal('TKN1.v');
+    expect(BN2Str(await synth.decimals())).to.equal('18');
     expect(BN2Str(await synth.totalSupply())).to.equal('160');
   });
   it("Swap from Synth to Base", async function() {
@@ -162,6 +163,7 @@ describe("Should Swap Synths", function() {
     expect(BN2Str(await synth2.balanceOf(acc1))).to.equal('67');
     expect(await synth2.name()).to.equal('Token2 - vSynth');
     expect(await synth2.symbol()).to.equal('TKN2.v');
+    expect(BN2Str(await synth2.decimals())).to.equal('6');
     expect(BN2Str(await synth2.totalSupply())).to.equal('67');
   });
 
