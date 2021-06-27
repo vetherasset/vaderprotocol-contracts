@@ -8,6 +8,8 @@ import "./interfaces/iVAULT.sol";
 import "./interfaces/iROUTER.sol";
 import "./interfaces/iERC20.sol";
 
+import "hardhat/console.sol";
+
 //======================================DAO=========================================//
 // * Anyone can propose, but for a fee of 1000 USDV
 // * Anyone can vote, using USDV weighting in the VAULT
@@ -35,6 +37,8 @@ contract DAO {
     uint256 public coolOffPeriod;
     uint256 public proposalFee;
 
+    uint256 public proposalCount;
+
     address public COUNCIL;
     address public VETHER;
     address public VADER;
@@ -59,6 +63,7 @@ contract DAO {
     bool public proposalFinalised;
     mapping(address => uint256) public mapMember_votesFor;
     mapping(address => uint256) public mapMember_votesAgainst;
+    mapping(uint256 => mapping(address => bool)) public mapProposal_Member_voted;
 
     event NewProposal(address indexed member, string proposalType);
     event NewVote(
@@ -102,8 +107,8 @@ contract DAO {
  
     constructor() {
         COUNCIL = msg.sender; // Deployer is first Council
-        coolOffPeriod = 1; // Set 2 days
         proposalFinalised = true;
+        coolOffPeriod = 1; // Set 2 days
         proposalFee = 1000*10**18; // 1000 USDV
     }
 
@@ -131,6 +136,12 @@ contract DAO {
             FACTORY = _factory;
             UTILS = _utils;
         }
+    }
+
+    // Can set params internally
+    function _setParams(uint256 newPeriod, uint256 newFee) internal {
+        coolOffPeriod = newPeriod;
+        proposalFee = newFee;
     }
 
     //============================== CREATE PROPOSALS ================================//
@@ -173,6 +184,8 @@ contract DAO {
 
     function _getProposalFee() internal {
         // require(iERC20(USDV).transferFrom(msg.sender, RESERVE, proposalFee));
+        proposalFinalised = false;
+        proposalCount += 1;
     }
 
     //============================== VOTE && FINALISE ================================//
@@ -213,7 +226,7 @@ contract DAO {
     function executeProposal() external {
         require((block.timestamp - proposalTimeStart) > coolOffPeriod, "Must be after cool off");
         require(proposalFinalising, "Must be finalising");
-        require(!proposalFinalised, "Must not be already done");
+        require(!proposalFinalised, "Must not be finalised");
         bytes memory _type = bytes(proposalType);
         if (isEqual(_type, "GRANT")) {
             GrantDetails memory _grant = proposedGrant;
@@ -230,10 +243,13 @@ contract DAO {
             iVADER(VADER).flipEmissions();
         } else if (isEqual(_type, "MINTING")) {
             iVADER(VADER).flipMinting();
+        } else if (isEqual(_type, "DAO_PARAMS")) {
+            ParamDetails memory _params = proposedParams;
+            _setParams(_params.p1, _params.p2);
         } else if (isEqual(_type, "VADER_PARAMS")) {
             ParamDetails memory _params = proposedParams;
             iVADER(VADER).setParams(_params.p1, _params.p2);
-        } else if (isEqual(_type, "ROUTER_PARAMS")) {
+        }else if (isEqual(_type, "ROUTER_PARAMS")) {
             ParamDetails memory _params = proposedParams;
             iROUTER(ROUTER).setParams(_params.p1, _params.p2, _params.p3, _params.p4);
         }
@@ -259,8 +275,13 @@ contract DAO {
     //============================== CONSENSUS ================================//
 
     function _countMemberVotes(bool isFor) internal returns (uint256 voteWeight) {
-        votesFor -= mapMember_votesFor[msg.sender];
-        votesAgainst -= mapMember_votesAgainst[msg.sender];
+        // If still voting, need to take away old votes for that member
+        if(mapMember_votesFor[msg.sender] > 0 && mapProposal_Member_voted[proposalCount][msg.sender]){
+            votesFor -= mapMember_votesFor[msg.sender];
+        }
+        if(mapMember_votesAgainst[msg.sender] > 0 && mapProposal_Member_voted[proposalCount][msg.sender]){
+            votesAgainst -= mapMember_votesAgainst[msg.sender];
+        }
         bytes memory _type = bytes(proposalType);
         if(msg.sender == COUNCIL && !isEqual(_type, "COUNCIL")){ // Don't let COUNCIL veto DAO changing it
             voteWeight = iVAULT(VAULT).totalWeight(); // Full weighting for Council EOA
@@ -277,6 +298,7 @@ contract DAO {
             votesAgainst += voteWeight;
             mapMember_votesAgainst[msg.sender] = voteWeight;
         }
+        mapProposal_Member_voted[proposalCount][msg.sender] = true;
     }
 
     function hasMajorityFor() public view returns (bool) {
