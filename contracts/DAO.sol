@@ -23,7 +23,7 @@ contract DAO {
         uint256 p3;
         uint256 p4;
     }
-    struct AnchorDetails {
+    struct AddressDetails {
         address a1;
         address a2;
     }
@@ -47,7 +47,7 @@ contract DAO {
 
     GrantDetails public proposedGrant;
     ParamDetails public proposedParams;
-    AnchorDetails public proposedAnchor;
+    AddressDetails public proposedAddresses;
     address public proposedAddress;
 
     string public proposalType;
@@ -152,36 +152,35 @@ contract DAO {
         emit NewProposal(msg.sender, typeStr);
     }
 
-    // Proposal with address parameter
-    function newAddressProposal(string memory typeStr, address newAddress) external noExisting {
+    // // Proposal with address parameter
+    // function newAddressProposal(string memory typeStr, address newAddress) external noExisting {
+    //     _getProposalFee();
+    //     require(newAddress != address(0), "No address proposed");
+    //     proposedAddress = newAddress;
+    //     proposalType = typeStr;
+    //     emit NewProposal(msg.sender, typeStr);
+    // }
+    // Proposal to change addresses
+    function newAddressProposal(string memory typeStr, address oldAddress, address newAddress) external noExisting {
         _getProposalFee();
-        require(newAddress != address(0), "No address proposed");
-        proposedAddress = newAddress;
-        proposalType = typeStr;
-        emit NewProposal(msg.sender, typeStr);
-    }
-
-    // Proposal with no parameters
-    function newActionProposal(string memory typeStr) external noExisting {
-        _getProposalFee();
+        AddressDetails memory addresses;
+        addresses.a1 = oldAddress; addresses.a2 = newAddress;
+        proposedAddresses = addresses;
         proposalType = typeStr;
         emit NewProposal(msg.sender, typeStr);
     }
     // Proposal with parameters
-    function newParamProposal(string memory typeStr, uint256 p1, uint256 p2, uint256 p3, uint256 p4) external noExisting {
+    function newParamProposal(string memory typeStr, uint256 param1, uint256 param2, uint256 param3, uint256 param4) external noExisting {
         _getProposalFee();
         ParamDetails memory params;
-        params.p1 = p1; params.p2 = p2; params.p3 = p3; params.p4 = p4;
+        params.p1 = param1; params.p2 = param2; params.p3 = param3; params.p4 = param4;
         proposedParams = params;
         proposalType = typeStr;
         emit NewProposal(msg.sender, typeStr);
     }
-    // Proposal for Anchors
-    function newAnchorProposal(string memory typeStr, address a1, address a2) external noExisting {
+    // Proposal with no parameters
+    function newActionProposal(string memory typeStr) external noExisting {
         _getProposalFee();
-        AnchorDetails memory anchor;
-        anchor.a1 = a1; anchor.a2 = a2;
-        proposedAnchor = anchor;
         proposalType = typeStr;
         emit NewProposal(msg.sender, typeStr);
     }
@@ -236,13 +235,13 @@ contract DAO {
             GrantDetails memory _grant = proposedGrant;
             iRESERVE(RESERVE).grant(_grant.recipient, _grant.amount);
         } else if (isEqual(_type, "UTILS")) {
-            UTILS = proposedAddress;
+            UTILS = proposedAddresses.a2;
         } else if (isEqual(_type, "RESERVE")) {
-            RESERVE = proposedAddress;
+            RESERVE = proposedAddresses.a2;
         }else if (isEqual(_type, "DAO")) {
-            iVADER(VADER).changeDAO(proposedAddress);
+            iVADER(VADER).changeDAO(proposedAddresses.a2);
         }else if (isEqual(_type, "COUNCIL")) {
-            _changeCouncil(proposedAddress); // Allow DAO to change Council
+            _changeCouncil(proposedAddresses.a2); // Allow DAO to change Council
         } else if (isEqual(_type, "EMISSIONS")) {
             iVADER(VADER).flipEmissions();
         } else if (isEqual(_type, "MINTING")) {
@@ -260,8 +259,13 @@ contract DAO {
             ParamDetails memory _params = proposedParams;
             iROUTER(ROUTER).setAnchorParams(_params.p1, _params.p2, _params.p3);
         } else if (isEqual(_type, "ANCHOR")) {
-            AnchorDetails memory _anchor = proposedAnchor;
-            iROUTER(ROUTER).replaceAnchor(_anchor.a1, _anchor.a2);
+            AddressDetails memory _addresses = proposedAddresses;
+            iROUTER(ROUTER).replaceAnchor(_addresses.a1, _addresses.a2);
+        } else if (isEqual(_type, "CURATE_POOL")) {
+            iROUTER(ROUTER).curatePool(proposedAddresses.a2);
+        } else if (isEqual(_type, "REPLACE_POOL")) {
+            AddressDetails memory _addresses = proposedAddresses;
+            iROUTER(ROUTER).replacePool(_addresses.a1, _addresses.a2);
         }
         _finaliseProposal();
     }

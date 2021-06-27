@@ -110,7 +110,12 @@ describe("Deploy Rewards", function() {
 describe("Should do pool rewards", function() {
   it("Swap anchor, get rewards", async function() {
     let r = '15';
-    await router.curatePool(anchor.address)
+
+    await dao.newAddressProposal("CURATE_POOL", anchor.address, anchor.address)
+    await dao.voteForProposal()
+    await mine()
+    await dao.executeProposal()
+
     expect(BN2Str(await reserve.reserveVADER())).to.equal(r);
     expect(await router.emitting()).to.equal(true);
     expect(BN2Str(await utils.getRewardShare(anchor.address, '1'))).to.equal(r);
@@ -133,7 +138,12 @@ describe("Should do pool rewards", function() {
     await dao.voteForProposal()
     await mine()
     await dao.executeProposal()
-    await router.curatePool(asset.address, {from:acc1})
+
+    await dao.newAddressProposal("CURATE_POOL", asset.address, asset.address)
+    await dao.voteForProposal()
+    await mine()
+    await dao.executeProposal()
+
     expect(BN2Str(await reserve.reserveUSDV())).to.equal(r);
     expect(await router.emitting()).to.equal(true);
     expect(BN2Str(await utils.getRewardShare(asset.address, '1'))).to.equal(r);

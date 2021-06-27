@@ -131,7 +131,11 @@ describe("Should do IL Protection", function() {
     expect(BN2Str(await utils.calcCoverage('100', '1000', '20', '2000'))).to.equal('70');
   });
   it("Small swap, need protection", async function() {
-    await router.curatePool(anchor.address)
+    await dao.newAddressProposal("CURATE_POOL", anchor.address, anchor.address)
+    await dao.voteForProposal()
+    await mine()
+    await dao.executeProposal()
+
     expect(BN2Str(await anchor.balanceOf(acc1))).to.equal('1000');
     expect(BN2Str(await pools.getBaseAmount(anchor.address))).to.equal('1000');
     expect(BN2Str(await pools.getTokenAmount(anchor.address))).to.equal('1000');
@@ -188,7 +192,12 @@ describe("Should do IL Protection", function() {
     await mine()
     await dao.executeProposal()
     expect(await pools.isAsset(asset.address)).to.equal(true);
-    await router.curatePool(asset.address)
+
+    await dao.newAddressProposal("CURATE_POOL", asset.address, asset.address)
+    await dao.voteForProposal()
+    await mine()
+    await dao.executeProposal()
+
     expect(await router.isCurated(asset.address)).to.equal(true);
     expect(BN2Str(await usdv.balanceOf(acc1))).to.equal('900');
     for(let i = 0; i<9; i++){

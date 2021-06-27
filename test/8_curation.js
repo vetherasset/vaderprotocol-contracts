@@ -146,12 +146,22 @@ describe("Should Curate", function() {
     expect(await router.isCurated(asset.address)).to.equal(false);
     expect(BN2Str(await router.curatedPoolLimit())).to.equal('1');
     expect(BN2Str(await router.curatedPoolCount())).to.equal('0');
-    await router.curatePool(asset.address, {from:acc1})
+
+    await dao.newAddressProposal("CURATE_POOL", asset.address, asset.address)
+    await dao.voteForProposal()
+    await mine()
+    await dao.executeProposal()
+
     expect(await router.isCurated(asset.address)).to.equal(true);
     expect(BN2Str(await router.curatedPoolCount())).to.equal('1');
   });
   it("Fail curate second", async function() {
-    await router.curatePool(asset2.address, {from:acc1})
+
+    await dao.newAddressProposal("CURATE_POOL", asset2.address, asset2.address)
+    await dao.voteForProposal()
+    await mine()
+    await dao.executeProposal()
+
     expect(await router.isCurated(asset2.address)).to.equal(false);
     expect(BN2Str(await router.curatedPoolCount())).to.equal('1');
   });
@@ -161,18 +171,26 @@ describe("Should Curate", function() {
     await mine()
     await dao.executeProposal()
     expect(BN2Str(await router.curatedPoolLimit())).to.equal('2');
-    await router.curatePool(asset2.address, {from:acc1})
+
+    await dao.newAddressProposal("CURATE_POOL", asset2.address, asset2.address)
+    await dao.voteForProposal()
+    await mine()
+    await dao.executeProposal()
+
     expect(await router.isCurated(asset2.address)).to.equal(true);
     expect(BN2Str(await router.curatedPoolCount())).to.equal('2');
 
   });
   it("Replace 1-for-1", async function() {
-    await router.replacePool(asset2.address, asset3.address, {from:acc1})
+    await router.addLiquidity(usdv.address, '1', asset3.address, '1', {from:acc1})
     expect(await router.isCurated(asset2.address)).to.equal(true);
     expect(await router.isCurated(asset3.address)).to.equal(false);
 
-    await router.addLiquidity(usdv.address, '1', asset3.address, '1', {from:acc1})
-    await router.replacePool(asset2.address, asset3.address, {from:acc1})
+    await dao.newAddressProposal("REPLACE_POOL", asset2.address, asset3.address)
+    await dao.voteForProposal()
+    await mine()
+    await dao.executeProposal()
+
     expect(await router.isCurated(asset2.address)).to.equal(false);
     expect(await router.isCurated(asset3.address)).to.equal(true);
   });
@@ -185,7 +203,12 @@ describe("Should Do Rewards and Protection", function() {
     expect(BN2Str(await utils.getRewardShare(asset2.address, '1'))).to.equal('0');
   });
   it("Curated, Rewards", async function() {
-    await router.curatePool(asset.address, {from:acc1})
+
+    await dao.newAddressProposal("CURATE_POOL", asset.address, asset.address)
+    await dao.voteForProposal()
+    await mine()
+    await dao.executeProposal()
+
     expect(Number(await reserve.reserveUSDV())).to.be.greaterThan(0);
     // expect(BN2Str(await utils.getRewardShare(asset.address, '1'))).to.equal('2');
   });

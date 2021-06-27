@@ -153,9 +153,9 @@ describe("Handle Anchors", function() {
     
     // await router.replaceAnchor(anchor0.address, anchor5.address, {from:acc1})
 
-    await dao.newAnchorProposal("ANCHOR", anchor0.address, anchor5.address)
+    await dao.newAddressProposal("ANCHOR", anchor0.address, anchor5.address)
     await dao.voteForProposal()
-    await setNextBlockTimestamp(ts0 + 4 * 15)
+    await setNextBlockTimestamp(ts0 + 30 * 15)
     await dao.executeProposal()
 
     expect(await router.arrayAnchors('0')).to.equal(anchor5.address)
@@ -168,7 +168,7 @@ describe("Handle Anchors", function() {
 
 describe("Handle TWAP", function() {
   it("Get prices", async function() {
-    const ts1 = ts0 + 2000
+    const ts1 = ts0 + 4000
     await setNextBlockTimestamp(ts1)
     // expect(approx(await router.getTWAPPrice())).to.equal('1')
     await router.swap('10', vader.address, anchor0.address, {from:acc1})
