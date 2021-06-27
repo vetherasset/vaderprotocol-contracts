@@ -62,9 +62,9 @@ describe("Deploy Router", function() {
     await reserve.init(vader.address)
 
     await dao.newActionProposal("EMISSIONS")
-    await dao.voteProposal(await dao.proposalCount())
+    await dao.voteForProposal()
     await mine()
-    await dao.finaliseProposal(await dao.proposalCount())
+    await dao.executeProposal()
 
     asset = await Asset.new();
     asset2 = await Asset.new();
@@ -90,9 +90,9 @@ describe("Deploy Router", function() {
     await asset3.approve(router.address, BN2Str(one), {from:acc1})
 
     await dao.newActionProposal("MINTING")
-    await dao.voteProposal(await dao.proposalCount())
+    await dao.voteForProposal()
     await mine()
-    await dao.finaliseProposal(await dao.proposalCount())
+    await dao.executeProposal()
     await vader.convertToUSDV(3000, {from:acc1})
     await usdv.transfer(acc0, '1', {from:acc1})
     await usdv.transfer(acc1, '1', {from:acc0})
@@ -157,9 +157,9 @@ describe("Should Curate", function() {
   });
   it("Increase limit", async function() {
     await dao.newParamProposal("ROUTER_PARAMS", '1', '1', '2', '0')
-    await dao.voteProposal(await dao.proposalCount())
+    await dao.voteForProposal()
     await mine()
-    await dao.finaliseProposal(await dao.proposalCount())
+    await dao.executeProposal()
     expect(BN2Str(await router.curatedPoolLimit())).to.equal('2');
     await router.curatePool(asset2.address, {from:acc1})
     expect(await router.isCurated(asset2.address)).to.equal(true);

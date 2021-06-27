@@ -84,9 +84,9 @@ describe("Deploy Router", function() {
     await asset2.approve(router.address, max, {from:acc1})
 
     await dao.newActionProposal("MINTING")
-    await dao.voteProposal(await dao.proposalCount())
+    await dao.voteForProposal()
     await mine()
-    await dao.finaliseProposal(await dao.proposalCount())
+    await dao.executeProposal()
 
     await vader.convertToUSDV('3000', {from:acc1})
     // await usdv.withdrawToUSDV('10000', {from:acc1})

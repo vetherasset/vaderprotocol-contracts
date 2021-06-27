@@ -89,9 +89,9 @@ describe("Deploy Router", function() {
     await asset2.transfer(acc1, '2000')
 
     await dao.newActionProposal("MINTING")
-    await dao.voteProposal(await dao.proposalCount())
+    await dao.voteForProposal()
     await setNextBlockTimestamp(ts0 + 1*15)
-    await dao.finaliseProposal(await dao.proposalCount())
+    await dao.executeProposal()
     await vader.convertToUSDV('4000', {from:acc1})
 
     expect(await vader.DAO()).to.equal(dao.address);
@@ -207,13 +207,13 @@ describe("Member should deposit Synths for rewards", function() {
   it("Should deposit", async function() {
     
     await dao.newActionProposal("EMISSIONS")
-    await dao.voteProposal(await dao.proposalCount())
+    await dao.voteForProposal()
     await setNextBlockTimestamp(ts0 + 3*15)
-    await dao.finaliseProposal(await dao.proposalCount())
+    await dao.executeProposal()
     await dao.newParamProposal("VADER_PARAMS", '1', '2', '0', '0')
-    await dao.voteProposal(await dao.proposalCount())
+    await dao.voteForProposal()
     await setNextBlockTimestamp(ts0 + 4*15)
-    await dao.finaliseProposal(await dao.proposalCount())
+    await dao.executeProposal()
 
     await vader.transfer(acc0, ('100'), {from:acc1})
     await vader.transfer(acc1, ('100'), {from:acc0})
@@ -260,9 +260,9 @@ describe("Member should deposit Synths for rewards", function() {
     expect(BN2Str(await vault.getMemberWeight(acc1))).to.equal('20');
 
     await dao.newActionProposal("EMISSIONS")
-    await dao.voteProposal(await dao.proposalCount())
+    await dao.voteForProposal()
     await setNextBlockTimestamp(ts0 + 6*15)
-    await dao.finaliseProposal(await dao.proposalCount())
+    await dao.executeProposal()
 
     let tx = await vault.withdraw(synth.address, "10000",{from:acc1})
     expect(BN2Str(await vault.getMemberDeposit(acc1, synth.address))).to.equal('0');

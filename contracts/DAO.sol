@@ -11,16 +11,6 @@ import "./interfaces/iERC20.sol";
 import "hardhat/console.sol";
 
 //======================================DAO=========================================//
-// * Anyone can propose, but for a fee of 1000 USDV
-// * Anyone can vote, using USDV weighting in the VAULT
-// * Only 1 proposal at a time (must be finished)
-// * Council can veto For or Against at any time, but still must go thru cool-off period
-// * Council is deployer, EoA, or multi-sig
-// * DAO can change Council, Council cannot veto
-// * Proposals go through: 
-// - being voted on, 
-// - finalising (cool off), 
-// - or finalised (executed after cool off or cancelled)
 
 contract DAO {
     struct GrantDetails {

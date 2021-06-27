@@ -77,13 +77,13 @@ describe("Deploy Interest", function() {
 
     await vader.upgrade('10', {from:acc1})
     await dao.newActionProposal("EMISSIONS")
-    await dao.voteProposal(await dao.proposalCount())
+    await dao.voteForProposal()
     await mine()
-    await dao.finaliseProposal(await dao.proposalCount())
+    await dao.executeProposal()
     await dao.newActionProposal("MINTING")
-    await dao.voteProposal(await dao.proposalCount())
+    await dao.voteForProposal()
     await mine()
-    await dao.finaliseProposal(await dao.proposalCount())
+    await dao.executeProposal()
     await vader.convertToUSDV('5000', {from:acc1})
 
     await asset.transfer(acc1, '2000')
