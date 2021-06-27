@@ -12,4 +12,7 @@ interface iDAO {
     function POOLS() external view returns(address);
     function FACTORY() external view returns(address);
     function UTILS() external view returns(address);
+    function getMemberVotes(address member) external view returns (uint256);
+    function purgeVotes(address member) external;
+
 }

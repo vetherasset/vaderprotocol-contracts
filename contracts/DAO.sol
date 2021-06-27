@@ -265,13 +265,7 @@ contract DAO {
     //============================== CONSENSUS ================================//
 
     function _countMemberVotes(bool isFor) internal returns (uint256 voteWeight) {
-        // If still voting, need to take away old votes for that member
-        if(mapMember_votesFor[msg.sender] > 0 && mapProposal_Member_voted[proposalCount][msg.sender]){
-            votesFor -= mapMember_votesFor[msg.sender];
-        }
-        if(mapMember_votesAgainst[msg.sender] > 0 && mapProposal_Member_voted[proposalCount][msg.sender]){
-            votesAgainst -= mapMember_votesAgainst[msg.sender];
-        }
+        _purgeVotes(msg.sender);
         bytes memory _type = bytes(proposalType);
         if(msg.sender == COUNCIL && !isEqual(_type, "COUNCIL")){ // Don't let COUNCIL veto DAO changing it
             voteWeight = iVAULT(VAULT).totalWeight(); // Full weighting for Council EOA
@@ -308,8 +302,15 @@ contract DAO {
 
     // Vault can purge votes for member if they leave the vault
     function purgeVotes(address member) external onlyVault {
-        votesFor -= mapMember_votesFor[member];
-        votesAgainst -= mapMember_votesAgainst[member];
+        _purgeVotes(member);
+    }
+    function _purgeVotes(address member) internal {
+        if(mapMember_votesFor[msg.sender] > 0 && mapProposal_Member_voted[proposalCount][msg.sender]){
+            votesFor -= mapMember_votesFor[msg.sender];
+        }
+        if(mapMember_votesAgainst[msg.sender] > 0 && mapProposal_Member_voted[proposalCount][msg.sender]){
+            votesAgainst -= mapMember_votesAgainst[msg.sender];
+        }
         mapMember_votesAgainst[member] = 0;
         mapMember_votesFor[member] = 0;
     }

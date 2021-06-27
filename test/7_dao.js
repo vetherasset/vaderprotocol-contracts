@@ -125,10 +125,8 @@ describe("DAO Functions", function () {
     await router.swapWithSynths('110', usdv.address, false, asset.address, true, { from: acc1 })
 
     let synth = await Synth.at(await factory.getSynth(asset.address));
-
     await synth.approve(vault.address, max, { from: acc0 })
     await synth.approve(vault.address, max, { from: acc1 })
-
     await vault.deposit(synth.address, '10', { from: acc0 })
     await vault.deposit(synth.address, '10', { from: acc1 })
 
@@ -158,6 +156,20 @@ describe("DAO Functions", function () {
     assert.equal(await dao.UTILS(), utils2.address)
   })
 })
+
+describe("Leave DAO", function () {
+  it("It should leave", async () => {
+    assert.equal(BN2Str(await dao.getMemberVotes(acc0)), 22)
+    assert.equal(BN2Str(await dao.getMemberVotes(acc1)), 11)
+
+    let synth = await Synth.at(await factory.getSynth(asset.address));
+    await vault.withdraw(synth.address, '10000', { from: acc0 })
+    await vault.withdraw(synth.address, '10000', { from: acc1 })
+
+    assert.equal(BN2Str(await dao.getMemberVotes(acc0)), 0)
+    assert.equal(BN2Str(await dao.getMemberVotes(acc1)), 0)
+  })
+})    
 
 
 
