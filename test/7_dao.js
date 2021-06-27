@@ -148,7 +148,7 @@ describe("DAO Functions", function () {
   it("It should change Utils", async () => {
     assert.equal(await dao.UTILS(), utils.address)
     let utils2 = await Utils.new(vader.address);
-    await dao.newAddressProposal('UTILS', utils2.address, { from: acc1 })
+    await dao.newAddressProposal('UTILS', utils2.address, utils2.address, { from: acc1 })
     await dao.voteForProposal({ from: acc0 })
     await dao.voteForProposal({ from: acc1 })
     await setNextBlockTimestamp(ts0 + 6 * 15)

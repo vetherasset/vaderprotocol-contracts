@@ -66,6 +66,8 @@ interface iROUTER {
 
     function curatePool(address token) external;
 
+    function replacePool(address oldToken, address newToken) external;
+
     function listAnchor(address token) external;
 
     function replaceAnchor(address oldToken, address newToken) external;

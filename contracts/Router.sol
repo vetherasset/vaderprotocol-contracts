@@ -276,7 +276,7 @@ contract Router {
 
     //=====================================CURATION==========================================//
 
-    function curatePool(address token) external {
+    function curatePool(address token) external onlyDAO {
         require(iPOOLS(POOLS()).isAsset(token) || iPOOLS(POOLS()).isAnchor(token));
         if (!isCurated(token)) {
             if (curatedPoolCount < curatedPoolLimit) {
@@ -288,14 +288,11 @@ contract Router {
         emit Curated(msg.sender, token);
     }
 
-    function replacePool(address oldToken, address newToken) external {
-        require(iPOOLS(POOLS()).isAsset(newToken));
-        if (iPOOLS(POOLS()).getBaseAmount(newToken) > iPOOLS(POOLS()).getBaseAmount(oldToken)) {
-            // Must be deeper
-            _isCurated[oldToken] = false;
-            _isCurated[newToken] = true;
-            emit Curated(msg.sender, newToken);
-        }
+    function replacePool(address oldToken, address newToken) external onlyDAO{
+        require(iPOOLS(POOLS()).isAsset(newToken) || iPOOLS(POOLS()).isAnchor(newToken));
+        _isCurated[oldToken] = false;
+        _isCurated[newToken] = true;
+        emit Curated(msg.sender, newToken);
     }
 
     //=====================================ANCHORS==========================================//
