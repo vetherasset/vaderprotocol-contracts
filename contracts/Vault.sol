@@ -66,9 +66,7 @@ contract Vault {
 
     //=========================================DAO=========================================//
     // Can set params
-    function setParams(
-        uint256 newDepositTime
-    ) external onlyDAO {
+    function setParams(uint256 newDepositTime) external onlyDAO {
         minimumDepositTime = newDepositTime;
     }
 

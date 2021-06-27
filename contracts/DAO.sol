@@ -3,6 +3,7 @@ pragma solidity 0.8.3;
 
 // Interfaces
 import "./interfaces/iVADER.sol";
+import "./interfaces/iUSDV.sol";
 import "./interfaces/iRESERVE.sol";
 import "./interfaces/iVAULT.sol";
 import "./interfaces/iROUTER.sol";
@@ -30,6 +31,7 @@ contract DAO {
 
     uint256 public coolOffPeriod;
     uint256 public proposalFee;
+    uint256 public quorum;
 
     uint256 public proposalCount;
 
@@ -105,6 +107,7 @@ contract DAO {
         proposalFinalised = true;
         coolOffPeriod = 1; // Set 2 days
         proposalFee = 0; // 0 USDV to start
+        quorum = 3; // 33% as threshold
     }
 
     function init(
@@ -134,9 +137,10 @@ contract DAO {
     }
 
     // Can set params internally
-    function _setParams(uint256 newPeriod, uint256 newFee) internal {
+    function _setParams(uint256 newPeriod, uint256 newFee, uint256 newQuorom) internal {
         coolOffPeriod = newPeriod;
         proposalFee = newFee;
+        quorum = newQuorom;
     }
 
     //============================== CREATE PROPOSALS ================================//
@@ -152,19 +156,11 @@ contract DAO {
         emit NewProposal(msg.sender, typeStr);
     }
 
-    // // Proposal with address parameter
-    // function newAddressProposal(string memory typeStr, address newAddress) external noExisting {
-    //     _getProposalFee();
-    //     require(newAddress != address(0), "No address proposed");
-    //     proposedAddress = newAddress;
-    //     proposalType = typeStr;
-    //     emit NewProposal(msg.sender, typeStr);
-    // }
     // Proposal to change addresses
-    function newAddressProposal(string memory typeStr, address oldAddress, address newAddress) external noExisting {
+    function newAddressProposal(string memory typeStr, address address1, address address2) external noExisting {
         _getProposalFee();
         AddressDetails memory addresses;
-        addresses.a1 = oldAddress; addresses.a2 = newAddress;
+        addresses.a1 = address1; addresses.a2 = address2;
         proposedAddresses = addresses;
         proposalType = typeStr;
         emit NewProposal(msg.sender, typeStr);
@@ -198,22 +194,11 @@ contract DAO {
         bytes memory _type = bytes(proposalType);
         voteWeight = _countMemberVotes(true); // This counts and adds vote weight
         if (hasQuorumFor() && !proposalFinalising) { // No voting when finalising, min consensus is Quorum
-            if (isEqual(_type, "DAO") || isEqual(_type, "UTILS") || isEqual(_type, "RESERVE")) {
-                if (hasMajorityFor()) {
-                    _startFinalising();
-                }
-            } else {
-                _startFinalising();
-            }
+            proposalFinalising = true;
+            proposalTimeStart = block.timestamp;
+            emit ProposalFinalising(msg.sender, block.timestamp + coolOffPeriod, string(bytes(proposalType)));
         }
         emit NewVote(msg.sender, voteWeight, votesFor, true, string(_type));
-    }
-
-    // Starts the cool off period
-    function _startFinalising() internal {
-        proposalFinalising = true;
-        proposalTimeStart = block.timestamp;
-        emit ProposalFinalising(msg.sender, block.timestamp + coolOffPeriod, string(bytes(proposalType)));
     }
 
     // Vote against. Allow minority to cancel at any time
@@ -231,42 +216,78 @@ contract DAO {
         require(proposalFinalising, "Must be finalising");
         require(!proposalFinalised, "Must not be finalised");
         bytes memory _type = bytes(proposalType);
+
+        // Grant Funding
         if (isEqual(_type, "GRANT")) {
             GrantDetails memory _grant = proposedGrant;
             iRESERVE(RESERVE).grant(_grant.recipient, _grant.amount);
-        } else if (isEqual(_type, "UTILS")) {
-            UTILS = proposedAddresses.a2;
+        } 
+        
+        // Addresses
+        if (isEqual(_type, "USDV")) {
+            USDV = proposedAddresses.a1;
         } else if (isEqual(_type, "RESERVE")) {
-            RESERVE = proposedAddresses.a2;
-        }else if (isEqual(_type, "DAO")) {
-            iVADER(VADER).changeDAO(proposedAddresses.a2);
-        }else if (isEqual(_type, "COUNCIL")) {
-            _changeCouncil(proposedAddresses.a2); // Allow DAO to change Council
-        } else if (isEqual(_type, "EMISSIONS")) {
+            RESERVE = proposedAddresses.a1;
+        } else if (isEqual(_type, "VAULT")) {
+            VAULT = proposedAddresses.a1;
+        } else if (isEqual(_type, "ROUTER")) {
+            ROUTER = proposedAddresses.a1;
+        } else if (isEqual(_type, "LENDER")) {
+            LENDER = proposedAddresses.a1;
+        } else if (isEqual(_type, "POOLS")) {
+            POOLS = proposedAddresses.a1;
+        } else if (isEqual(_type, "FACTORY")) {
+            FACTORY = proposedAddresses.a1;
+        } else if (isEqual(_type, "UTILS")) {
+            UTILS = proposedAddresses.a1;
+        } else if (isEqual(_type, "DAO")) {
+            iVADER(VADER).changeDAO(proposedAddresses.a1);
+        } else if (isEqual(_type, "COUNCIL")) {
+            _changeCouncil(proposedAddresses.a1); // Allow DAO to change Council
+        } 
+        
+        // Global State
+        if (isEqual(_type, "EMISSIONS")) {
             iVADER(VADER).flipEmissions();
         } else if (isEqual(_type, "MINTING")) {
             iVADER(VADER).flipMinting();
-        } else if (isEqual(_type, "DAO_PARAMS")) {
+        } 
+        
+        // Contract params
+        if (isEqual(_type, "DAO_PARAMS")) {
             ParamDetails memory _params = proposedParams;
-            _setParams(_params.p1, _params.p2);
+            _setParams(_params.p1, _params.p2, _params.p3);
         } else if (isEqual(_type, "VADER_PARAMS")) {
             ParamDetails memory _params = proposedParams;
             iVADER(VADER).setParams(_params.p1, _params.p2, _params.p2);
-        } else if (isEqual(_type, "ROUTER_PARAMS")) {
+        } else if (isEqual(_type, "USDV_PARAMS")) {
+            ParamDetails memory _params = proposedParams;
+            iUSDV(USDV).setParams(_params.p1);
+        } else if (isEqual(_type, "VAULT_PARAMS")) {
+            ParamDetails memory _params = proposedParams;
+            iVAULT(VAULT).setParams(_params.p1);
+        } else if (isEqual(_type, "RESERVE_PARAMS")) {
+            ParamDetails memory _params = proposedParams;
+            iRESERVE(RESERVE).setParams(_params.p1, _params.p2, _params.p3);
+        }  else if (isEqual(_type, "ROUTER_PARAMS")) {
             ParamDetails memory _params = proposedParams;
             iROUTER(ROUTER).setParams(_params.p1, _params.p2, _params.p3, _params.p4);
+        }
+        
+        // Router Specific
+        if (isEqual(_type, "ANCHOR")) {
+            AddressDetails memory _addresses = proposedAddresses;
+            iROUTER(ROUTER).replaceAnchor(_addresses.a1, _addresses.a2);
         } else if (isEqual(_type, "ANCHOR_PARAMS")) {
             ParamDetails memory _params = proposedParams;
             iROUTER(ROUTER).setAnchorParams(_params.p1, _params.p2, _params.p3);
-        } else if (isEqual(_type, "ANCHOR")) {
-            AddressDetails memory _addresses = proposedAddresses;
-            iROUTER(ROUTER).replaceAnchor(_addresses.a1, _addresses.a2);
         } else if (isEqual(_type, "CURATE_POOL")) {
-            iROUTER(ROUTER).curatePool(proposedAddresses.a2);
+            iROUTER(ROUTER).curatePool(proposedAddresses.a1);
         } else if (isEqual(_type, "REPLACE_POOL")) {
             AddressDetails memory _addresses = proposedAddresses;
             iROUTER(ROUTER).replacePool(_addresses.a1, _addresses.a2);
         }
+
         _finaliseProposal();
     }
 
@@ -309,18 +330,13 @@ contract DAO {
         mapProposal_Member_voted[proposalCount][msg.sender] = true;
     }
 
-    function hasMajorityFor() public view returns (bool) {
-        uint256 consensus = iVAULT(VAULT).totalWeight() / 2; // >50%
-        return votesFor > consensus;
-    }
-
     function hasQuorumFor() public view returns (bool) {
-        uint256 consensus = iVAULT(VAULT).totalWeight() / 3; // >33%
+        uint256 consensus = iVAULT(VAULT).totalWeight() / quorum;
         return votesFor > consensus;
     }
 
     function hasMinorityAgainst() public view returns (bool) {
-        uint256 consensus = iVAULT(VAULT).totalWeight() / 6; // >16%
+        uint256 consensus = iVAULT(VAULT).totalWeight() / quorum / 2;
         return votesAgainst > consensus;
     }
 
