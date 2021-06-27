@@ -109,7 +109,7 @@ contract DAO {
         COUNCIL = msg.sender; // Deployer is first Council
         proposalFinalised = true;
         coolOffPeriod = 1; // Set 2 days
-        proposalFee = 1000*10**18; // 1000 USDV
+        proposalFee = 0; // 0 USDV to start
     }
 
     function init(
@@ -183,7 +183,7 @@ contract DAO {
     }
 
     function _getProposalFee() internal {
-        // require(iERC20(USDV).transferFrom(msg.sender, RESERVE, proposalFee));
+        require(iERC20(USDV).transferFrom(msg.sender, RESERVE, proposalFee));
         proposalFinalised = false;
         proposalCount += 1;
     }
