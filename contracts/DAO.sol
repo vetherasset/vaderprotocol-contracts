@@ -6,8 +6,20 @@ import "./interfaces/iVADER.sol";
 import "./interfaces/iRESERVE.sol";
 import "./interfaces/iVAULT.sol";
 import "./interfaces/iROUTER.sol";
+import "./interfaces/iERC20.sol";
 
-//======================================VADER=========================================//
+//======================================DAO=========================================//
+// * Anyone can propose, but for a fee of 1000 USDV
+// * Anyone can vote, using USDV weighting in the VAULT
+// * Only 1 proposal at a time (must be finished)
+// * Council can veto For or Against at any time, but still must go thru cool-off period
+// * Council is deployer, EoA, or multi-sig
+// * DAO can change Council, Council cannot veto
+// * Proposals go through: 
+// - being voted on, 
+// - finalising (cool off), 
+// - or finalised (executed after cool off or cancelled)
+
 contract DAO {
     struct GrantDetails {
         address recipient;
@@ -20,22 +32,8 @@ contract DAO {
         uint256 p4;
     }
 
-    GrantDetails public proposedGrant;
-    ParamDetails public proposedParams;
-    address public proposedAddress;
-
-    string public proposalType;
-    uint256 public votesFor;
-    uint256 public votesAgainst;
-    uint256 public proposalTimeStart;
-    bool public proposalFinalising;
-    bool public proposalFinalised;
-    mapping(address => uint256) public mapMember_votesFor;
-    mapping(address => uint256) public mapMember_votesAgainst;
-
-    // uint256 public proposalCount;
-
     uint256 public coolOffPeriod;
+    uint256 public proposalFee;
 
     address public COUNCIL;
     address public VETHER;
@@ -49,16 +47,18 @@ contract DAO {
     address public FACTORY;
     address public UTILS;
 
-    // mapping(uint256 => GrantDetails) public mapPID_grant;
-    // mapping(uint256 => address) public mapPID_address;
-    // mapping(uint256 => ParamDetails) public mapPID_params;
+    GrantDetails public proposedGrant;
+    ParamDetails public proposedParams;
+    address public proposedAddress;
 
-    // mapping(uint256 => string) public mapPID_type;
-    // mapping(uint256 => uint256) public mapPID_votes;
-    // mapping(uint256 => uint256) public mapPID_timeStart;
-    // mapping(uint256 => bool) public mapPID_finalising;
-    // mapping(uint256 => bool) public mapPID_finalised;
-    // mapping(uint256 => mapping(address => uint256)) public mapPIDMember_votes;
+    string public proposalType;
+    uint256 public votesFor;
+    uint256 public votesAgainst;
+    uint256 public proposalTimeStart;
+    bool public proposalFinalising;
+    bool public proposalFinalised;
+    mapping(address => uint256) public mapMember_votesFor;
+    mapping(address => uint256) public mapMember_votesAgainst;
 
     event NewProposal(address indexed member, string proposalType);
     event NewVote(
@@ -86,6 +86,17 @@ contract DAO {
         require(msg.sender == COUNCIL, "!Council");
         _;
     }
+    // Only VAULT can execute
+    modifier onlyVault() {
+        require(msg.sender == VAULT, "!Vault");
+        _;
+    }
+    // No existing proposals
+    modifier noExisting() {
+        require(proposalFinalised, "Existing proposal");
+        _;
+    }
+
 
     //=====================================CREATION=========================================//
  
@@ -93,6 +104,7 @@ contract DAO {
         COUNCIL = msg.sender; // Deployer is first Council
         coolOffPeriod = 1; // Set 2 days
         proposalFinalised = true;
+        proposalFee = 1000*10**18; // 1000 USDV
     }
 
     function init(
@@ -122,9 +134,9 @@ contract DAO {
     }
 
     //============================== CREATE PROPOSALS ================================//
-    // Action with funding
-    function newGrantProposal(address recipient, uint256 amount) external {
-        require(proposalFinalised, "Existing proposal");
+    // Proposal with funding
+    function newGrantProposal(address recipient, uint256 amount) external noExisting {
+        _getProposalFee();
         string memory typeStr = "GRANT";
         proposalType = typeStr;
         GrantDetails memory grant;
@@ -134,24 +146,24 @@ contract DAO {
         emit NewProposal(msg.sender, typeStr);
     }
 
-    // Action with address parameter
-    function newAddressProposal(string memory typeStr, address newAddress) external {
-        require(proposalFinalised, "Existing proposal");
+    // Proposal with address parameter
+    function newAddressProposal(string memory typeStr, address newAddress) external noExisting {
+        _getProposalFee();
         require(newAddress != address(0), "No address proposed");
         proposedAddress = newAddress;
         proposalType = typeStr;
         emit NewProposal(msg.sender, typeStr);
     }
 
-    // Action with no parameters
-    function newActionProposal(string memory typeStr) external {
-        require(proposalFinalised, "Existing proposal");
+    // Proposal with no parameters
+    function newActionProposal(string memory typeStr) external noExisting {
+        _getProposalFee();
         proposalType = typeStr;
         emit NewProposal(msg.sender, typeStr);
     }
-    // Action with parameters
-    function newParamProposal(string memory typeStr, uint256 p1, uint256 p2, uint256 p3, uint256 p4) external {
-        require(proposalFinalised, "Existing proposal");
+    // Proposal with parameters
+    function newParamProposal(string memory typeStr, uint256 p1, uint256 p2, uint256 p3, uint256 p4) external noExisting {
+        _getProposalFee();
         ParamDetails memory params;
         params.p1 = p1; params.p2 = p2; params.p3 = p3; params.p4 = p4;
         proposedParams = params;
@@ -159,41 +171,46 @@ contract DAO {
         emit NewProposal(msg.sender, typeStr);
     }
 
+    function _getProposalFee() internal {
+        // require(iERC20(USDV).transferFrom(msg.sender, RESERVE, proposalFee));
+    }
+
     //============================== VOTE && FINALISE ================================//
 
-    // Vote for a proposal
+    // Vote for a proposal, if meeting consensus, move to finalising
     function voteForProposal() external returns (uint256 voteWeight) {
         bytes memory _type = bytes(proposalType);
-        voteWeight = countMemberVotes(true);
-        if (hasQuorumFor() && !proposalFinalising) {
+        voteWeight = _countMemberVotes(true); // This counts and adds vote weight
+        if (hasQuorumFor() && !proposalFinalising) { // No voting when finalising, min consensus is Quorum
             if (isEqual(_type, "DAO") || isEqual(_type, "UTILS") || isEqual(_type, "RESERVE")) {
                 if (hasMajorityFor()) {
-                    _finalise();
+                    _startFinalising();
                 }
             } else {
-                _finalise();
+                _startFinalising();
             }
         }
         emit NewVote(msg.sender, voteWeight, votesFor, true, string(_type));
     }
 
-    function _finalise() internal {
+    // Starts the cool off period
+    function _startFinalising() internal {
         proposalFinalising = true;
         proposalTimeStart = block.timestamp;
         emit ProposalFinalising(msg.sender, block.timestamp + coolOffPeriod, string(bytes(proposalType)));
     }
 
-    // Allow minority to cancel
+    // Vote against. Allow minority to cancel at any time
     function voteAgainstProposal() external returns (uint256 voteWeight)  {
-        voteWeight = countMemberVotes(false);
-        if (hasMinorityAgainst() && proposalFinalising) {
-            _completeProposal();
+        voteWeight = _countMemberVotes(false);
+        if (hasMinorityAgainst()) {
+            _finaliseProposal();
         }
         emit NewVote(msg.sender, voteWeight, votesAgainst, false, string(bytes(proposalType)));
     }
 
-    // Proposal with quorum can finalise after cool off period
-    function finaliseProposal() external {
+    // Proposal with quorum can execute after cool off period
+    function executeProposal() external {
         require((block.timestamp - proposalTimeStart) > coolOffPeriod, "Must be after cool off");
         require(proposalFinalising, "Must be finalising");
         require(!proposalFinalised, "Must not be already done");
@@ -207,6 +224,8 @@ contract DAO {
             RESERVE = proposedAddress;
         }else if (isEqual(_type, "DAO")) {
             iVADER(VADER).changeDAO(proposedAddress);
+        }else if (isEqual(_type, "COUNCIL")) {
+            _changeCouncil(proposedAddress); // Allow DAO to change Council
         } else if (isEqual(_type, "EMISSIONS")) {
             iVADER(VADER).flipEmissions();
         } else if (isEqual(_type, "MINTING")) {
@@ -218,10 +237,11 @@ contract DAO {
             ParamDetails memory _params = proposedParams;
             iROUTER(ROUTER).setParams(_params.p1, _params.p2, _params.p3, _params.p4);
         }
-        _completeProposal();
+        _finaliseProposal();
     }
 
-    function _completeProposal() internal {
+    // Emits event and resets status
+    function _finaliseProposal() internal {
         string memory _typeStr = proposalType;
         emit FinalisedProposal(
             msg.sender,
@@ -238,33 +258,25 @@ contract DAO {
 
     //============================== CONSENSUS ================================//
 
-    function countMemberVotes(bool isFor) internal returns (uint256 voteWeight) {
-        if(isFor){
-            votesFor -= mapMember_votesFor[msg.sender];
-            if(msg.sender == COUNCIL){
-                voteWeight = iVAULT(VAULT).totalWeight(); // Full weighting for Council EOA
-                if(voteWeight == 0){
-                    voteWeight = 1; // Edge case if no one in vault
-                }
-            } else {
-                voteWeight = iVAULT(VAULT).getMemberWeight(msg.sender); // Normal weighting
+    function _countMemberVotes(bool isFor) internal returns (uint256 voteWeight) {
+        votesFor -= mapMember_votesFor[msg.sender];
+        votesAgainst -= mapMember_votesAgainst[msg.sender];
+        bytes memory _type = bytes(proposalType);
+        if(msg.sender == COUNCIL && !isEqual(_type, "COUNCIL")){ // Don't let COUNCIL veto DAO changing it
+            voteWeight = iVAULT(VAULT).totalWeight(); // Full weighting for Council EOA
+            if(voteWeight == 0){
+                voteWeight = 1; // Edge case if no one in vault
             }
+        } else {
+            voteWeight = iVAULT(VAULT).getMemberWeight(msg.sender); // Normal weighting
+        }
+        if(isFor){
             votesFor += voteWeight;
             mapMember_votesFor[msg.sender] = voteWeight;
         } else {
-            votesAgainst -= mapMember_votesAgainst[msg.sender];
-            if(msg.sender == COUNCIL){
-                voteWeight = iVAULT(VAULT).totalWeight(); // Full weighting for Council EOA
-                if(voteWeight == 0){
-                    voteWeight = 1; // Edge case if no one in vault
-                }
-            } else {
-                voteWeight = iVAULT(VAULT).getMemberWeight(msg.sender); // Normal weighting
-            }
             votesAgainst += voteWeight;
             mapMember_votesAgainst[msg.sender] = voteWeight;
         }
-       
     }
 
     function hasMajorityFor() public view returns (bool) {
@@ -282,15 +294,22 @@ contract DAO {
         return votesAgainst > consensus;
     }
 
-    function isEqual(bytes memory part1, bytes memory part2) internal pure returns (bool) {
-        return sha256(part1) == sha256(part2);
+    // Vault can purge votes for member if they leave the vault
+    function purgeVotes(address member) external onlyVault {
+        votesFor -= mapMember_votesFor[member];
+        votesAgainst -= mapMember_votesAgainst[member];
+        mapMember_votesAgainst[member] = 0;
+        mapMember_votesFor[member] = 0;
     }
 
     //============================== COUNCIL ================================//
     // Can change COUNCIL
     function changeCouncil(address newCouncil) external onlyCouncil {
-        require(newCouncil != address(0), "address err");
-        COUNCIL = newCouncil;
+        _changeCouncil(newCouncil);
+    }
+    function _changeCouncil(address _newCouncil) internal {
+        require(_newCouncil != address(0), "address err");
+        COUNCIL = _newCouncil;
     }
 
     // Can purge COUNCIL
@@ -300,10 +319,11 @@ contract DAO {
 
     //============================== HELPERS ================================//
 
-    function getVotes() external view returns (uint256) {
-        return votesFor;
-    }
     function getMemberVotes(address member) external view returns (uint256) {
         return mapMember_votesFor[member];
+    }
+
+    function isEqual(bytes memory part1, bytes memory part2) internal pure returns (bool) {
+        return sha256(part1) == sha256(part2);
     }
 }
