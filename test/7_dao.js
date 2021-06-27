@@ -138,16 +138,50 @@ describe("DAO Functions", function () {
     let balanceAfter = getBN(await usdv.balanceOf(acc3))
     assert.equal(BN2Str(balanceAfter.minus(balanceBefore)), '1')
   })
-  it("It should change Utils", async () => {
-    assert.equal(await dao.UTILS(), utils.address)
-    let utils2 = await Utils.new(vader.address);
-    await dao.newAddressProposal('UTILS', utils2.address, utils2.address, { from: acc1 })
-    await dao.voteForProposal({ from: acc0 })
-    await dao.voteForProposal({ from: acc1 })
-    await setNextBlockTimestamp(ts0 + 6 * 15)
-    await dao.executeProposal()
-    assert.equal(await dao.UTILS(), utils2.address)
-  })
+  
+    it("It should change Utils", async () => {
+      assert.equal(await dao.UTILS(), utils.address)
+      let utils2 = await Utils.new(vader.address);
+      await dao.newAddressProposal('UTILS', utils2.address, utils2.address, { from: acc1 })
+      await dao.voteForProposal({ from: acc0 })
+      await dao.voteForProposal({ from: acc1 })
+      await setNextBlockTimestamp(ts0 + 7 * 15)
+      await dao.executeProposal()
+      assert.equal(await dao.UTILS(), utils2.address)
+    })
+
+    it("It should change ROUTER Params", async () => {
+      assert.equal(BN2Str(await router.intervalTWAP()), '3')
+      await dao.newParamProposal('ROUTER_PARAMS', '1', '1', '1', '2', { from: acc1 })
+      await dao.voteForProposal()
+      await setNextBlockTimestamp(ts0 + 8 * 15)
+      await dao.executeProposal()
+      assert.equal(BN2Str(await router.intervalTWAP()), '2')
+    })
+    it("It should change ANCHOR Params", async () => {
+      assert.equal(BN2Str(await router.anchorLimit()), '5')
+      await dao.newParamProposal('ANCHOR_PARAMS', '6', '200', '500', '0', { from: acc1 })
+      await dao.voteForProposal()
+      await setNextBlockTimestamp(ts0 + 9 * 15)
+      await dao.executeProposal()
+      assert.equal(BN2Str(await router.anchorLimit()), '6')
+    })
+    it("It should change Curate Pool", async () => {
+      assert.equal((await router.isCurated(asset.address)), false)
+      await dao.newAddressProposal("CURATE_POOL", asset.address, asset.address)
+      await dao.voteForProposal()
+      await setNextBlockTimestamp(ts0 + 10 * 15)
+      await dao.executeProposal()
+      assert.equal((await router.isCurated(asset.address)), true)
+    })
+    it("It should change VAULT Params", async () => {
+      assert.equal(BN2Str(await vault.minimumDepositTime()), '1')
+      await dao.newParamProposal('VAULT_PARAMS', '2', '0', '0', '0', { from: acc1 })
+      await dao.voteForProposal()
+      await setNextBlockTimestamp(ts0 + 11 * 15)
+      await dao.executeProposal()
+      assert.equal(BN2Str(await vault.minimumDepositTime()), '2')
+    })
 })
 
 describe("Leave DAO", function () {

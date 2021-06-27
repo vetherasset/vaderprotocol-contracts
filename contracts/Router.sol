@@ -63,10 +63,12 @@ contract Router {
         rewardReductionFactor = 1;
         timeForFullProtection = 1; //8640000; //100 days
         curatedPoolLimit = 1;
+        intervalTWAP = 3; //6hours
+        
         anchorLimit = 5;
         insidePriceLimit = 200;
         outsidePriceLimit = 500;
-        intervalTWAP = 3; //6hours
+        
         lastUpdatedTime = block.timestamp;
         startIntervalTime = lastUpdatedTime;
         cachedIntervalTime = startIntervalTime;
@@ -314,8 +316,6 @@ contract Router {
         require(idx1 != 0, "No such old token");
         require(iPOOLS(POOLS()).isAnchor(newToken), "!Anchor"); // Must be anchor
         require(!iFACTORY(FACTORY()).isSynth(newToken), "Synth!"); // Must not be synth
-        require((iPOOLS(POOLS()).getBaseAmount(newToken) > iPOOLS(POOLS()).getBaseAmount(oldToken)), "Not deeper");
-        iUTILS(UTILS()).requirePriceBounds(oldToken, outsidePriceLimit, false, getAnchorPrice()); // if price oldToken >5%
         iUTILS(UTILS()).requirePriceBounds(newToken, insidePriceLimit, true, getAnchorPrice()); // if price newToken <2%
         _isCurated[oldToken] = false;
         _isCurated[newToken] = true;
