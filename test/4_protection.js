@@ -65,9 +65,9 @@ describe("Deploy Protection", function() {
     await reserve.init(vader.address)
 
     await dao.newActionProposal("EMISSIONS")
-    await dao.voteProposal(await dao.proposalCount())
+    await dao.voteForProposal()
     await mine()
-    await dao.finaliseProposal(await dao.proposalCount())
+    await dao.executeProposal()
 
     anchor = await Anchor.new();
     asset = await Asset.new();
@@ -85,17 +85,17 @@ describe("Deploy Protection", function() {
     await router.addLiquidity(vader.address, '1000', anchor.address, '1000', {from:acc1})
 
     await dao.newActionProposal("MINTING")
-    await dao.voteProposal(await dao.proposalCount())
+    await dao.voteForProposal()
     await mine()
-    await dao.finaliseProposal(await dao.proposalCount())
+    await dao.executeProposal()
     await dao.newActionProposal("EMISSIONS")
-    await dao.voteProposal(await dao.proposalCount())
+    await dao.voteForProposal()
     await mine()
-    await dao.finaliseProposal(await dao.proposalCount())
+    await dao.executeProposal()
     await dao.newParamProposal("VADER_PARAMS", '1', '1', '0', '0')
-    await dao.voteProposal(await dao.proposalCount())
+    await dao.voteForProposal()
     await mine()
-    await dao.finaliseProposal(await dao.proposalCount())
+    await dao.executeProposal()
     await vader.convertToUSDV('2000', {from:acc1})
 
     await asset.transfer(acc1, '2000')
@@ -113,9 +113,9 @@ describe("Deploy Protection", function() {
     expect(BN2Str(await reserve.reserveVADER())).to.equal('800');
     expect(BN2Str(await vader.balanceOf(reserve.address))).to.equal('800');
     // await dao.newActionProposal("EMISSIONS")
-    // await dao.voteProposal(await dao.proposalCount())
+    // await dao.voteForProposal()
     // await mine()
-    // await dao.finaliseProposal(await dao.proposalCount())
+    // await dao.executeProposal()
   });
 });
 
@@ -178,15 +178,15 @@ describe("Should do IL Protection", function() {
 
   it("Small swap, need protection on Asset", async function() {
     // await dao.newActionProposal("EMISSIONS")
-    // await dao.voteProposal(await dao.proposalCount())
+    // await dao.voteForProposal()
     // await mine()
-    // await dao.finaliseProposal(await dao.proposalCount())
+    // await dao.executeProposal()
     // expect(Number(await reserve.reserveUSDV())).to.be.greaterThan(0);
     // expect(Number(await reserve.reserveUSDV())).to.be.greaterThan(0);
     await dao.newParamProposal("ROUTER_PARAMS", '1', '1', '2', '0')
-    await dao.voteProposal(await dao.proposalCount())
+    await dao.voteForProposal()
     await mine()
-    await dao.finaliseProposal(await dao.proposalCount())
+    await dao.executeProposal()
     expect(await pools.isAsset(asset.address)).to.equal(true);
     await router.curatePool(asset.address)
     expect(await router.isCurated(asset.address)).to.equal(true);

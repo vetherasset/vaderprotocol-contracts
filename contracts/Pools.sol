@@ -284,7 +284,7 @@ contract Pools {
             pooledUSDV = _balance;
         } else {
             // Want to know added Asset/Anchor
-            require((isAsset(_token) || isAnchor(_token)), '!POOL');
+            require((isAsset(_token) || isAnchor(_token)), "!POOL");
             require(_token == _pool, "!pool");
             addedAmount = _balance - mapToken_tokenAmount[_pool];
         }

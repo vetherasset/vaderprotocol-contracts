@@ -75,9 +75,9 @@ describe("Deploy USDV", function() {
 describe("Convert", function() {
   it("Should convert acc1", async function() {
     await dao.newActionProposal("MINTING")
-    await dao.voteProposal(await dao.proposalCount())
+    await dao.voteForProposal()
     await mine()
-    await dao.finaliseProposal(await dao.proposalCount())
+    await dao.executeProposal()
 
     await vader.approve(usdv.address, '10000', {from:acc1})
     await vader.convertToUSDV('250', {from:acc1})

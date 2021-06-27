@@ -178,6 +178,7 @@ contract Vault {
         totalWeight -= _redeemedWeight; // Reduce for total
         emit MemberWithdraws(_asset, _member, redeemedAmount, _redeemedWeight, totalWeight); // Event
         iRESERVE(RESERVE()).checkReserve();
+        iDAO(DAO()).purgeVotes(_member);
     }
 
     // Get the value owed for a member
