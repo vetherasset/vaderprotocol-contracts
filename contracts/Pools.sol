@@ -27,6 +27,14 @@ contract Pools {
     mapping(address => uint256) public mapToken_baseAmount;
     mapping(address => uint256) public mapToken_tokenAmount;
 
+    struct LiquidityDetails {
+        uint256 amount;
+        address member;
+    }
+
+    mapping(address => LiquidityDetails[]) public mapPool_tokenLiquidity;
+    mapping(address => LiquidityDetails[]) public mapPool_baseLiquidity;
+
     // Events
     event AddLiquidity(
         address indexed member,
@@ -135,6 +143,40 @@ contract Pools {
         emit RemoveLiquidity(member, base, outputBase, token, outputToken, units, mapToken_Units[token]);
         transferOut(base, outputBase, member);
         transferOut(token, outputToken, member);
+    }
+
+    function queueLiquidity(address token, uint256 amount, address pool, address member) external onlySystem returns () {
+        // if (base), then get desired token amount needed
+        // for each entry in the assetQueue, iterate, if less than currentDesired, add liquidity, issue 50% units to both
+        // if remainder, mutate entry
+        // if no remainder, shift from array
+        // if still desired, start again
+
+        if(iROUTER(ROUTER()).isBase(base)){
+
+            LiquidityDetails[] memory arrayTokenQueue = mapPool_tokenLiquidity[pool];
+            uint256 _remainingBase = amount;
+            uint256 _index;
+            for(_index = 0; _index < arrayTokenQueue.length; _index++){
+                uint256 _desiredToken = iUTILS(UTILS()).calcValueInToken(_remainingBase);
+                uint256 _pairedToken = arrayTokenQueue[_index].amount;
+                uint256 _pairedMember = arrayTokenQueue[_index].member;
+                if(_desiredToken >= _pairedToken ){
+                    // Fully consume paired liquidity
+                    uint256 _pairedBase = iUTILS(UTILS()).getShare(_pairedToken, _desiredToken, _remainingBase);
+                    _addLiquidityForPairedMembers(_pairedBase, _pairedToken, member, _pairedMember);
+                    _remainingBase -= _pairedBase;
+                } else {
+                    // Partially consume paired liquidity
+                    _addLiquidityForPairedMembers(_remainingBase, _desiredToken, member, _pairedMember);
+                    _pairedToken -= _desiredToken;
+                    _updateTokenQueue(_index, _pairedToken); // Update Entry
+                }
+            }
+            _unshiftTokenQueue(_index);
+        }
+        
+
     }
 
     //=======================================SWAP===========================================//
