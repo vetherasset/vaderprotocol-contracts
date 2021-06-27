@@ -311,7 +311,7 @@ contract Router {
         updateAnchorPrice(token);
     }
 
-    function replaceAnchor(address oldToken, address newToken) external {
+    function replaceAnchor(address oldToken, address newToken) external onlyDAO {
         require(newToken != oldToken, "New token not new");
         uint idx1 = mapAnchorAddress_arrayAnchorsIndex1[oldToken];
         require(idx1 != 0, "No such old token");

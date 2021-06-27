@@ -144,13 +144,20 @@ describe("Handle Anchors", function() {
     // expect(BN2Str(await router.getVADERAmount('100'))).to.equal('100')
     // expect(BN2Str(await router.getUSDVAmount('100'))).to.equal('100')
   });
-  it("Replace Outlier", async function() {
+  it("Replace Outlier using DAO", async function() {
     expect(await router.arrayAnchors('0')).to.equal(anchor0.address)
     await router.addLiquidity(vader.address, '111', anchor5.address, '111', {from:acc1})
     expect(BN2Str(await router.getAnchorPrice())).to.equal('1000000000000000000')
     expect(BN2Str(await utils.calcValueInBase(anchor0.address, '1000000000000000000'))).to.equal('1208791208791208791');
     expect(BN2Str(await utils.calcValueInBase(anchor5.address, '1000000000000000000'))).to.equal('1000000000000000000');
-    await router.replaceAnchor(anchor0.address, anchor5.address, {from:acc1})
+    
+    // await router.replaceAnchor(anchor0.address, anchor5.address, {from:acc1})
+
+    await dao.newAnchorProposal("ANCHOR", anchor0.address, anchor5.address)
+    await dao.voteForProposal()
+    await setNextBlockTimestamp(ts0 + 4 * 15)
+    await dao.executeProposal()
+
     expect(await router.arrayAnchors('0')).to.equal(anchor5.address)
     expect(BN2Str(await router.getAnchorPrice())).to.equal('1000000000000000000')
     // expect(BN2Str(await router.getVADERAmount('100'))).to.equal('100')

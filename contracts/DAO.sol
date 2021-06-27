@@ -23,6 +23,10 @@ contract DAO {
         uint256 p3;
         uint256 p4;
     }
+    struct AnchorDetails {
+        address a1;
+        address a2;
+    }
 
     uint256 public coolOffPeriod;
     uint256 public proposalFee;
@@ -43,6 +47,7 @@ contract DAO {
 
     GrantDetails public proposedGrant;
     ParamDetails public proposedParams;
+    AnchorDetails public proposedAnchor;
     address public proposedAddress;
 
     string public proposalType;
@@ -171,6 +176,15 @@ contract DAO {
         proposalType = typeStr;
         emit NewProposal(msg.sender, typeStr);
     }
+    // Proposal for Anchors
+    function newAnchorProposal(string memory typeStr, address a1, address a2) external noExisting {
+        _getProposalFee();
+        AnchorDetails memory anchor;
+        anchor.a1 = a1; anchor.a2 = a2;
+        proposedAnchor = anchor;
+        proposalType = typeStr;
+        emit NewProposal(msg.sender, typeStr);
+    }
 
     function _getProposalFee() internal {
         require(iERC20(USDV).transferFrom(msg.sender, RESERVE, proposalFee));
@@ -239,9 +253,15 @@ contract DAO {
         } else if (isEqual(_type, "VADER_PARAMS")) {
             ParamDetails memory _params = proposedParams;
             iVADER(VADER).setParams(_params.p1, _params.p2);
-        }else if (isEqual(_type, "ROUTER_PARAMS")) {
+        } else if (isEqual(_type, "ROUTER_PARAMS")) {
             ParamDetails memory _params = proposedParams;
             iROUTER(ROUTER).setParams(_params.p1, _params.p2, _params.p3, _params.p4);
+        } else if (isEqual(_type, "ANCHOR_PARAMS")) {
+            ParamDetails memory _params = proposedParams;
+            iROUTER(ROUTER).setAnchorParams(_params.p1, _params.p2, _params.p3);
+        } else if (isEqual(_type, "ANCHOR")) {
+            AnchorDetails memory _anchor = proposedAnchor;
+            iROUTER(ROUTER).replaceAnchor(_anchor.a1, _anchor.a2);
         }
         _finaliseProposal();
     }
