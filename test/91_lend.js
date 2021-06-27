@@ -74,7 +74,7 @@ describe("Deploy Lender", function() {
     await usdv.approve(router.address, max, {from:acc1})
     await anchor.approve(router.address, max, {from:acc1})
 
-    await vader.upgrade('10', {from:acc1})
+    await vader.upgrade('20', {from:acc1})
 
     await dao.newActionProposal("EMISSIONS")
     await dao.voteForProposal()
@@ -91,7 +91,8 @@ describe("Deploy Lender", function() {
     await dao.voteForProposal()
     await mine()
     await dao.executeProposal()
-    await vader.convertToUSDV('5000', {from:acc1})
+    await vader.convertToUSDV('10000', {from:acc1})
+    await usdv.transfer(reserve.address, '1000', {from:acc1})
 
     await asset.transfer(acc1, '2000')
     await asset.approve(router.address, BN2Str(one), {from:acc1})
@@ -126,11 +127,11 @@ describe("Add liquidity", function() {
 
 describe("Should Borrow Debt", function() {
   it("Borrow ANCHOR with VADER", async function() {
-    expect(BN2Str(await vader.balanceOf(acc1))).to.equal('3000');
+    expect(BN2Str(await vader.balanceOf(acc1))).to.equal('8000');
     expect(BN2Str(await anchor.balanceOf(acc1))).to.equal('1000');
     await vader.approve(lender.address, max, {from:acc1})
     await lender.borrow('100', vader.address, anchor.address, {from:acc1})
-    expect(BN2Str(await vader.balanceOf(acc1))).to.equal('2900');
+    expect(BN2Str(await vader.balanceOf(acc1))).to.equal('7900');
     expect(BN2Str(await anchor.balanceOf(acc1))).to.equal('1058');
     expect(BN2Str(await lender.getSystemCollateral(vader.address, anchor.address))).to.equal('97');
     expect(BN2Str(await lender.getSystemDebt(vader.address, anchor.address))).to.equal('58');
@@ -138,11 +139,11 @@ describe("Should Borrow Debt", function() {
     expect(BN2Str(await lender.getMemberDebt(acc1, vader.address, anchor.address))).to.equal('58');
   });
   it("Borrow ASSET with USDV", async function() {
-    expect(BN2Str(await usdv.balanceOf(acc1))).to.equal('3000');
+    expect(BN2Str(await usdv.balanceOf(acc1))).to.equal('7000');
     expect(BN2Str(await asset.balanceOf(acc1))).to.equal('1000');
     await usdv.approve(lender.address, max, {from:acc1})
     await lender.borrow('100', usdv.address, asset.address, {from:acc1})
-    expect(BN2Str(await usdv.balanceOf(acc1))).to.equal('2900');
+    expect(BN2Str(await usdv.balanceOf(acc1))).to.equal('6900');
     expect(BN2Str(await asset.balanceOf(acc1))).to.equal('1058');
     expect(BN2Str(await lender.getSystemCollateral(usdv.address, asset.address))).to.equal('97');
     expect(BN2Str(await lender.getSystemDebt(usdv.address, asset.address))).to.equal('58');

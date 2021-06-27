@@ -65,7 +65,7 @@ describe("Deploy Vader", function() {
     expect(BN2Str(await vader.decimals())).to.equal('18');
     expect(BN2Str(await vader.totalSupply())).to.equal('0');
     expect(BN2Str(await vader.maxSupply())).to.equal(BN2Str(2000000000 * one));
-    expect(BN2Str(await vader.emissionCurve())).to.equal('10');
+    expect(BN2Str(await vader.emissionCurve())).to.equal('3');
     expect(await vader.emitting()).to.equal(false);
     expect(BN2Str(await vader.secondsPerEra())).to.equal('1');
     // console.log(BN2Str(await vader.nextEraTime()));
@@ -82,7 +82,7 @@ describe("Upgrade", function() {
     expect(BN2Str(await vader.totalSupply())).to.equal(BN2Str(1000));
     expect(BN2Str(await vether.balanceOf(acc1))).to.equal(BN2Str(0));
     expect(BN2Str(await vader.balanceOf(acc1))).to.equal(BN2Str(1000));
-    expect(BN2Str(await vader.getDailyEmission())).to.equal(BN2Str('100'));
+    expect(BN2Str(await vader.getDailyEmission())).to.equal(BN2Str('0'));
   });
 // acc  | VTH | VADER  |
 // acc0 |   0 |    0 |
@@ -160,21 +160,22 @@ describe("DAO Functions", function() {
 
 describe("Emissions", function() {
   it("Should emit properly", async function() {
-    expect(BN2Str(await vader.getDailyEmission())).to.equal(BN2Str('800'));
+    // console.log(await vader.getDailyEmission())
+    expect(BN2Str(await vader.getDailyEmission())).to.equal(BN2Str('2'));
     await vader.transfer(acc0, BN2Str(200), {from:acc1})
     await vader.transfer(acc1, BN2Str(100), {from:acc0})
-    expect(BN2Str(await vader.balanceOf(reserve.address))).to.equal(BN2Str('2400'));
-    expect(BN2Str(await vader.getDailyEmission())).to.equal(BN2Str('3200'));
+    expect(BN2Str(await vader.balanceOf(reserve.address))).to.equal(BN2Str('4'));
+    expect(BN2Str(await vader.getDailyEmission())).to.equal(BN2Str('2'));
     await vader.transfer(acc0, BN2Str(100), {from:acc1})
-    expect(BN2Str(await vader.balanceOf(reserve.address))).to.equal(BN2Str('5600'));
-    expect(BN2Str(await vader.getDailyEmission())).to.equal(BN2Str('6400'));
+    expect(BN2Str(await vader.balanceOf(reserve.address))).to.equal(BN2Str('6'));
+    expect(BN2Str(await vader.getDailyEmission())).to.equal(BN2Str('2'));
   });
 });
 
 describe("FeeOnTransfer", function() {
   it("Should set up fees", async function() {
     expect(BN2Str(await vader.feeOnTransfer())).to.equal('0');
-    expect(BN2Str(await vader.totalSupply())).to.equal(BN2Str(6400));
+    expect(BN2Str(await vader.totalSupply())).to.equal(BN2Str(806));
     expect(BN2Str(await vether.balanceOf(acc0))).to.equal('999999999999999999999999');
     await vether.approve(vader.address, '999999999999999999999999', {from:acc0})
     await vader.upgrade('999999999999999999999999', {from:acc0})
@@ -182,10 +183,10 @@ describe("FeeOnTransfer", function() {
     await dao.voteForProposal()
     await mine()
     await dao.executeProposal()
-    expect(BN2Str(await vader.getDailyEmission())).to.equal(BN2Str('494071146245059288537546'));
-    expect(BN2Str(await vader.totalSupply())).to.equal('1000000000000000000000005400');
+    expect(BN2Str(await vader.getDailyEmission())).to.equal(BN2Str('1353619578753587091883'));
+    expect(BN2Str(await vader.totalSupply())).to.equal('999999999999999999999999806');
     await vader.transfer(acc1, BN2Str(100), {from:acc0})
-    expect(BN2Str(await vader.totalSupply())).to.equal('1000494071146245059288542946');
+    expect(BN2Str(await vader.totalSupply())).to.equal('1000001353619578753587091689');
     expect(BN2Str(await vader.maxSupply())).to.equal(BN2Str(2 * 10**9 * 10 ** 18));
     expect(BN2Str(await vader.feeOnTransfer())).to.equal('50');
   });

@@ -251,7 +251,7 @@ contract DAO {
             _setParams(_params.p1, _params.p2);
         } else if (isEqual(_type, "VADER_PARAMS")) {
             ParamDetails memory _params = proposedParams;
-            iVADER(VADER).setParams(_params.p1, _params.p2);
+            iVADER(VADER).setParams(_params.p1, _params.p2, _params.p2);
         } else if (isEqual(_type, "ROUTER_PARAMS")) {
             ParamDetails memory _params = proposedParams;
             iROUTER(ROUTER).setParams(_params.p1, _params.p2, _params.p3, _params.p4);

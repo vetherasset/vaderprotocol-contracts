@@ -85,6 +85,8 @@ describe("Deploy Interest", function() {
     await mine()
     await dao.executeProposal()
     await vader.convertToUSDV('5000', {from:acc1})
+    await vader.transfer(reserve.address, '1000', {from:acc1})
+    await usdv.transfer(reserve.address, '1000', {from:acc1})
 
     await asset.transfer(acc1, '2000')
 

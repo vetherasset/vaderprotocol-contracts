@@ -95,13 +95,6 @@ describe("DAO Functions", function () {
     await dao.executeProposal()
     assert.equal(await vader.emitting(), true)
 
-    assert.equal(await vader.emissionCurve(), '10')
-    await dao.newParamProposal("VADER_PARAMS", '1', '90', '0', '0')
-    await dao.voteForProposal()
-    await setNextBlockTimestamp(ts0 + 2 * 15)
-    await dao.executeProposal()
-    assert.equal(await vader.emissionCurve(), '90')
-
     await vader.transfer(acc1, ('100'), { from: acc0 })
     await vader.transfer(acc0, ('100'), { from: acc1 })
     await vader.transfer(acc1, '2000')
@@ -135,7 +128,7 @@ describe("DAO Functions", function () {
   it("It should GRANT", async () => {
 
     await usdv.transfer(vault.address, '100', { from: acc1 });
-    assert.equal(BN2Str(await reserve.reserveUSDV()), '173')
+    assert.equal(BN2Str(await reserve.reserveUSDV()), '12')
     await dao.newGrantProposal(acc3, '10', { from: acc1 })
     await dao.voteForProposal({ from: acc0 })
     await dao.voteForProposal({ from: acc1 })
@@ -143,7 +136,7 @@ describe("DAO Functions", function () {
     let balanceBefore = getBN(await usdv.balanceOf(acc3))
     await dao.executeProposal()
     let balanceAfter = getBN(await usdv.balanceOf(acc3))
-    assert.equal(BN2Str(balanceAfter.minus(balanceBefore)), '10')
+    assert.equal(BN2Str(balanceAfter.minus(balanceBefore)), '1')
   })
   it("It should change Utils", async () => {
     assert.equal(await dao.UTILS(), utils.address)
