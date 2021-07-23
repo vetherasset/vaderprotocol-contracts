@@ -63,10 +63,12 @@ contract Router {
         rewardReductionFactor = 1;
         timeForFullProtection = 1; //8640000; //100 days
         curatedPoolLimit = 1;
+        intervalTWAP = 3; //6hours
+        
         anchorLimit = 5;
         insidePriceLimit = 200;
         outsidePriceLimit = 500;
-        intervalTWAP = 3; //6hours
+        
         lastUpdatedTime = block.timestamp;
         startIntervalTime = lastUpdatedTime;
         cachedIntervalTime = startIntervalTime;
@@ -277,7 +279,7 @@ contract Router {
 
     //=====================================CURATION==========================================//
 
-    function curatePool(address token) external {
+    function curatePool(address token) external onlyTIMELOCK {
         require(iPOOLS(POOLS()).isAsset(token) || iPOOLS(POOLS()).isAnchor(token), "!Asset && !Anchor");
         if (!isCurated(token)) {
             if (curatedPoolCount < curatedPoolLimit) {
@@ -289,14 +291,11 @@ contract Router {
         emit Curated(msg.sender, token);
     }
 
-    function replacePool(address oldToken, address newToken) external {
-        require(iPOOLS(POOLS()).isAsset(newToken), "!Asset");
-        if (iPOOLS(POOLS()).getBaseAmount(newToken) > iPOOLS(POOLS()).getBaseAmount(oldToken)) {
-            // Must be deeper
-            _isCurated[oldToken] = false;
-            _isCurated[newToken] = true;
-            emit Curated(msg.sender, newToken);
-        }
+    function replacePool(address oldToken, address newToken) external onlyTIMELOCK {
+        require(iPOOLS(POOLS()).isAsset(newToken) || iPOOLS(POOLS()).isAnchor(newToken));
+        _isCurated[oldToken] = false;
+        _isCurated[newToken] = true;
+        emit Curated(msg.sender, newToken);
     }
 
     //=====================================ANCHORS==========================================//
@@ -318,8 +317,6 @@ contract Router {
         require(idx1 != 0, "No such old token");
         require(iPOOLS(POOLS()).isAnchor(newToken), "!Anchor"); // Must be anchor
         require(!iFACTORY(FACTORY()).isSynth(newToken), "Synth!"); // Must not be synth
-        require((iPOOLS(POOLS()).getBaseAmount(newToken) > iPOOLS(POOLS()).getBaseAmount(oldToken)), "Not deeper");
-        iUTILS(UTILS()).requirePriceBounds(oldToken, outsidePriceLimit, false, getAnchorPrice()); // if price oldToken >5%
         iUTILS(UTILS()).requirePriceBounds(newToken, insidePriceLimit, true, getAnchorPrice()); // if price newToken <2%
         _isCurated[oldToken] = false;
         _isCurated[newToken] = true;

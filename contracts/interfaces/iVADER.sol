@@ -19,7 +19,7 @@ interface iVADER {
 
     function flipMinting() external;
 
-    function setParams(uint256 newEra, uint256 newCurve) external;
+    function setParams(uint256 newSeconds, uint256 newCurve, uint256 newTailEmissionEra) external;
 
     function setReserve(address newReserve) external;
 

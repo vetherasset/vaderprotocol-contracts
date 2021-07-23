@@ -13,7 +13,7 @@ contract Synth is iERC20 {
     // Coin Defaults
     string public override name;
     string public override symbol;
-    uint8 public constant override decimals = 18;
+    uint8 public override decimals;
     uint256 public override totalSupply;
 
     // ERC-20 Mappings
@@ -33,6 +33,7 @@ contract Synth is iERC20 {
         string memory synthSymbol = ".v";
         name = string(abi.encodePacked(iERC20(_token).name(), synthName));
         symbol = string(abi.encodePacked(iERC20(_token).symbol(), synthSymbol));
+        decimals = iERC20(_token).decimals();
     }
 
     //========================================iERC20=========================================//

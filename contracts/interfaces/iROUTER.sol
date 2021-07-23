@@ -8,6 +8,11 @@ interface iROUTER {
         uint256 newLimit,
         uint256 newInterval
     ) external;
+    function setAnchorParams(
+        uint256 newLimit,
+        uint256 newInside,
+        uint256 newOutside
+    ) external;
 
     function addLiquidity(
         address base,
@@ -61,9 +66,11 @@ interface iROUTER {
 
     function curatePool(address token) external;
 
+    function replacePool(address oldToken, address newToken) external;
+
     function listAnchor(address token) external;
 
-    function replacePool(address oldToken, address newToken) external;
+    function replaceAnchor(address oldToken, address newToken) external;
 
     function updateAnchorPrice(address token) external;
 
