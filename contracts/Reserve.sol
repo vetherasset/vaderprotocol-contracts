@@ -4,7 +4,7 @@ pragma solidity 0.8.3;
 // Interfaces
 import "./interfaces/SafeERC20.sol";
 import "./interfaces/iERC20.sol";
-import "./interfaces/iDAO.sol";
+import "./interfaces/iGovernorAlpha.sol";
 import "./interfaces/iVADER.sol";
 import "./interfaces/iUSDV.sol";
 
@@ -21,25 +21,25 @@ contract Reserve {
     uint256 public allocatedVADER;
     uint256 public vaultShare;
 
-    // Only DAO can execute
-    modifier onlyDAO() {
-        require(msg.sender == DAO(), "!DAO");
+    // Only TIMELOCK can execute
+    modifier onlyTIMELOCK() {
+        require(msg.sender == TIMELOCK(), "!TIMELOCK");
         _;
     }
-    // Only DAO can execute
+    // Only System can execute
     modifier onlySystem() {
-        require(isPermitted(msg.sender));
+        require(isPermitted(msg.sender), "!Permitted");
         _;
     }
 
-    function isPermitted(address _address) private view returns(bool _permitted){
-        if(_address == VAULT() || _address == ROUTER() || _address == LENDER()){
+    function isPermitted(address _address) private view returns (bool _permitted) {
+        if (_address == VAULT() || _address == ROUTER() || _address == LENDER()) {
             _permitted = true;
         }
     }
 
     //=====================================CREATION=========================================//
- 
+
     constructor() {
         minGrantTime = 2592000;
         splitForUSDV = 6700;
@@ -48,27 +48,27 @@ contract Reserve {
 
     // Can only be called once
     function init(address _vader) external {
-        if(VADER == address(0)){
+        if (VADER == address(0)) {
             VADER = _vader;
             nextEraTime = block.timestamp + iVADER(VADER).secondsPerEra();
             iERC20(VADER).approve(USDV(), type(uint).max);
         }
     }
-    
-    //=========================================DAO=========================================//
 
-    function setParams(uint256 newSplit, uint256 newDelay, uint256 newShare) external onlyDAO {
+    //======================================= TIMELOCK =========================================//
+
+    function setParams(uint256 newSplit, uint256 newDelay, uint256 newShare) external onlyTIMELOCK {
         splitForUSDV = newSplit;
         minGrantTime = newDelay;
         vaultShare = newShare;
     }
 
     // Can issue grants
-    function grant(address recipient, uint256 amount) public onlyDAO {
+    function grant(address recipient, uint256 amount) public onlyTIMELOCK {
         require((block.timestamp - lastGranted) >= minGrantTime, "not too fast");
         lastGranted = block.timestamp;
         uint256 _reserveForGrant = reserveUSDV() / 10;
-        if(amount > _reserveForGrant){
+        if (amount > _reserveForGrant) {
             amount = _reserveForGrant;
         }
         iERC20(USDV()).transfer(recipient, amount); // safeErc20 not needed; USDV trusted
@@ -95,9 +95,9 @@ contract Reserve {
     // System addresses can request an amount up to the balance
     function requestFundsStrict(address base, address recipient, uint256 amount) external onlySystem returns(uint256) {
         checkReserve();
-        if(base == VADER) {
+        if (base == VADER) {
             require(reserveVADER() > amount, "Insufficient VADER Reserve");
-        } else if(base == USDV()) {
+        } else if (base == USDV()) {
             require(reserveUSDV() > amount, "Insufficient USDV Reserve");
         }
         ExternalERC20(base).safeTransfer(recipient, amount);
@@ -120,7 +120,7 @@ contract Reserve {
         }
     }
 
-    function getVaultReward() external view returns(uint256) {
+    function getVaultReward() external view returns (uint256) {
         return reserveUSDV() / vaultShare;
     }
 
@@ -136,7 +136,7 @@ contract Reserve {
 
     // Want to get part of the reserve that is not allocated
     function unallocatedVADER() public view returns (uint256 amount) {
-        if(reserveVADER() > allocatedVADER){
+        if (reserveVADER() > allocatedVADER){
             amount = reserveVADER() - allocatedVADER; // The difference
         }
         // Else 0
@@ -144,20 +144,27 @@ contract Reserve {
 
     //============================== HELPERS ================================//
 
-    function DAO() internal view returns(address){
-        return iVADER(VADER).DAO();
-    }
-    function USDV() internal view returns(address){
-        return iDAO(iVADER(VADER).DAO()).USDV();
-    }
-    function VAULT() internal view returns(address){
-        return iDAO(iVADER(VADER).DAO()).VAULT();
-    }
-    function ROUTER() internal view returns(address){
-        return iDAO(iVADER(VADER).DAO()).ROUTER();
-    }
-    function LENDER() internal view returns(address){
-        return iDAO(iVADER(VADER).DAO()).LENDER();
+    function GovernorAlpha() internal view returns (address) {
+        return iVADER(VADER).GovernorAlpha();
     }
 
+    function USDV() internal view returns (address) {
+        return iGovernorAlpha(GovernorAlpha()).USDV();
+    }
+
+    function VAULT() internal view returns (address) {
+        return iGovernorAlpha(GovernorAlpha()).VAULT();
+    }
+
+    function ROUTER() internal view returns (address) {
+        return iGovernorAlpha(GovernorAlpha()).ROUTER();
+    }
+
+    function LENDER() internal view returns (address) {
+        return iGovernorAlpha(GovernorAlpha()).LENDER();
+    }
+
+    function TIMELOCK() internal view returns (address) {
+        return iGovernorAlpha(GovernorAlpha()).TIMELOCK();
+    }
 }

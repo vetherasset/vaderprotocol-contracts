@@ -3,7 +3,7 @@ pragma solidity 0.8.3;
 
 // Interfaces
 import "./interfaces/iERC20.sol";
-import "./interfaces/iDAO.sol";
+import "./interfaces/iGovernorAlpha.sol";
 import "./interfaces/iVADER.sol";
 import "./interfaces/iROUTER.sol";
 import "./interfaces/iLENDER.sol";
@@ -108,7 +108,7 @@ contract Utils {
         uint256 _B = iPOOLS(POOLS()).getBaseAmount(token);
         uint256 _T = iPOOLS(POOLS()).getTokenAmount(token);
         address _synth = iFACTORY(FACTORY()).getSynth(token);
-        if(_synth != address(0)){
+        if (_synth != address(0)) {
             uint256 _S = iERC20(_synth).totalSupply();
             _totalUnits = _totalUnits + calcSynthUnits(_S, _B, _T);
         }
@@ -390,20 +390,27 @@ contract Utils {
 
     //============================== HELPERS ================================//
 
-    function USDV() internal view returns(address){
-        return iDAO(iVADER(VADER).DAO()).USDV();
-    }
-    function ROUTER() internal view returns(address){
-        return iDAO(iVADER(VADER).DAO()).ROUTER();
-    }
-    function LENDER() internal view returns(address){
-        return iDAO(iVADER(VADER).DAO()).LENDER();
-    }
-    function POOLS() internal view returns(address){
-        return iDAO(iVADER(VADER).DAO()).POOLS();
-    }
-    function FACTORY() internal view returns(address){
-        return iDAO(iVADER(VADER).DAO()).FACTORY();
+    function GovernorAlpha() internal view returns (address) {
+        return iVADER(VADER).GovernorAlpha();
     }
 
+    function USDV() internal view returns (address) {
+        return iGovernorAlpha(GovernorAlpha()).USDV();
+    }
+
+    function ROUTER() internal view returns (address) {
+        return iGovernorAlpha(GovernorAlpha()).ROUTER();
+    }
+
+    function LENDER() internal view returns (address) {
+        return iGovernorAlpha(GovernorAlpha()).LENDER();
+    }
+
+    function POOLS() internal view returns (address) {
+        return iGovernorAlpha(GovernorAlpha()).POOLS();
+    }
+
+    function FACTORY() internal view returns (address) {
+        return iGovernorAlpha(GovernorAlpha()).FACTORY();
+    }
 }

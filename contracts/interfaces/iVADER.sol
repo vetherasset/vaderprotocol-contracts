@@ -3,7 +3,9 @@ pragma solidity 0.8.3;
 
 interface iVADER {
 
-    function DAO() external view returns (address);
+    function GovernorAlpha() external view returns (address);
+
+    function Admin() external view returns (address);
 
     function UTILS() external view returns (address);
 
@@ -23,9 +25,9 @@ interface iVADER {
 
     function changeUTILS(address newUTILS) external;
 
-    function changeDAO(address newDAO) external;
+    function changeGovernorAlpha(address newGovernorAlpha) external;
 
-    function purgeDAO() external;
+    function purgeGovernorAlpha() external;
 
     function upgrade(uint256 amount) external;
 

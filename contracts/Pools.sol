@@ -4,7 +4,7 @@ pragma solidity 0.8.3;
 // Interfaces
 import "./interfaces/SafeERC20.sol";
 import "./interfaces/iERC20.sol";
-import "./interfaces/iDAO.sol";
+import "./interfaces/iGovernorAlpha.sol";
 import "./interfaces/iUTILS.sol";
 import "./interfaces/iVADER.sol";
 import "./interfaces/iROUTER.sol";
@@ -77,7 +77,7 @@ contract Pools {
     }
 
     //=====================================CREATION=========================================//
- 
+
     constructor(address _vader) {
         VADER = _vader;
     }
@@ -90,7 +90,7 @@ contract Pools {
         address member
     ) external onlySystem returns (uint256 liquidityUnits) {
         require(iROUTER(ROUTER()).isBase(base), "!Base");
-        require(token != USDV() && token != VADER); // Prohibited
+        require(token != USDV() && token != VADER, "USDV || VADER"); // Prohibited
         uint256 _actualInputBase;
         if (base == VADER) {
             if (!_isAnchor[token]) {
@@ -191,15 +191,12 @@ contract Pools {
 
     // Should be done with intention, is gas-intensive
     function deploySynth(address token) external {
-        require(token != VADER && token != USDV() && !isAnchor(token));
+        require(token != VADER && token != USDV() && !isAnchor(token), "VADER || USDV || ANCHOR");
         iFACTORY(FACTORY()).deploySynth(token);
     }
 
     // Mint a Synth against its own pool
-    function mintSynth(
-        address token,
-        address member
-    ) external onlySystem returns (uint256 outputAmount) {
+    function mintSynth(address token, address member) external onlySystem returns (uint256 outputAmount) {
         address synth = getSynth(token);
         require(synth != address(0), "!Synth");
         uint256 _actualInputBase = getAddedAmount(USDV(), token); // Get input
@@ -214,10 +211,7 @@ contract Pools {
     }
 
     // Burn a Synth to get out BASE
-    function burnSynth(
-        address token,
-        address member
-    ) external onlySystem returns (uint256 outputBase) {
+    function burnSynth (address token, address member) external onlySystem returns (uint256 outputBase) {
         address synth = getSynth(token);
         uint256 _actualInputSynth = iERC20(synth).balanceOf(address(this)); // Get input
         iERC20(synth).burn(_actualInputSynth); // Burn it
@@ -305,7 +299,7 @@ contract Pools {
         }
     }
 
-    function isAsset(address token) public view returns(bool) {
+    function isAsset(address token) public view returns (bool) {
         return _isAsset[token];
     }
 
@@ -340,24 +334,33 @@ contract Pools {
     function isSynth(address token) external view returns (bool) {
         return iFACTORY(FACTORY()).isSynth(token);
     }
-    
-    function USDV() internal view returns(address){
-        return iDAO(iVADER(VADER).DAO()).USDV();
+
+    function GovernorAlpha() internal view returns (address) {
+        return iVADER(VADER).GovernorAlpha();
     }
-    function ROUTER() internal view returns(address){
-        return iDAO(iVADER(VADER).DAO()).ROUTER();
+
+    function USDV() internal view returns (address) {
+        return iGovernorAlpha(GovernorAlpha()).USDV();
     }
-    function VAULT() internal view returns(address){
-        return iDAO(iVADER(VADER).DAO()).VAULT();
+
+    function ROUTER() internal view returns (address) {
+        return iGovernorAlpha(GovernorAlpha()).ROUTER();
     }
-    function LENDER() internal view returns(address){
-        return iDAO(iVADER(VADER).DAO()).LENDER();
+
+    function VAULT() internal view returns (address) {
+        return iGovernorAlpha(GovernorAlpha()).VAULT();
     }
-    function FACTORY() internal view returns(address){
-        return iDAO(iVADER(VADER).DAO()).FACTORY();
+
+    function LENDER() internal view returns (address) {
+        return iGovernorAlpha(GovernorAlpha()).LENDER();
     }
+
+    function FACTORY() internal view returns (address) {
+        return iGovernorAlpha(GovernorAlpha()).FACTORY();
+    }
+
     function UTILS() public view returns (address) {
-        return iDAO(iVADER(VADER).DAO()).UTILS();
+        return iGovernorAlpha(GovernorAlpha()).UTILS();
     }
 
 }

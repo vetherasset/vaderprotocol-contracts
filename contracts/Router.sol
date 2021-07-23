@@ -4,7 +4,7 @@ pragma solidity 0.8.3;
 // Interfaces
 import "./interfaces/SafeERC20.sol";
 import "./interfaces/iERC20.sol";
-import "./interfaces/iDAO.sol";
+import "./interfaces/iGovernorAlpha.sol";
 import "./interfaces/iUTILS.sol";
 import "./interfaces/iVADER.sol";
 import "./interfaces/iRESERVE.sol";
@@ -50,14 +50,14 @@ contract Router {
     event PoolReward(address indexed base, address indexed token, uint256 amount);
     event Curated(address indexed curator, address indexed token);
 
-    // Only DAO can execute
-    modifier onlyDAO() {
-        require(msg.sender == DAO(), "!DAO");
+    // Only TIMELOCK can execute
+    modifier onlyTIMELOCK() {
+        require(msg.sender == TIMELOCK(), "!TIMELOCK");
         _;
     }
 
     //=====================================CREATION=========================================//
- 
+
     constructor(address _vader) {
         VADER = _vader;
         rewardReductionFactor = 1;
@@ -74,14 +74,14 @@ contract Router {
         cachedIntervalTime = startIntervalTime;
     }
 
-    //=========================================DAO=========================================//
+    //====================================== TIMELOCK =====================================//
     // Can set params
     function setParams(
         uint256 newFactor,
         uint256 newTime,
         uint256 newLimit,
         uint256 newInterval
-    ) external onlyDAO {
+    ) external onlyTIMELOCK {
         rewardReductionFactor = newFactor;
         timeForFullProtection = newTime;
         curatedPoolLimit = newLimit;
@@ -92,7 +92,7 @@ contract Router {
         uint256 newLimit,
         uint256 newInside,
         uint256 newOutside
-    ) external onlyDAO {
+    ) external onlyTIMELOCK {
         anchorLimit = newLimit;
         insidePriceLimit = newInside;
         outsidePriceLimit = newOutside;
@@ -122,7 +122,7 @@ contract Router {
     ) external returns (uint256 units, uint256 amountBase, uint256 amountToken) {
         address _member = msg.sender;
         uint256 _protection = getILProtection(_member, base, token, basisPoints);
-        if(_protection > 0){
+        if (_protection > 0) {
             iRESERVE(RESERVE()).requestFunds(base, POOLS(), _protection);
             iPOOLS(POOLS()).addLiquidity(base, token, _member);
             mapMemberToken_depositBase[_member][token] += _protection;
@@ -184,7 +184,7 @@ contract Router {
         }
         if (isBase(outputToken)) {
             // Token||Synth -> BASE
-            require(iUTILS(UTILS()).calcSwapSlip(inputAmount, iPOOLS(POOLS()).getTokenAmount(inputToken)) <= slipLimit);
+            require(iUTILS(UTILS()).calcSwapSlip(inputAmount, iPOOLS(POOLS()).getTokenAmount(inputToken)) <= slipLimit, ">slipLimit");
             if (!inSynth) {
                 outputAmount = iPOOLS(POOLS()).swap(_base, inputToken, _member, true);
             } else {
@@ -192,22 +192,23 @@ contract Router {
             }
         } else if (isBase(inputToken)) {
             // BASE -> Token||Synth
-            require(iUTILS(UTILS()).calcSwapSlip(inputAmount, iPOOLS(POOLS()).getBaseAmount(outputToken)) <= slipLimit);
+            require(iUTILS(UTILS()).calcSwapSlip(inputAmount, iPOOLS(POOLS()).getBaseAmount(outputToken)) <= slipLimit, ">slipLimit");
             if (!outSynth) {
                 outputAmount = iPOOLS(POOLS()).swap(_base, outputToken, _member, false);
             } else {
                 outputAmount = iPOOLS(POOLS()).mintSynth(outputToken, _member);
             }
-        } else { // !isBase(inputToken) && !isBase(outputToken)
+        } else {
+            // !isBase(inputToken) && !isBase(outputToken)
             // Token||Synth -> Token||Synth
-            require(iUTILS(UTILS()).calcSwapSlip(inputAmount, iPOOLS(POOLS()).getTokenAmount(inputToken)) <= slipLimit);
+            require(iUTILS(UTILS()).calcSwapSlip(inputAmount, iPOOLS(POOLS()).getTokenAmount(inputToken)) <= slipLimit, ">slipLimit");
             uint _intermediaryAmount;
             if (!inSynth) {
                 _intermediaryAmount = iPOOLS(POOLS()).swap(_base, inputToken, POOLS(), true);
             } else {
                 _intermediaryAmount = iPOOLS(POOLS()).burnSynth(inputToken, POOLS());
             }
-            require(iUTILS(UTILS()).calcSwapSlip(_intermediaryAmount, iPOOLS(POOLS()).getBaseAmount(outputToken)) <= slipLimit);
+            require(iUTILS(UTILS()).calcSwapSlip(_intermediaryAmount, iPOOLS(POOLS()).getBaseAmount(outputToken)) <= slipLimit, ">slipLimit");
             if (!outSynth) {
                 outputAmount = iPOOLS(POOLS()).swap(_base, outputToken, _member, false);
             } else {
@@ -278,8 +279,8 @@ contract Router {
 
     //=====================================CURATION==========================================//
 
-    function curatePool(address token) external onlyDAO {
-        require(iPOOLS(POOLS()).isAsset(token) || iPOOLS(POOLS()).isAnchor(token));
+    function curatePool(address token) external onlyTIMELOCK {
+        require(iPOOLS(POOLS()).isAsset(token) || iPOOLS(POOLS()).isAnchor(token), "!Asset && !Anchor");
         if (!isCurated(token)) {
             if (curatedPoolCount < curatedPoolLimit) {
                 // Limit
@@ -290,7 +291,7 @@ contract Router {
         emit Curated(msg.sender, token);
     }
 
-    function replacePool(address oldToken, address newToken) external onlyDAO{
+    function replacePool(address oldToken, address newToken) external onlyTIMELOCK {
         require(iPOOLS(POOLS()).isAsset(newToken) || iPOOLS(POOLS()).isAnchor(newToken));
         _isCurated[oldToken] = false;
         _isCurated[newToken] = true;
@@ -300,8 +301,8 @@ contract Router {
     //=====================================ANCHORS==========================================//
 
     function listAnchor(address token) external {
-        require(arrayAnchors.length < anchorLimit); // Limit
-        require(iPOOLS(POOLS()).isAnchor(token)); // Must be anchor
+        require(arrayAnchors.length < anchorLimit, ">=Limit"); // Limit
+        require(iPOOLS(POOLS()).isAnchor(token), "!Anchor"); // Must be anchor
         require(!iFACTORY(FACTORY()).isSynth(token), "Synth!"); // Must not be synth
         arrayAnchors.push(token); // Add
         mapAnchorAddress_arrayAnchorsIndex1[token] = arrayAnchors.length; // Store 1-based index
@@ -310,7 +311,7 @@ contract Router {
         updateAnchorPrice(token);
     }
 
-    function replaceAnchor(address oldToken, address newToken) external onlyDAO {
+    function replaceAnchor(address oldToken, address newToken) external onlyTIMELOCK {
         require(newToken != oldToken, "New token not new");
         uint idx1 = mapAnchorAddress_arrayAnchorsIndex1[oldToken];
         require(idx1 != 0, "No such old token");
@@ -342,7 +343,8 @@ contract Router {
         uint _secondsSinceLastUpdate = _now - lastUpdatedTime;
         accumulatedPrice += _secondsSinceLastUpdate * getAnchorPrice();
         lastUpdatedTime = _now;
-        if((_now - cachedIntervalTime) > intervalTWAP){ // More than the interval, update interval params
+        if ((_now - cachedIntervalTime) > intervalTWAP) {
+            // More than the interval, update interval params
             startIntervalAccumulatedPrice = cachedIntervalAccumulatedPrice; // update price from cache
             startIntervalTime = cachedIntervalTime; // update time from cache
             cachedIntervalAccumulatedPrice = accumulatedPrice; // reset cache
@@ -354,13 +356,15 @@ contract Router {
     function getAnchorPrice() public view returns (uint256 anchorPrice) {
         // if array len odd  3/2 = 1; 5/2 = 2
         // if array len even 2/2 = 1; 4/2 = 2
-        uint _anchorMiddle = arrayPrices.length/2;
+        uint _anchorMiddle = arrayPrices.length / 2;
         uint256[] memory _sortedAnchorFeed = iUTILS(UTILS()).sortArray(arrayPrices); // Sort price array, no need to modify storage
-        if(arrayPrices.length == 0) {
+        if (arrayPrices.length == 0) {
             anchorPrice = one; // Edge case for first USDV mint
-        } else if(arrayPrices.length & 0x1 == 0x1) { // arrayPrices.length is odd
+        } else if (arrayPrices.length & 0x1 == 0x1) {
+            // arrayPrices.length is odd
             anchorPrice = _sortedAnchorFeed[_anchorMiddle]; // Return the middle
-        } else { // arrayPrices.length is even
+        } else {
+            // arrayPrices.length is even
             anchorPrice = (_sortedAnchorFeed[_anchorMiddle] / 2) + (_sortedAnchorFeed[_anchorMiddle - 1] / 2); // Return the average of middle pair
         }
     }
@@ -385,7 +389,7 @@ contract Router {
         return (vaderAmount * one) / _price;
     }
 
-     //======================================ASSETS=========================================//   
+    //======================================ASSETS=========================================//
 
     // Move funds in
     function moveTokenToPools(address _token, uint256 _amount) internal returns (uint256 safeAmount) {
@@ -429,7 +433,7 @@ contract Router {
     // @dev Assumes `_token` is trusted (is a base asset or synth) and supports
     function _getFunds(address _token, uint256 _amount) internal returns (uint256) {
         uint256 _balance = iERC20(_token).balanceOf(address(this));
-        require(iERC20(_token).transferFrom(msg.sender, address(this), _amount)); // safeErc20 not needed; _token trusted
+        require(iERC20(_token).transferFrom(msg.sender, address(this), _amount), "!Transfer"); // safeErc20 not needed; _token trusted
         return iERC20(_token).balanceOf(address(this)) - _balance;
     }
 
@@ -439,7 +443,7 @@ contract Router {
         address _member,
         uint256 _amount
     ) internal {
-        require(iERC20(_token).transfer(_member, _amount)); // safeErc20 not needed; _token trusted
+        require(iERC20(_token).transfer(_member, _amount), "!Transfer"); // safeErc20 not needed; _token trusted
     }
 
     //======================================HELPERS=========================================//
@@ -480,23 +484,33 @@ contract Router {
         return mapMemberToken_lastDeposited[member][token];
     }
 
-    function DAO() internal view returns(address){
-        return iVADER(VADER).DAO();
-    }
-    function USDV() internal view returns(address){
-        return iDAO(iVADER(VADER).DAO()).USDV();
-    }
-    function RESERVE() internal view returns(address){
-        return iDAO(iVADER(VADER).DAO()).RESERVE();
-    }
-    function POOLS() internal view returns(address){
-        return iDAO(iVADER(VADER).DAO()).POOLS();
-    }
-    function FACTORY() internal view returns(address){
-        return iDAO(iVADER(VADER).DAO()).FACTORY();
-    }
-    function UTILS() internal view returns(address){
-        return iDAO(iVADER(VADER).DAO()).UTILS();
+    //============================== HELPERS ================================//
+
+    function GovernorAlpha() internal view returns (address) {
+        return iVADER(VADER).GovernorAlpha();
     }
 
+    function USDV() internal view returns (address) {
+        return iGovernorAlpha(GovernorAlpha()).USDV();
+    }
+
+    function RESERVE() internal view returns (address) {
+        return iGovernorAlpha(GovernorAlpha()).RESERVE();
+    }
+
+    function POOLS() internal view returns (address) {
+        return iGovernorAlpha(GovernorAlpha()).POOLS();
+    }
+
+    function FACTORY() internal view returns (address) {
+        return iGovernorAlpha(GovernorAlpha()).FACTORY();
+    }
+
+    function UTILS() internal view returns (address) {
+        return iGovernorAlpha(GovernorAlpha()).UTILS();
+    }
+
+    function TIMELOCK() internal view returns (address) {
+        return iGovernorAlpha(GovernorAlpha()).TIMELOCK();
+    }
 }

@@ -2,8 +2,6 @@
 pragma solidity 0.8.3;
 
 interface iUSDV {
-    function ROUTER() external view returns (address);
-
     function isMature() external view returns (bool);
 
     function setParams(uint256 newDelay) external;

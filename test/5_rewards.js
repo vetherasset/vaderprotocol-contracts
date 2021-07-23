@@ -1,49 +1,43 @@
-const { expect } = require("chai");
-var Utils = artifacts.require('./Utils')
-var DAO = artifacts.require('./DAO')
-var Vether = artifacts.require('./Vether')
-var Vader = artifacts.require('./Vader')
-var USDV = artifacts.require('./USDV')
-var RESERVE = artifacts.require('./Reserve')
-var VAULT = artifacts.require('./Vault')
-var Pools = artifacts.require('./Pools')
-var Router = artifacts.require('./Router')
-var Lender = artifacts.require('./Lender')
-var Factory = artifacts.require('./Factory')
-var Asset = artifacts.require('./Token1')
-var Anchor = artifacts.require('./Token2')
+const BigNumber = require('bignumber.js');
+const {
+  encodeParameters,
+  setNextBlockTimestamp,
+  currentBlockTimestamp,
+} = require('./Utils/Ethereum');
 
-const BigNumber = require('bignumber.js')
-const truffleAssert = require('truffle-assertions');
-const { VoidSigner } = require("@ethersproject/abstract-signer");
+var Vether = artifacts.require('./Vether');
+var Vader = artifacts.require('./Vader');
+var USDV = artifacts.require('./USDV');
+var RESERVE = artifacts.require('./Reserve');
+var VAULT = artifacts.require('./Vault');
+var Router = artifacts.require('./Router');
+var Lender = artifacts.require('./Lender');
+var Pools = artifacts.require('./Pools');
+var Factory = artifacts.require('./Factory');
+var Utils = artifacts.require('./Utils');
+var Governor = artifacts.require('./Governance/GovernorAlpha');
+var Timelock = artifacts.require('./Timelock');
+var Asset = artifacts.require('./Token1');
+var Anchor = artifacts.require('./Token2');
 
-function BN2Str(BN) { return ((new BigNumber(BN)).toFixed()) }
-function getBN(BN) { return (new BigNumber(BN)) }
+function BN2Str(BN) { return ((new BigNumber(BN)).toFixed()); }
 
-async function mine() {
-  await ethers.provider.send('evm_mine')
-}
+var acc0, acc1, acc2;
+var vether, vader, usdv, reserve, vault, router;
+var lender, pools, factory, utils, governor, timelock;
+var asset, anchor;
 
-const max = '115792089237316195423570985008687907853269984665640564039457584007913129639935'
+const max = '115792089237316195423570985008687907853269984665640564039457584007913129639935';
+const one = 1e18;
 
-var utils;
-var dao; var vader; var vether; var usdv;
-var reserve; var vault; var pools; var anchor; var asset; var router; var lender; var factory;
-var anchor0; var anchor1; var anchor2; var anchor3; var anchor4;  var anchor5;
-var acc0; var acc1; var acc2; var acc3; var acc0; var acc5;
-const one = 10**18
-
-before(async function() {
+before(async function () {
   accounts = await ethers.getSigners();
-  acc0 = await accounts[0].getAddress()
-  acc1 = await accounts[1].getAddress()
-  acc2 = await accounts[2].getAddress()
-  acc3 = await accounts[3].getAddress()
+  acc0 = await accounts[0].getAddress();
+  acc1 = await accounts[1].getAddress();
+  acc2 = await accounts[2].getAddress();
 
-  dao = await DAO.new();
   vether = await Vether.new();
   vader = await Vader.new();
-  utils = await Utils.new(vader.address);
   usdv = await USDV.new(vader.address);
   reserve = await RESERVE.new();
   vault = await VAULT.new(vader.address);
@@ -51,115 +45,130 @@ before(async function() {
   lender = await Lender.new(vader.address);
   pools = await Pools.new(vader.address);
   factory = await Factory.new(pools.address);
-})
-// acc  | VTH | VADER  | USDV | Anr  |  Ass |
-// pool|   0 | 2000 | 2000 | 1000 | 1000 |
-// acc1 |   0 | 1000 | 1000 | 1000 | 1000 |
+  utils = await Utils.new(vader.address);
 
-describe("Deploy Rewards", function() {
-  it("Should have right reserves", async function() {
-    await dao.init(vether.address, vader.address, usdv.address, reserve.address,
-    vault.address, router.address, lender.address, pools.address, factory.address, utils.address);
+  governor = await Governor.new(
+    vether.address,
+    vader.address,
+    usdv.address,
+    reserve.address,
+    vault.address,
+    router.address,
+    lender.address,
+    pools.address,
+    factory.address,
+    utils.address,
+    acc2
+  );
+  timelock = await Timelock.new(acc2, 2 * 24 * 60 * 60);
+  await governor.initTimelock(timelock.address);
+});
+// acc  | VTH | VADER | USDV |  Anr |  Ass |
+// pool |   0 |  2000 | 2000 | 1000 | 1000 |
+// acc1 |   0 |  1000 | 1000 | 1000 | 1000 |
 
-    await vader.changeDAO(dao.address)
-    await reserve.init(vader.address)
+describe("Deploy Rewards", function () {
+  it("Should have right reserves", async function () {
+    await vader.changeGovernorAlpha(governor.address);
+    await reserve.init(vader.address);
+
+    let targets = [vader.address];
+    let values = ["0"];
+    let signatures = ["flipEmissions()"];
+    let calldatas = [encodeParameters([], [])];
+
+    let ts = await currentBlockTimestamp() + 2 * 24 * 60 * 60 + 60;
+    await timelock.queueTransaction(targets[0], values[0], signatures[0], calldatas[0], ts, { from: acc2 });
+    await setNextBlockTimestamp(ts);
+    await timelock.executeTransaction(targets[0], values[0], signatures[0], calldatas[0], ts, { from: acc2 });
+
+    targets = [vader.address];
+    values = ["0"];
+    signatures = ["setParams(uint256,uint256)"];
+    calldatas = [encodeParameters(['uint256', 'uint256'], [1, 900])];
+
+    ts = await currentBlockTimestamp() + 2 * 24 * 60 * 60 + 60;
+    await timelock.queueTransaction(targets[0], values[0], signatures[0], calldatas[0], ts, { from: acc2 });
+    await setNextBlockTimestamp(ts);
+    await timelock.executeTransaction(targets[0], values[0], signatures[0], calldatas[0], ts, { from: acc2 });
 
     anchor = await Anchor.new();
     asset = await Asset.new();
 
-    await vether.transfer(acc1, BN2Str(7407))
-    await anchor.transfer(acc1, BN2Str(3000))
+    await vether.transfer(acc1, BN2Str(7407));
+    await anchor.transfer(acc1, BN2Str(3000));
 
-    await vader.approve(usdv.address, max, {from:acc1})
-    await anchor.approve(router.address, max, {from:acc1})
-    await vether.approve(vader.address, max, {from:acc1})
-    await vader.approve(router.address, max, {from:acc1})
-    await usdv.approve(router.address, max, {from:acc1})
+    await vader.approve(usdv.address, max, { from: acc1 });
+    await anchor.approve(router.address, max, { from: acc1 });
+    await vether.approve(vader.address, max, { from: acc1 });
+    await vader.approve(router.address, max, { from: acc1 });
+    await usdv.approve(router.address, max, { from: acc1 });
 
-    await vader.upgrade('8', {from:acc1})
+    await vader.upgrade('8', { from: acc1 });
+    await vader.transfer(acc0, '100', { from: acc1 });
+    await vader.transfer(acc1, '100');
 
-    await dao.newActionProposal("MINTING")
-    await dao.voteForProposal()
-    await mine()
-    await dao.executeProposal()
-    await dao.newActionProposal("EMISSIONS")
-    await dao.voteForProposal()
-    await mine()
-    await dao.executeProposal()
-    await dao.newParamProposal("VADER_PARAMS", '1', '1', '365', '0')
-    await dao.voteForProposal()
-    await mine()
-    await dao.executeProposal()
+    await vader.flipMinting();
+    await vader.convertToUSDV(BN2Str(1100), { from: acc1 });
+    await asset.transfer(acc1, BN2Str(2000));
+    await asset.approve(router.address, BN2Str(one), { from: acc1 });
 
-    await vader.convertToUSDV(BN2Str(1100), {from:acc1})
+    await router.addLiquidity(vader.address, '1000', anchor.address, '1000', { from: acc1 });
+    await router.addLiquidity(usdv.address, '1000', asset.address, '1000', { from: acc1 });
 
-    await asset.transfer(acc1, BN2Str(2000))
-    await asset.approve(router.address, BN2Str(one), {from:acc1})
-
-    await router.addLiquidity(vader.address, '1000', anchor.address, '1000', {from:acc1})
-    await router.addLiquidity(usdv.address, '1000', asset.address, '1000', {from:acc1})
-
-    await vader.transfer(acc0, '100', {from:acc1})
-    await vader.transfer(acc1, '100')
-    await vader.transfer(acc0, '100', {from:acc1})
-
-    expect(BN2Str(await vader.getDailyEmission())).to.equal('21');
-    expect(BN2Str(await reserve.reserveVADER())).to.equal('91');
-    expect(BN2Str(await reserve.reserveUSDV())).to.equal('14');
+    assert.equal(BN2Str(await vader.getDailyEmission()), '7');
+    assert.equal(BN2Str(await reserve.reserveVADER()), '15');
+    assert.equal(BN2Str(await reserve.reserveUSDV()), '16');
   });
 });
 
-describe("Should do pool rewards", function() {
-  it("Swap anchor, get rewards", async function() {
-    let r = '91';
+describe("Should do pool rewards", function () {
+  it("Swap anchor, get rewards", async function () {
+    let r = '15';
+    await router.curatePool(anchor.address);
+    assert.equal(BN2Str(await reserve.reserveVADER()), r);
+    assert.equal(await router.emitting(), true);
+    assert.equal(BN2Str(await utils.getRewardShare(anchor.address, '1')), r);
+    assert.equal(BN2Str(await utils.getReducedShare(r, '1')), r);
+    assert.equal(BN2Str(await pools.getBaseAmount(anchor.address)), '1000');
 
-    await dao.newAddressProposal("CURATE_POOL", anchor.address, anchor.address)
-    await dao.voteForProposal()
-    await mine()
-    await dao.executeProposal()
-
-    expect(BN2Str(await reserve.reserveVADER())).to.equal(r);
-    expect(await router.emitting()).to.equal(true);
-    expect(BN2Str(await utils.getRewardShare(anchor.address, '1'))).to.equal(r);
-    expect(BN2Str(await utils.getReducedShare(r, '1'))).to.equal(r);
-    expect(BN2Str(await pools.getBaseAmount(anchor.address))).to.equal('1000');
-    let tx = await router.swap('100', vader.address, anchor.address, {from:acc1})
-    expect(BN2Str(tx.logs[0].args.amount)).to.equal('112');
-    expect(BN2Str(await pools.getBaseAmount(anchor.address))).to.equal('1156');
-    expect(BN2Str(await reserve.reserveVADER())).to.equal('0');
-    expect(BN2Str(await utils.getRewardShare(anchor.address, '1'))).to.equal('0');
-    expect(BN2Str(await utils.getReducedShare('0', '1'))).to.equal('0');
-
-    expect(BN2Str(await reserve.reserveVADER())).to.equal('0');
-    expect(BN2Str(await reserve.reserveUSDV())).to.equal('70');
+    let tx = await router.swap('100', vader.address, anchor.address, { from: acc1 });
+    assert.equal(BN2Str(tx.logs[0].args.amount), '22');
+    assert.equal(BN2Str(await pools.getBaseAmount(anchor.address)), '1118');
+    assert.equal(BN2Str(await reserve.reserveVADER()), '0');
+    assert.equal(BN2Str(await utils.getRewardShare(anchor.address, '1')), '0');
+    assert.equal(BN2Str(await utils.getReducedShare('0', '1')), '0');
+    assert.equal(BN2Str(await reserve.reserveVADER()), '0');
+    assert.equal(BN2Str(await reserve.reserveUSDV()), '20');
   });
 
-  it("Swap asset, get rewards", async function() {
-    let r = '70';
-    await dao.newParamProposal("ROUTER_PARAMS", '1', '1', '2', '0')
-    await dao.voteForProposal()
-    await mine()
-    await dao.executeProposal()
+  it("Swap asset, get rewards", async function () {
+    let r = '20';
+    const targets = [router.address];
+    const values = ["0"];
+    const signatures = ["setParams(uint256,uint256,uint256,uint256)"];
+    const calldatas = [encodeParameters(['uint256', 'uint256', 'uint256', 'uint256'], [1, 1, 2, 0])];
 
-    await dao.newAddressProposal("CURATE_POOL", asset.address, asset.address)
-    await dao.voteForProposal()
-    await mine()
-    await dao.executeProposal()
+    const ts = await currentBlockTimestamp() + 2 * 24 * 60 * 60 + 60;
+    await timelock.queueTransaction(targets[0], values[0], signatures[0], calldatas[0], ts, { from: acc2 });
+    await setNextBlockTimestamp(ts);
+    await timelock.executeTransaction(targets[0], values[0], signatures[0], calldatas[0], ts, { from: acc2 });
 
-    expect(BN2Str(await reserve.reserveUSDV())).to.equal(r);
-    expect(await router.emitting()).to.equal(true);
-    expect(BN2Str(await utils.getRewardShare(asset.address, '1'))).to.equal(r);
-    expect(BN2Str(await utils.getReducedShare(r, '1'))).to.equal(r);
-    expect(BN2Str(await pools.getBaseAmount(asset.address))).to.equal('1000');
-    let tx = await router.swap('100', usdv.address, asset.address, {from:acc1})
-    expect(BN2Str(tx.logs[0].args.amount)).to.equal(r);
-    expect(BN2Str(await pools.getBaseAmount(asset.address))).to.equal(BN2Str(1100 + +r));
-    expect(BN2Str(await reserve.reserveUSDV())).to.equal('0');
-    expect(BN2Str(await utils.getRewardShare(asset.address, '1'))).to.equal('0');
-    expect(BN2Str(await utils.getReducedShare('0', '1'))).to.equal('0');
+    await router.curatePool(asset.address, { from: acc1 });
+    assert.equal(BN2Str(await reserve.reserveUSDV()), r);
+    assert.equal(await router.emitting(), true);
+    assert.equal(BN2Str(await utils.getRewardShare(asset.address, '1')), r);
+    assert.equal(BN2Str(await utils.getReducedShare(r, '1')), r);
+    assert.equal(BN2Str(await pools.getBaseAmount(asset.address)), '1000');
 
-    expect(BN2Str(await reserve.reserveVADER())).to.equal('0');
-    expect(BN2Str(await reserve.reserveUSDV())).to.equal('0');
+    let tx = await router.swap('100', usdv.address, asset.address, { from: acc1 });
+    assert.equal(BN2Str(tx.logs[0].args.amount), r);
+    assert.equal(BN2Str(await pools.getBaseAmount(asset.address)), BN2Str(1100 + +r));
+    assert.equal(BN2Str(await reserve.reserveUSDV()), '0');
+    assert.equal(BN2Str(await utils.getRewardShare(asset.address, '1')), '0');
+    assert.equal(BN2Str(await utils.getReducedShare('0', '1')), '0');
+    assert.equal(BN2Str(await reserve.reserveVADER()), '0');
+    assert.equal(BN2Str(await reserve.reserveUSDV()), '0');
   });
 });
 

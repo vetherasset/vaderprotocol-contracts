@@ -3,8 +3,8 @@ pragma solidity 0.8.3;
 
 // Interfaces
 import "./interfaces/iERC20.sol";
-import "./interfaces/iERC677.sol"; 
-import "./interfaces/iDAO.sol";
+import "./interfaces/iERC677.sol";
+import "./interfaces/iGovernorAlpha.sol";
 import "./interfaces/iVADER.sol";
 import "./interfaces/iROUTER.sol";
 
@@ -24,9 +24,9 @@ contract USDV is iERC20 {
 
     address public immutable VADER;
 
-    // Only DAO can execute
-    modifier onlyDAO() {
-        require(msg.sender == DAO(), "!DAO");
+    // Only TIMELOCK can execute
+    modifier onlyTIMELOCK() {
+        require(msg.sender == TIMELOCK(), "!TIMELOCK");
         _;
     }
 
@@ -56,10 +56,12 @@ contract USDV is iERC20 {
         _approve(msg.sender, spender, amount);
         return true;
     }
+
     function increaseAllowance(address spender, uint256 addedValue) public virtual returns (bool) {
-        _approve(msg.sender, spender, _allowances[msg.sender][spender]+(addedValue));
+        _approve(msg.sender, spender, _allowances[msg.sender][spender] + (addedValue));
         return true;
     }
+
     function decreaseAllowance(address spender, uint256 subtractedValue) public virtual returns (bool) {
         uint256 currentAllowance = _allowances[msg.sender][spender];
         require(currentAllowance >= subtractedValue, "allowance err");
@@ -74,7 +76,8 @@ contract USDV is iERC20 {
     ) internal virtual {
         require(owner != address(0), "sender");
         require(spender != address(0), "spender");
-        if (_allowances[owner][spender] < type(uint256).max) { // No need to re-approve if already max
+        if (_allowances[owner][spender] < type(uint256).max) {
+            // No need to re-approve if already max
             _allowances[owner][spender] = amount;
             emit Approval(owner, spender, amount);
         }
@@ -98,17 +101,17 @@ contract USDV is iERC20 {
 
     //iERC677 approveAndCall
     function approveAndCall(address recipient, uint amount, bytes calldata data) public returns (bool) {
-      _approve(msg.sender, recipient, amount);
-      iERC677(recipient).onTokenApproval(address(this), amount, msg.sender, data); // Amount is passed thru to recipient
-      return true;
-     }
+        _approve(msg.sender, recipient, amount);
+        iERC677(recipient).onTokenApproval(address(this), amount, msg.sender, data); // Amount is passed thru to recipient
+        return true;
+    }
 
-      //iERC677 transferAndCall
+    //iERC677 transferAndCall
     function transferAndCall(address recipient, uint amount, bytes calldata data) public returns (bool) {
-      _transfer(msg.sender, recipient, amount);
-      iERC677(recipient).onTokenTransfer(address(this), amount, msg.sender, data); // Amount is passed thru to recipient 
-      return true;
-     }
+        _transfer(msg.sender, recipient, amount);
+        iERC677(recipient).onTokenTransfer(address(this), amount, msg.sender, data); // Amount is passed thru to recipient 
+        return true;
+    }
 
     // Internal transfer function
     function _transfer(
@@ -160,9 +163,9 @@ contract USDV is iERC20 {
         emit Transfer(account, address(0), amount);
     }
 
-    //=========================================DAO=========================================//
+    //======================================== TIMELOCK =========================================//
     // Can set params
-    function setParams(uint256 newDelay) external onlyDAO {
+    function setParams(uint256 newDelay) external onlyTIMELOCK {
         blockDelay = newDelay;
     }
 
@@ -175,7 +178,7 @@ contract USDV is iERC20 {
 
     // Convert to USDV for Member
     function convertToUSDVForMember(address member, uint256 amount) public returns (uint256) {
-        require(iERC20(VADER).transferFrom(msg.sender, address(this), amount)); // Get VADER Funds
+        require(iERC20(VADER).transferFrom(msg.sender, address(this), amount), "!Transfer"); // Get VADER Funds
         return convertToUSDVForMemberDirectly(member);
     }
 
@@ -195,10 +198,15 @@ contract USDV is iERC20 {
 
     //============================== HELPERS ================================//
 
-    function DAO() internal view returns (address) {
-        return iVADER(VADER).DAO();
+    function GovernorAlpha() internal view returns(address) {
+        return iVADER(VADER).GovernorAlpha();
     }
+
     function ROUTER() internal view returns (address) {
-        return iDAO(iVADER(VADER).DAO()).ROUTER();
+        return iGovernorAlpha(GovernorAlpha()).ROUTER();
+    }
+
+    function TIMELOCK() internal view returns (address) {
+        return iGovernorAlpha(GovernorAlpha()).TIMELOCK();
     }
 }

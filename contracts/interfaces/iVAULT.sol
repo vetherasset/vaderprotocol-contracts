@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.3;
 
-interface iVAULT {
+interface iVAULT {    
+    function delegates(address) external view returns (address);
+
     function totalWeight() external view returns (uint256);
 
     function setParams(uint256 newDepositTime) external;
@@ -24,6 +26,10 @@ interface iVAULT {
 
     function calcDepositValueForMember(address asset, address member) external view returns (uint256 value);
 
+    function getCurrentVotes(address account) external view returns (uint256);
+
+    function getPriorVotes(address account, uint blockNumber) external view returns (uint256);
+
     function getMemberDeposit(address member, address asset) external view returns (uint256);
 
     function getMemberLastTime(address member, address asset) external view returns (uint256);
@@ -31,4 +37,6 @@ interface iVAULT {
     function getMemberWeight(address member) external view returns (uint256);
 
     function getAssetDeposit(address asset) external view returns (uint256);
+    
+    function getUSDVTotalSupply() external view returns (uint256);
 }

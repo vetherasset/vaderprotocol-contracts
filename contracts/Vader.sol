@@ -3,8 +3,8 @@ pragma solidity 0.8.3;
 
 // Interfaces
 import "./interfaces/iERC20.sol";
-import "./interfaces/iERC677.sol"; 
-import "./interfaces/iDAO.sol";
+import "./interfaces/iERC677.sol";
+import "./interfaces/iGovernorAlpha.sol";
 import "./interfaces/iUTILS.sol";
 import "./interfaces/iUSDV.sol";
 import "./interfaces/iROUTER.sol";
@@ -38,15 +38,31 @@ contract Vader is iERC20 {
     uint256 public nextEraTime;
     uint256 public feeOnTransfer;
 
-    address public DAO;
+    address private governorAlpha;
+    address private admin;
 
     address public constant burnAddress = 0x0111011001100001011011000111010101100101;
 
     event NewEra(uint256 era, uint256 nextEraTime, uint256 emission);
 
-    // Only DAO can execute
-    modifier onlyDAO() {
-        require(msg.sender == DAO, "!DAO");
+    // Only TIMELOCK can execute
+    modifier onlyTIMELOCK() {
+        require(msg.sender == TIMELOCK(), "!TIMELOCK");
+        _;
+    }
+    // Only ADMIN can execute
+    modifier onlyADMIN() {
+        require(msg.sender == admin, "!ADMIN");
+        _;
+    }
+    // Only GovernorAlpha or TIMELOCK can execute
+    modifier onlyGovernorAlphaOrTIMELOCK() {
+        require(msg.sender == governorAlpha || msg.sender == TIMELOCK(), "!GovernorAlpha && !TIMELOCK");
+        _;
+    }
+    // Only Admin or TIMELOCK can execute
+    modifier onlyAdminOrTIMELOCK() {
+        require(msg.sender == admin || msg.sender == TIMELOCK(), "!Admin && !TIMELOCK");
         _;
     }
     // Only VAULT can execute
@@ -62,7 +78,8 @@ contract Vader is iERC20 {
         nextEraTime = block.timestamp + secondsPerEra;
         emissionCurve = 3;
         eraTailEmissions = 365;
-        DAO = msg.sender; // Then call changeDAO() once DAO created
+        governorAlpha = msg.sender; // Then call changeGovernorAlpha() once GovernorAlpha created
+        admin = msg.sender;
     }
 
     //========================================iERC20=========================================//
@@ -85,10 +102,12 @@ contract Vader is iERC20 {
         _approve(msg.sender, spender, amount);
         return true;
     }
+
     function increaseAllowance(address spender, uint256 addedValue) public virtual returns (bool) {
         _approve(msg.sender, spender, _allowances[msg.sender][spender]+(addedValue));
         return true;
     }
+
     function decreaseAllowance(address spender, uint256 subtractedValue) public virtual returns (bool) {
         uint256 currentAllowance = _allowances[msg.sender][spender];
         require(currentAllowance >= subtractedValue, "allowance err");
@@ -124,19 +143,20 @@ contract Vader is iERC20 {
         }
         return true;
     }
+
     //iERC677 approveAndCall
     function approveAndCall(address recipient, uint amount, bytes calldata data) public returns (bool) {
-      _approve(msg.sender, recipient, amount);
-      iERC677(recipient).onTokenApproval(address(this), amount, msg.sender, data); // Amount is passed thru to recipient
-      return true;
-     }
+        _approve(msg.sender, recipient, amount);
+        iERC677(recipient).onTokenApproval(address(this), amount, msg.sender, data); // Amount is passed thru to recipient
+        return true;
+    }
 
-      //iERC677 transferAndCall
+    //iERC677 transferAndCall
     function transferAndCall(address recipient, uint amount, bytes calldata data) public returns (bool) {
-      _transfer(msg.sender, recipient, amount);
-      iERC677(recipient).onTokenTransfer(address(this), amount, msg.sender, data); // Amount is passed thru to recipient 
-      return true;
-     }
+        _transfer(msg.sender, recipient, amount);
+        iERC677(recipient).onTokenTransfer(address(this), amount, msg.sender, data); // Amount is passed thru to recipient 
+        return true;
+    }
 
     // Internal transfer function
     function _transfer(
@@ -147,8 +167,9 @@ contract Vader is iERC20 {
         require(sender != address(0), "sender");
         require(recipient != address(this), "recipient");
         require(_balances[sender] >= amount, "balance err");
-        uint _fee = iUTILS(UTILS()).calcPart(feeOnTransfer, amount);  // Critical functionality
-        if(_fee <= amount){                            // Stops reverts if UTILS corrupted
+        uint _fee = iUTILS(UTILS()).calcPart(feeOnTransfer, amount); // Critical functionality
+        if (_fee <= amount) {
+            // Stops reverts if UTILS corrupted
             amount -= _fee;
             _burn(sender, _fee);
         }
@@ -188,33 +209,44 @@ contract Vader is iERC20 {
         emit Transfer(account, address(0), amount);
     }
 
-    //=========================================DAO=========================================//
+    //===================================== TIMELOCK ====================================//
     // Can start
-    function flipEmissions() external onlyDAO {
+    function flipEmissions() external onlyTIMELOCK {
         emitting = !emitting;
     }
 
     // Can stop
-    function flipMinting() external onlyDAO {
+    function flipMinting() external onlyADMIN {
         minting = !minting;
     }
 
     // Can set params
-    function setParams(uint256 newSeconds, uint256 newCurve, uint256 newTailEmissionEra) external onlyDAO {
+    function setParams(uint256 newSeconds, uint256 newCurve, uint256 newTailEmissionEra) external onlyTIMELOCK {
         secondsPerEra = newSeconds;
         emissionCurve = newCurve;
         eraTailEmissions = newTailEmissionEra;
     }
 
-    // Can change DAO
-    function changeDAO(address newDAO) external onlyDAO {
-        require(newDAO != address(0), "address err");
-        DAO = newDAO;
+    // Can change GovernorAlpha
+    function changeGovernorAlpha(address newGovernorAlpha) external onlyGovernorAlphaOrTIMELOCK {
+        require(newGovernorAlpha != address(0), "address err");
+        governorAlpha = newGovernorAlpha;
     }
 
-    // Can purge DAO
-    function purgeDAO() external onlyDAO {
-        DAO = address(0);
+    // Can change Admin
+    function changeAdmin(address newAdmin) external onlyAdminOrTIMELOCK {
+        require(newAdmin != address(0), "address err");
+        admin = newAdmin;
+    }
+
+    // Can purge GovernorAlpha
+    function purgeGovernorAlpha() external onlyTIMELOCK {
+        governorAlpha = address(0);
+    }
+
+    // Can purge Admin
+    function purgeAdmin() external onlyTIMELOCK {
+        admin = address(0);
     }
 
     //======================================EMISSION========================================//
@@ -247,7 +279,7 @@ contract Vader is iERC20 {
     //======================================ASSET MINTING========================================//
     // VETHER Owners to Upgrade
     function upgrade(uint256 amount) external {
-        require(iERC20(VETHER()).transferFrom(msg.sender, burnAddress, amount)); // safeERC20 not needed; vether trusted
+        require(iERC20(VETHER()).transferFrom(msg.sender, burnAddress, amount), "!Transfer"); // safeERC20 not needed; vether trusted
         _mint(msg.sender, amount * conversionFactor);
     }
 
@@ -270,31 +302,47 @@ contract Vader is iERC20 {
     // Redeem on behalf of member
     function redeemToVADERForMember(address member, uint256 amount) public onlyVAULT returns (uint256 redeemAmount) {
         require(minting, "not minting");
-        require(iERC20(USDV()).transferFrom(msg.sender, address(this), amount));
+        require(iERC20(USDV()).transferFrom(msg.sender, address(this), amount), "!Transfer");
         iERC20(USDV()).burn(amount);
         redeemAmount = iROUTER(ROUTER()).getVADERAmount(amount); // Critical pricing functionality
         _mint(member, redeemAmount);
     }
 
-    //====================================== HELPERS ========================================//
+    //============================== HELPERS ================================//
 
-    function VETHER() internal view returns(address){
-        return iDAO(DAO).VETHER();
-    }
-    function USDV() internal view returns(address){
-        return iDAO(DAO).USDV();
-    }
-    function VAULT() internal view returns(address){
-        return iDAO(DAO).VAULT();
-    }
-    function RESERVE() internal view returns(address){
-        return iDAO(DAO).RESERVE();
-    }
-    function ROUTER() internal view returns(address){
-        return iDAO(DAO).ROUTER();
-    }
-    function UTILS() internal view returns(address){
-        return iDAO(DAO).UTILS();
+    function GovernorAlpha() external view returns (address) {
+        return governorAlpha;
     }
 
+    function Admin() external view returns (address) {
+        return admin;
+    }
+
+    function VETHER() internal view returns (address) {
+        return iGovernorAlpha(governorAlpha).VETHER();
+    }
+
+    function USDV() internal view returns (address) {
+        return iGovernorAlpha(governorAlpha).USDV();
+    }
+
+    function VAULT() internal view returns (address) {
+        return iGovernorAlpha(governorAlpha).VAULT();
+    }
+
+    function RESERVE() internal view returns (address) {
+        return iGovernorAlpha(governorAlpha).RESERVE();
+    }
+
+    function ROUTER() internal view returns (address) {
+        return iGovernorAlpha(governorAlpha).ROUTER();
+    }
+
+    function UTILS() internal view returns (address) {
+        return iGovernorAlpha(governorAlpha).UTILS();
+    }
+
+    function TIMELOCK() internal view returns (address) {
+        return iGovernorAlpha(governorAlpha).TIMELOCK();
+    }
 }
