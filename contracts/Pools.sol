@@ -90,7 +90,7 @@ contract Pools {
         address member
     ) external onlySystem returns (uint256 liquidityUnits) {
         require(isBase(base), "!Base");
-        require(token != USDV() && token != VADER, "USDV || VADER"); // Prohibited
+        require(!isBase(token), "USDV || VADER"); // Prohibited
         uint256 _actualInputBase;
         if (base == VADER) {
             if (!_isAnchor[token]) {
@@ -191,7 +191,7 @@ contract Pools {
 
     // Should be done with intention, is gas-intensive
     function deploySynth(address token) external {
-        require(token != VADER && token != USDV() && !isAnchor(token), "VADER || USDV || ANCHOR");
+        require(!isBase(token) && !isAnchor(token), "VADER || USDV || ANCHOR");
         iFACTORY(FACTORY()).deploySynth(token);
     }
 
