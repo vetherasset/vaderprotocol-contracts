@@ -89,7 +89,7 @@ contract Pools {
         address token,
         address member
     ) external onlySystem returns (uint256 liquidityUnits) {
-        require(iROUTER(ROUTER()).isBase(base), "!Base");
+        require(isBase(base), "!Base");
         require(token != USDV() && token != VADER, "USDV || VADER"); // Prohibited
         uint256 _actualInputBase;
         if (base == VADER) {
@@ -126,7 +126,7 @@ contract Pools {
         uint256 basisPoints,
         address member
     ) external onlySystem returns (uint256 units, uint256 outputBase, uint256 outputToken) {
-        require(iROUTER(ROUTER()).isBase(base), "!Base");
+        require(isBase(base), "!Base");
         (units, outputBase, outputToken) = iUTILS(UTILS()).getMemberShare(basisPoints, token, member);
         mapToken_Units[token] -= units;
         mapTokenMember_Units[token][member] -= units;
@@ -146,7 +146,7 @@ contract Pools {
         address member,
         bool toBase
     ) external onlySystem returns (uint256 outputAmount) {
-        require(iROUTER(ROUTER()).isBase(base), "!Base");
+        require(isBase(base), "!Base");
         if (toBase) {
             uint256 _actualInput = getAddedAmount(token, token);
             outputAmount = iUTILS(UTILS()).calcSwapOutput(
@@ -179,7 +179,7 @@ contract Pools {
     // Add to balances directly (must send first)
     function sync(address token, address pool) external {
         uint256 _actualInput = getAddedAmount(token, pool);
-        if (token == VADER || token == USDV()) {
+        if (isBase(token)) {
             mapToken_baseAmount[pool] += _actualInput;
         } else {
             mapToken_tokenAmount[pool] += _actualInput;
@@ -297,6 +297,10 @@ contract Pools {
         if (_recipient != address(this)) {
             ExternalERC20(_token).safeTransfer(_recipient, _amount);
         }
+    }
+
+    function isBase(address token) public view returns (bool base) {
+        return token == VADER || token == USDV();
     }
 
     function isAsset(address token) public view returns (bool) {
