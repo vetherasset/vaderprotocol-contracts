@@ -93,6 +93,7 @@ contract Pools {
         require(!isBase(token), "USDV || VADER"); // Prohibited
         uint256 _actualInputBase;
         if (base == VADER) {
+            require(getSynth(token) == address(0), "Synth!");
             if (!_isAnchor[token]) {
                 // If new Anchor
                 _isAnchor[token] = true;
