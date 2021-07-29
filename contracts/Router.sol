@@ -171,10 +171,11 @@ contract Router {
     ) public returns (uint256 outputAmount) {
         updateTWAPPrice();
         address _member = msg.sender;
+        uint256 movedAmount;
         if (!inSynth) {
-            moveTokenToPools(inputToken, inputAmount);
+            movedAmount = moveTokenToPools(inputToken, inputAmount);
         } else {
-            moveTokenToPools(iPOOLS(POOLS()).getSynth(inputToken), inputAmount);
+            movedAmount = moveTokenToPools(iPOOLS(POOLS()).getSynth(inputToken), inputAmount);
         }
         address _base;
         if (iPOOLS(POOLS()).isAnchor(inputToken) || iPOOLS(POOLS()).isAnchor(outputToken)) {
@@ -184,7 +185,7 @@ contract Router {
         }
         if (isBase(outputToken)) {
             // Token||Synth -> BASE
-            require(iUTILS(UTILS()).calcSwapSlip(inputAmount, iPOOLS(POOLS()).getTokenAmount(inputToken)) <= slipLimit, ">slipLimit");
+            require(iUTILS(UTILS()).calcSwapSlip(movedAmount, iPOOLS(POOLS()).getTokenAmount(inputToken)) <= slipLimit, ">slipLimit");
             if (!inSynth) {
                 outputAmount = iPOOLS(POOLS()).swap(_base, inputToken, _member, true);
             } else {
@@ -192,7 +193,7 @@ contract Router {
             }
         } else if (isBase(inputToken)) {
             // BASE -> Token||Synth
-            require(iUTILS(UTILS()).calcSwapSlip(inputAmount, iPOOLS(POOLS()).getBaseAmount(outputToken)) <= slipLimit, ">slipLimit");
+            require(iUTILS(UTILS()).calcSwapSlip(movedAmount, iPOOLS(POOLS()).getBaseAmount(outputToken)) <= slipLimit, ">slipLimit");
             if (!outSynth) {
                 outputAmount = iPOOLS(POOLS()).swap(_base, outputToken, _member, false);
             } else {
@@ -201,7 +202,7 @@ contract Router {
         } else {
             // !isBase(inputToken) && !isBase(outputToken)
             // Token||Synth -> Token||Synth
-            require(iUTILS(UTILS()).calcSwapSlip(inputAmount, iPOOLS(POOLS()).getTokenAmount(inputToken)) <= slipLimit, ">slipLimit");
+            require(iUTILS(UTILS()).calcSwapSlip(movedAmount, iPOOLS(POOLS()).getTokenAmount(inputToken)) <= slipLimit, ">slipLimit");
             uint _intermediaryAmount;
             if (!inSynth) {
                 _intermediaryAmount = iPOOLS(POOLS()).swap(_base, inputToken, POOLS(), true);
@@ -393,7 +394,7 @@ contract Router {
 
     // Move funds in
     function moveTokenToPools(address _token, uint256 _amount) internal returns (uint256 safeAmount) {
-        if (_token == VADER || _token == USDV() || iPOOLS(POOLS()).isSynth(_token)) {
+        if (isBase(_token) || iPOOLS(POOLS()).isSynth(_token)) {
             safeAmount = _amount;
             iERC20(_token).transferFrom(msg.sender, POOLS(), _amount); // safeErc20 not needed; bases and synths trusted
         } else {
