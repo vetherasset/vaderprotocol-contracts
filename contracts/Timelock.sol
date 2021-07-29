@@ -19,21 +19,21 @@ contract Timelock {
 
     mapping(bytes32 => bool) public queuedTransactions;
 
-    constructor(address admin_, uint delay_) {
-        require(delay_ >= MINIMUM_DELAY, "Delay must exceed minimum delay.");
-        require(delay_ <= MAXIMUM_DELAY, "Delay must not exceed maximum delay.");
+    constructor(address _admin, uint _delay) {
+        require(_delay >= MINIMUM_DELAY, "Delay must exceed minimum delay.");
+        require(_delay <= MAXIMUM_DELAY, "Delay must not exceed maximum delay.");
 
-        admin = admin_;
-        delay = delay_;
+        admin = _admin;
+        delay = _delay;
     }
 
     fallback() external payable {}
 
-    function setDelay(uint delay_) public {
+    function setDelay(uint _delay) public {
         require(msg.sender == address(this), "Call must come from Timelock.");
-        require(delay_ >= MINIMUM_DELAY, "Delay must exceed minimum delay.");
-        require(delay_ <= MAXIMUM_DELAY, "Delay must not exceed maximum delay.");
-        delay = delay_;
+        require(_delay >= MINIMUM_DELAY, "Delay must exceed minimum delay.");
+        require(_delay <= MAXIMUM_DELAY, "Delay must not exceed maximum delay.");
+        delay = _delay;
 
         emit NewDelay(delay);
     }
@@ -46,9 +46,9 @@ contract Timelock {
         emit NewAdmin(admin);
     }
 
-    function setPendingAdmin(address pendingAdmin_) public {
+    function setPendingAdmin(address _pendingAdmin) public {
         require(msg.sender == address(this), "Call must come from Timelock.");
-        pendingAdmin = pendingAdmin_;
+        pendingAdmin = _pendingAdmin;
 
         emit NewPendingAdmin(pendingAdmin);
     }

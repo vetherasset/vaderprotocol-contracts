@@ -26,15 +26,15 @@ contract GovernorAlpha {
     // @notice The duration of voting on a proposal, in blocks
     function votingPeriod() public pure returns (uint) { return 17280; } // ~3 days in blocks (assuming 15s blocks)
 
-    address public VETHER;
-    address public VADER;
-    address public USDV;
+    address public immutable VETHER;
+    address public immutable VADER;
+    address public immutable USDV;
+    address public immutable VAULT;
+    address public immutable ROUTER;
+    address public immutable LENDER;
+    address public immutable POOLS;
+    address public immutable FACTORY;
     address public RESERVE;
-    address public VAULT;
-    address public ROUTER;
-    address public LENDER;
-    address public POOLS;
-    address public FACTORY;
     address public UTILS;
     address public TIMELOCK;
     // @notice The address of the Governor Guardian
@@ -143,24 +143,24 @@ contract GovernorAlpha {
         address _vether,
         address _vader,
         address _usdv,
-        address _reserve,
         address _vault,
         address _router,
         address _lender,
         address _pools,
         address _factory,
+        address _reserve,
         address _utils,
         address _guardian
     ) {
         VETHER = _vether;
         VADER = _vader;
         USDV = _usdv;
-        RESERVE = _reserve;
         VAULT = _vault;
         ROUTER = _router;
         LENDER = _lender;
         POOLS = _pools;
         FACTORY = _factory;
+        RESERVE = _reserve;
         UTILS = _utils;
         GUARDIAN = _guardian;
     }
