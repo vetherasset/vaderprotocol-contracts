@@ -9,8 +9,6 @@ import "./interfaces/iUTILS.sol";
 import "./interfaces/iUSDV.sol";
 import "./interfaces/iROUTER.sol";
 
-import "hardhat/console.sol";
-
 contract Vader is iERC20 {
     // ERC-20 Parameters
     string public constant override name = "VADER PROTOCOL TOKEN";

@@ -12,8 +12,6 @@ import "./interfaces/iPOOLS.sol";
 import "./interfaces/iFACTORY.sol";
 import "./interfaces/iSYNTH.sol";
 
-import "hardhat/console.sol";
-
 contract Vault {
     using SafeERC20 for ExternalERC20;
 
@@ -381,10 +379,6 @@ contract Vault {
 
     function getAssetLastTime(address asset) external view returns (uint256) {
         return mapAsset_lastHarvestedTime[asset];
-    }
-
-    function getUSDVTotalSupply() external view returns (uint256) {
-        return iERC20(USDV()).totalSupply();
     }
 
     function GovernorAlpha() internal view returns (address) {

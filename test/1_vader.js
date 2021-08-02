@@ -52,12 +52,12 @@ before(async function () {
     vether.address,
     vader.address,
     usdv.address,
-    reserve.address,
     vault.address,
     router.address,
     lender.address,
     pools.address,
     factory.address,
+    reserve.address,
     utils.address,
     acc3
   );
@@ -91,7 +91,7 @@ describe("Deploy Vader", function () {
     assert.equal(BN2Str(await vader.decimals()), '18');
     assert.equal(BN2Str(await vader.totalSupply()), '0');
     assert.equal(BN2Str(await vader.maxSupply()), BN2Str(2e9 * one));
-    assert.equal(BN2Str(await vader.emissionCurve()), '10');
+    assert.equal(BN2Str(await vader.emissionCurve()), '3');
     assert.equal(await vader.emitting(), false);
     assert.equal(BN2Str(await vader.secondsPerEra()), '1');
     assert.equal(await vader.GovernorAlpha(), governor.address);
@@ -115,7 +115,7 @@ describe("Upgrade", function () {
     assert.equal(BN2Str(await vader.totalSupply()), BN2Str(1000));
     assert.equal(BN2Str(await vether.balanceOf(acc1)), BN2Str(3991)); // 4000 - 4(0.1% of 4000) - 5(0.1% of 5000);
     assert.equal(BN2Str(await vader.balanceOf(acc1)), BN2Str(1000));
-    assert.equal(BN2Str(await vader.getDailyEmission()), BN2Str('100'));
+    assert.equal(BN2Str(await vader.getDailyEmission()), BN2Str('0'));
   });
   // acc  |  VTH | VADER |
   // acc0 |    0 |     0 |
@@ -176,8 +176,8 @@ describe("Governance Functions", function () {
   it("Governance setParams", async function () {
     const targets = [vader.address];
     const values = ["0"];
-    const signatures = ["setParams(uint256,uint256)"];
-    const calldatas = [encodeParameters(['uint256', 'uint256'], [1, 1])];
+    const signatures = ["setParams(uint256,uint256,uint256)"];
+    const calldatas = [encodeParameters(['uint256', 'uint256', 'uint256'], [1, 1, 365])];
 
     const ts = await currentBlockTimestamp() + 2 * 24 * 60 * 60 + 60;
     await timelock.queueTransaction(targets[0], values[0], signatures[0], calldatas[0], ts, { from: acc3 });
@@ -205,30 +205,30 @@ describe("Governance Functions", function () {
 
 describe("Emissions", function () {
   it("Should emit properly", async function () {
-    assert.equal(BN2Str(await vader.getDailyEmission()), BN2Str('800'));
+    assert.equal(BN2Str(await vader.getDailyEmission()), BN2Str('2'));
     await vader.transfer(acc0, BN2Str(200), { from: acc1 });
     await vader.transfer(acc1, BN2Str(100), { from: acc0 });
-    assert.equal(BN2Str(await vader.balanceOf(reserve.address)), BN2Str('2400'));
-    assert.equal(BN2Str(await vader.getDailyEmission()), BN2Str('3200'));
+    assert.equal(BN2Str(await vader.balanceOf(reserve.address)), BN2Str('4'));
+    assert.equal(BN2Str(await vader.getDailyEmission()), BN2Str('2'));
     await vader.transfer(acc0, BN2Str(100), { from: acc1 });
-    assert.equal(BN2Str(await vader.balanceOf(reserve.address)), BN2Str('5600'));
-    assert.equal(BN2Str(await vader.getDailyEmission()), BN2Str('6400'));
+    assert.equal(BN2Str(await vader.balanceOf(reserve.address)), BN2Str('6'));
+    assert.equal(BN2Str(await vader.getDailyEmission()), BN2Str('2'));
   });
 });
 
 describe("FeeOnTransfer", function () {
   it("Should set up fees", async function () {
     assert.equal(BN2Str(await vader.feeOnTransfer()), '0');
-    assert.equal(BN2Str(await vader.totalSupply()), BN2Str(6400));
+    assert.equal(BN2Str(await vader.totalSupply()), BN2Str(806));
     assert.equal(BN2Str(await vether.balanceOf(acc1)), '3991');
     await vether.transfer(acc1, BN2Str(BigNumber(1e24).minus(1e22)), { from: acc3 });
     await vether.approve(vader.address, BN2Str(1e23), { from: acc1 });
-    await vader.upgrade(BN2Str(1e23), { from: acc1 }); // totalSupply = 1e26 + 6400
+    await vader.upgrade(BN2Str(1e23), { from: acc1 }); // totalSupply = 1e26 + 806
 
     const targets = [vader.address];
     const values = ["0"];
-    const signatures = ["setParams(uint256,uint256)"];
-    const calldatas = [encodeParameters(['uint256', 'uint256'], [1, 2024])];
+    const signatures = ["setParams(uint256,uint256,uint256)"];
+    const calldatas = [encodeParameters(['uint256', 'uint256', 'uint256'], [1, 2024, 365])];
 
     const ts = await currentBlockTimestamp() + 2 * 24 * 60 * 60 + 60;
     await timelock.queueTransaction(targets[0], values[0], signatures[0], calldatas[0], ts, { from: acc3 });
@@ -238,17 +238,15 @@ describe("FeeOnTransfer", function () {
     assert.equal(BN2Str(await vader.secondsPerEra()), '1');
     assert.equal(BN2Str(await vader.emissionCurve()), '2024');
 
-    // _adjustedMax = (maxSupply * totalSupply) / baseline
-    // _adjustedMax = (2bn * (1e26 + 6400)) / 1bn = 2e26 + 12800
-    // (_adjustedMax - totalSupply) / (emissionCurve);
-    // ((2e26 + 12800) - (1e26 + 6400)) / (2024) = (1e26 + 6400) / 2024 = 49,407,114,624,505,928,853,758
-    assert.equal(BN2Str(await vader.getDailyEmission()), BN2Str('49407114624505928853758'));
-    assert.equal(BN2Str(await vader.totalSupply()), BN2Str(BigNumber(1e26).plus(6400)));
+    // totalSupply / emissionCurve / 365
+    // (1e26 + 806) / 2024 / 365 = 135,361,957,875,358,709,188
+    assert.equal(BN2Str(await vader.getDailyEmission()), BN2Str('135361957875358709188'));
+    assert.equal(BN2Str(await vader.totalSupply()), BN2Str(BigNumber(1e26).plus(806)));
     await vader.transfer(acc1, BN2Str(100), { from: acc1 });
-    // 1e26 + 6,400 + 49,407,114,624,505,928,853,758 = 100,049,407,114,624,505,928,860,158
-    assert.equal(BN2Str(await vader.totalSupply()), '100049407114624505928860158');
+    // 1e26 + 806 + 135,361,957,875,358,709,188 = 100,000,135,361,957,875,358,709,994
+    assert.equal(BN2Str(await vader.totalSupply()), '100000135361957875358709994');
     assert.equal(BN2Str(await vader.maxSupply()), BN2Str(2 * 10 ** 9 * 10 ** 18));
-    // (1e26 + 49,407,114,624,505,928,853,758) * 100 / 2e27
+    // (100,000,135,361,957,875,358,709,994) * 100 / 2e27
     assert.equal(BN2Str(await vader.feeOnTransfer()), '5');
   });
 

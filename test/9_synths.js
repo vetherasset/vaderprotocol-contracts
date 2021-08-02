@@ -52,12 +52,12 @@ before(async function () {
     vether.address,
     vader.address,
     usdv.address,
-    reserve.address,
     vault.address,
     router.address,
     lender.address,
     pools.address,
     factory.address,
+    reserve.address,
     utils.address,
     acc0
   );
@@ -217,8 +217,8 @@ describe("Member should deposit Synths for rewards", function () {
 
     targets = [vader.address];
     values = ["0"];
-    signatures = ["setParams(uint256,uint256)"];
-    calldatas = [encodeParameters(['uint256', 'uint256'], [1, 2])];
+    signatures = ["setParams(uint256,uint256,uint256)"];
+    calldatas = [encodeParameters(['uint256', 'uint256', 'uint256'], [1, 2, 365])];
 
     ts = await currentBlockTimestamp() + 2 * 24 * 60 * 60 + 60;
     await timelock.queueTransaction(targets[0], values[0], signatures[0], calldatas[0], ts, { from: acc0 });
@@ -227,7 +227,7 @@ describe("Member should deposit Synths for rewards", function () {
 
     await vader.transfer(acc0, ('100'), { from: acc1 });
     await vader.transfer(acc1, ('100'), { from: acc0 });
-    assert.equal(BN2Str(await vader.getDailyEmission()), ('4500'));
+    assert.equal(BN2Str(await vader.getDailyEmission()), ('5'));
 
     const synth = await Synth.at(await factory.getSynth(asset2.address));
     await pools.deploySynth(synth.address); // Works only with this, need to check
@@ -245,7 +245,7 @@ describe("Member should deposit Synths for rewards", function () {
     const balanceStart = await vader.balanceOf(vault.address);
     assert.equal(BN2Str(balanceStart), ('0'));
     await usdv.transfer(acc0, ('100'), { from: acc1 });
-    assert.equal(BN2Str(await reserve.reserveUSDV()), '3350');
+    assert.equal(BN2Str(await reserve.reserveUSDV()), '6');
     assert.equal(BN2Str(await synth.balanceOf(vault.address)), ('20'));
     assert.equal(BN2Str(await vault.calcDepositValueForMember(synth.address, acc1)), ('20')); // * by seconds
   });
@@ -257,11 +257,11 @@ describe("Member should deposit Synths for rewards", function () {
     const synth = await Synth.at(await factory.getSynth(asset2.address));
     assert.equal(BN2Str(await vault.getAssetDeposit(synth.address)), ('20'));
     assert.equal(BN2Str(await vault.totalWeight()), ('20'));
-    assert.equal(BN2Str(await reserve.getVaultReward()), ('1675'));
-    assert.equal(BN2Str(await vault.calcRewardForAsset(synth.address)), ('1675'));
+    assert.equal(BN2Str(await reserve.getVaultReward()), ('3'));
+    assert.equal(BN2Str(await vault.calcRewardForAsset(synth.address)), ('3'));
 
     await vault.harvest(synth.address, { from: acc1 });
-    assert.equal(BN2Str(await synth.balanceOf(vault.address)), ('261'));
+    assert.equal(BN2Str(await synth.balanceOf(vault.address)), ('22'));
     assert.equal(BN2Str(await vault.getMemberWeight(acc1)), ('20'));
     assert.equal(BN2Str(await vault.totalWeight()), ('20'));
   });
@@ -269,7 +269,7 @@ describe("Member should deposit Synths for rewards", function () {
   it("Should withdraw", async function () {
     const synth = await Synth.at(await factory.getSynth(asset2.address));
     assert.equal(BN2Str(await synth.balanceOf(acc1)), '66');
-    assert.equal(BN2Str(await synth.balanceOf(vault.address)), '261');
+    assert.equal(BN2Str(await synth.balanceOf(vault.address)), '22');
     assert.equal(BN2Str(await vault.getMemberDeposit(acc1, synth.address)), '20');
     assert.equal(BN2Str(await vault.getMemberWeight(acc1)), '20');
 
@@ -288,6 +288,6 @@ describe("Member should deposit Synths for rewards", function () {
     assert.equal(BN2Str(await vault.getMemberWeight(acc1)), '0');
     assert.equal(BN2Str(await vault.totalWeight()), '0');
     assert.equal(BN2Str(await synth.balanceOf(vault.address)), '0');
-    assert.equal(BN2Str(await synth.balanceOf(acc1)), '327');
+    assert.equal(BN2Str(await synth.balanceOf(acc1)), '88');
   });
 });

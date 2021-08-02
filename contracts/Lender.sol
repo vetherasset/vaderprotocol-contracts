@@ -11,8 +11,6 @@ import "./interfaces/iRESERVE.sol";
 import "./interfaces/iPOOLS.sol";
 import "./interfaces/iSYNTH.sol";
 
-import "hardhat/console.sol";
-
 contract Lender {
     using SafeERC20 for ExternalERC20;
 
