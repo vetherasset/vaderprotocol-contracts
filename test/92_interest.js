@@ -50,12 +50,12 @@ before(async function () {
     vether.address,
     vader.address,
     usdv.address,
-    reserve.address,
     vault.address,
     router.address,
     lender.address,
     pools.address,
     factory.address,
+    reserve.address,
     utils.address,
     acc0
   );
@@ -95,6 +95,8 @@ describe("Deploy Interest", function () {
 
     await vader.flipMinting();
     await vader.convertToUSDV('5000', { from: acc1 });
+    await vader.transfer(reserve.address, '1000', {from:acc1})
+    await usdv.transfer(reserve.address, '1000', {from:acc1})
 
     await asset.transfer(acc1, '2000');
     await vader.transfer(router.address, '1000', { from: acc1 });

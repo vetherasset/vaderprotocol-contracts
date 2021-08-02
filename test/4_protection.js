@@ -52,12 +52,12 @@ before(async function () {
     vether.address,
     vader.address,
     usdv.address,
-    reserve.address,
     vault.address,
     router.address,
     lender.address,
     pools.address,
     factory.address,
+    reserve.address,
     utils.address,
     acc2
   );
@@ -106,8 +106,8 @@ describe("Deploy Protection", function () {
 
     targets = [vader.address];
     values = ["0"];
-    signatures = ["setParams(uint256,uint256)"];
-    calldatas = [encodeParameters(['uint256', 'uint256'], [1, 1])];
+    signatures = ["setParams(uint256,uint256,uint256)"];
+    calldatas = [encodeParameters(['uint256', 'uint256', 'uint256'], [1, 1, 365])];
 
     ts = await currentBlockTimestamp() + 2 * 24 * 60 * 60 + 60;
     await timelock.queueTransaction(targets[0], values[0], signatures[0], calldatas[0], ts, { from: acc2 });
@@ -125,9 +125,9 @@ describe("Deploy Protection", function () {
     await vader.transfer(acc0, '100', { from: acc1 });
     await usdv.transfer(acc0, '100', { from: acc1 });
 
-    assert.equal(BN2Str(await vader.getDailyEmission()), '6800');
-    assert.equal(BN2Str(await reserve.reserveVADER()), '800');
-    assert.equal(BN2Str(await vader.balanceOf(reserve.address)), '800');
+    assert.equal(BN2Str(await vader.getDailyEmission()), '7');
+    assert.equal(BN2Str(await reserve.reserveVADER()), '7');
+    assert.equal(BN2Str(await vader.balanceOf(reserve.address)), '7');
   });
 });
 
@@ -144,7 +144,16 @@ describe("Should do IL Protection", function () {
   });
 
   it("Small swap, need protection", async function () {
-    await router.curatePool(anchor.address)
+    const targets = [router.address];
+    const values = ["0"];
+    const signatures = ["curatePool(address)"];
+    const calldatas = [encodeParameters(['address'], [anchor.address])];
+
+    const ts = await currentBlockTimestamp() + 2 * 24 * 60 * 60 + 60;
+    await timelock.queueTransaction(targets[0], values[0], signatures[0], calldatas[0], ts, { from: acc2 });
+    await setNextBlockTimestamp(ts);
+    await timelock.executeTransaction(targets[0], values[0], signatures[0], calldatas[0], ts, { from: acc2 });
+
     assert.equal(BN2Str(await anchor.balanceOf(acc1)), '1000');
     assert.equal(BN2Str(await pools.getBaseAmount(anchor.address)), '1000');
     assert.equal(BN2Str(await pools.getTokenAmount(anchor.address)), '1000');
@@ -163,11 +172,11 @@ describe("Should do IL Protection", function () {
     const coverage = await utils.getCoverage(acc1, anchor.address);
     assert.equal(BN2Str(coverage), '183');
     assert.equal(BN2Str(await utils.getProtection(acc1, anchor.address, "10000", '1')), '183');
-    assert.equal(BN2Str(await router.getILProtection(acc1, vader.address, anchor.address, '10000')), '183');
+    assert.equal(BN2Str(await router.getILProtection(acc1, vader.address, anchor.address, '10000')), '7');
   });
 
   it("RECEIVE protection on 50% ", async function () {
-    assert.equal(BN2Str(await reserve.reserveVADER()), '800');
+    assert.equal(BN2Str(await reserve.reserveVADER()), '7');
     assert.equal(BN2Str(await vader.balanceOf(acc1)), '5346');
     assert.equal(BN2Str(await anchor.balanceOf(acc1)), '100');
 
@@ -179,26 +188,36 @@ describe("Should do IL Protection", function () {
 
     await router.removeLiquidity(vader.address, anchor.address, '5000', { from: acc1 })
 
-    assert.equal(BN2Str(await reserve.reserveVADER()), '709');
-    assert.equal(BN2Str(await vader.balanceOf(acc1)), '5668'); // +322
+    assert.equal(BN2Str(await reserve.reserveVADER()), '0');
+    assert.equal(BN2Str(await vader.balanceOf(acc1)), '5626'); // +322
     assert.equal(BN2Str(await anchor.balanceOf(acc1)), '1049'); // +950
 
-    assert.equal(BN2Str(await pools.getMemberUnits(anchor.address, acc1)), '536');
+    assert.equal(BN2Str(await pools.getMemberUnits(anchor.address, acc1)), '503');
   });
 
   it("Small swap, need protection on Asset", async function () {
-    const targets = [router.address];
-    const values = ["0"];
-    const signatures = ["setParams(uint256,uint256,uint256,uint256)"];
-    const calldatas = [encodeParameters(['uint256', 'uint256', 'uint256', 'uint256'], [1, 1, 2, 0])];
+    let targets = [router.address];
+    let values = ["0"];
+    let signatures = ["setParams(uint256,uint256,uint256,uint256)"];
+    let calldatas = [encodeParameters(['uint256', 'uint256', 'uint256', 'uint256'], [1, 1, 2, 0])];
 
-    const ts = await currentBlockTimestamp() + 2 * 24 * 60 * 60 + 60;
+    let ts = await currentBlockTimestamp() + 2 * 24 * 60 * 60 + 60;
     await timelock.queueTransaction(targets[0], values[0], signatures[0], calldatas[0], ts, { from: acc2 });
     await setNextBlockTimestamp(ts);
     await timelock.executeTransaction(targets[0], values[0], signatures[0], calldatas[0], ts, { from: acc2 });
 
     assert.equal(await pools.isAsset(asset.address), true);
-    await router.curatePool(asset.address);
+
+    targets = [router.address];
+    values = ["0"];
+    signatures = ["curatePool(address)"];
+    calldatas = [encodeParameters(['address'], [asset.address])];
+
+    ts = await currentBlockTimestamp() + 2 * 24 * 60 * 60 + 60;
+    await timelock.queueTransaction(targets[0], values[0], signatures[0], calldatas[0], ts, { from: acc2 });
+    await setNextBlockTimestamp(ts);
+    await timelock.executeTransaction(targets[0], values[0], signatures[0], calldatas[0], ts, { from: acc2 });
+
     assert.equal(await router.isCurated(asset.address), true);
     assert.equal(BN2Str(await usdv.balanceOf(acc1)), '900');
     for (let i = 0; i < 9; i++) {

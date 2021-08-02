@@ -51,12 +51,12 @@ before(async function () {
     vether.address,
     vader.address,
     usdv.address,
-    reserve.address,
     vault.address,
     router.address,
     lender.address,
     pools.address,
     factory.address,
+    reserve.address,
     utils.address,
     acc2
   );
@@ -72,26 +72,6 @@ describe("Deploy Rewards", function () {
     await vader.changeGovernorAlpha(governor.address);
     await reserve.init(vader.address);
 
-    let targets = [vader.address];
-    let values = ["0"];
-    let signatures = ["flipEmissions()"];
-    let calldatas = [encodeParameters([], [])];
-
-    let ts = await currentBlockTimestamp() + 2 * 24 * 60 * 60 + 60;
-    await timelock.queueTransaction(targets[0], values[0], signatures[0], calldatas[0], ts, { from: acc2 });
-    await setNextBlockTimestamp(ts);
-    await timelock.executeTransaction(targets[0], values[0], signatures[0], calldatas[0], ts, { from: acc2 });
-
-    targets = [vader.address];
-    values = ["0"];
-    signatures = ["setParams(uint256,uint256)"];
-    calldatas = [encodeParameters(['uint256', 'uint256'], [1, 900])];
-
-    ts = await currentBlockTimestamp() + 2 * 24 * 60 * 60 + 60;
-    await timelock.queueTransaction(targets[0], values[0], signatures[0], calldatas[0], ts, { from: acc2 });
-    await setNextBlockTimestamp(ts);
-    await timelock.executeTransaction(targets[0], values[0], signatures[0], calldatas[0], ts, { from: acc2 });
-
     anchor = await Anchor.new();
     asset = await Asset.new();
 
@@ -105,10 +85,29 @@ describe("Deploy Rewards", function () {
     await usdv.approve(router.address, max, { from: acc1 });
 
     await vader.upgrade('8', { from: acc1 });
-    await vader.transfer(acc0, '100', { from: acc1 });
-    await vader.transfer(acc1, '100');
-
+    
     await vader.flipMinting();
+
+    let targets = [vader.address];
+    let values = ["0"];
+    let signatures = ["flipEmissions()"];
+    let calldatas = [encodeParameters([], [])];
+
+    let ts = await currentBlockTimestamp() + 2 * 24 * 60 * 60 + 60;
+    await timelock.queueTransaction(targets[0], values[0], signatures[0], calldatas[0], ts, { from: acc2 });
+    await setNextBlockTimestamp(ts);
+    await timelock.executeTransaction(targets[0], values[0], signatures[0], calldatas[0], ts, { from: acc2 });
+
+    targets = [vader.address];
+    values = ["0"];
+    signatures = ["setParams(uint256,uint256,uint256)"];
+    calldatas = [encodeParameters(['uint256', 'uint256', 'uint256'], [1, 1, 365])];
+
+    ts = await currentBlockTimestamp() + 2 * 24 * 60 * 60 + 60;
+    await timelock.queueTransaction(targets[0], values[0], signatures[0], calldatas[0], ts, { from: acc2 });
+    await setNextBlockTimestamp(ts);
+    await timelock.executeTransaction(targets[0], values[0], signatures[0], calldatas[0], ts, { from: acc2 });
+
     await vader.convertToUSDV(BN2Str(1100), { from: acc1 });
     await asset.transfer(acc1, BN2Str(2000));
     await asset.approve(router.address, BN2Str(one), { from: acc1 });
@@ -116,16 +115,30 @@ describe("Deploy Rewards", function () {
     await router.addLiquidity(vader.address, '1000', anchor.address, '1000', { from: acc1 });
     await router.addLiquidity(usdv.address, '1000', asset.address, '1000', { from: acc1 });
 
-    assert.equal(BN2Str(await vader.getDailyEmission()), '7');
-    assert.equal(BN2Str(await reserve.reserveVADER()), '15');
-    assert.equal(BN2Str(await reserve.reserveUSDV()), '16');
+    await vader.transfer(acc0, '100', { from: acc1 });
+    await vader.transfer(acc1, '100');
+    await vader.transfer(acc0, '100', { from: acc1 });
+
+    assert.equal(BN2Str(await vader.getDailyEmission()), '19');
+    assert.equal(BN2Str(await reserve.reserveVADER()), '81');
+    assert.equal(BN2Str(await reserve.reserveUSDV()), '14');
   });
 });
 
 describe("Should do pool rewards", function () {
   it("Swap anchor, get rewards", async function () {
-    let r = '15';
-    await router.curatePool(anchor.address);
+    let r = '81';
+
+    const targets = [router.address];
+    const values = ["0"];
+    const signatures = ["curatePool(address)"];
+    const calldatas = [encodeParameters(['address'], [anchor.address])];
+
+    const ts = await currentBlockTimestamp() + 2 * 24 * 60 * 60 + 60;
+    await timelock.queueTransaction(targets[0], values[0], signatures[0], calldatas[0], ts, { from: acc2 });
+    await setNextBlockTimestamp(ts);
+    await timelock.executeTransaction(targets[0], values[0], signatures[0], calldatas[0], ts, { from: acc2 });
+
     assert.equal(BN2Str(await reserve.reserveVADER()), r);
     assert.equal(await router.emitting(), true);
     assert.equal(BN2Str(await utils.getRewardShare(anchor.address, '1')), r);
@@ -133,28 +146,37 @@ describe("Should do pool rewards", function () {
     assert.equal(BN2Str(await pools.getBaseAmount(anchor.address)), '1000');
 
     let tx = await router.swap('100', vader.address, anchor.address, { from: acc1 });
-    assert.equal(BN2Str(tx.logs[0].args.amount), '22');
-    assert.equal(BN2Str(await pools.getBaseAmount(anchor.address)), '1118');
+    assert.equal(BN2Str(tx.logs[0].args.amount), '100');
+    assert.equal(BN2Str(await pools.getBaseAmount(anchor.address)), '1150');
     assert.equal(BN2Str(await reserve.reserveVADER()), '0');
     assert.equal(BN2Str(await utils.getRewardShare(anchor.address, '1')), '0');
     assert.equal(BN2Str(await utils.getReducedShare('0', '1')), '0');
     assert.equal(BN2Str(await reserve.reserveVADER()), '0');
-    assert.equal(BN2Str(await reserve.reserveUSDV()), '20');
+    assert.equal(BN2Str(await reserve.reserveUSDV()), '64');
   });
 
   it("Swap asset, get rewards", async function () {
-    let r = '20';
-    const targets = [router.address];
-    const values = ["0"];
-    const signatures = ["setParams(uint256,uint256,uint256,uint256)"];
-    const calldatas = [encodeParameters(['uint256', 'uint256', 'uint256', 'uint256'], [1, 1, 2, 0])];
+    let r = '64';
+    let targets = [router.address];
+    let values = ["0"];
+    let signatures = ["setParams(uint256,uint256,uint256,uint256)"];
+    let calldatas = [encodeParameters(['uint256', 'uint256', 'uint256', 'uint256'], [1, 1, 2, 0])];
 
-    const ts = await currentBlockTimestamp() + 2 * 24 * 60 * 60 + 60;
+    let ts = await currentBlockTimestamp() + 2 * 24 * 60 * 60 + 60;
+    await timelock.queueTransaction(targets[0], values[0], signatures[0], calldatas[0], ts, { from: acc2 });
+    await setNextBlockTimestamp(ts);
+    await timelock.executeTransaction(targets[0], values[0], signatures[0], calldatas[0], ts, { from: acc2 });
+    
+    targets = [router.address];
+    values = ["0"];
+    signatures = ["curatePool(address)"];
+    calldatas = [encodeParameters(['address'], [asset.address])];
+
+    ts = await currentBlockTimestamp() + 2 * 24 * 60 * 60 + 60;
     await timelock.queueTransaction(targets[0], values[0], signatures[0], calldatas[0], ts, { from: acc2 });
     await setNextBlockTimestamp(ts);
     await timelock.executeTransaction(targets[0], values[0], signatures[0], calldatas[0], ts, { from: acc2 });
 
-    await router.curatePool(asset.address, { from: acc1 });
     assert.equal(BN2Str(await reserve.reserveUSDV()), r);
     assert.equal(await router.emitting(), true);
     assert.equal(BN2Str(await utils.getRewardShare(asset.address, '1')), r);

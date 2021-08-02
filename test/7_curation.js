@@ -52,12 +52,12 @@ before(async function () {
     vether.address,
     vader.address,
     usdv.address,
-    reserve.address,
     vault.address,
     router.address,
     lender.address,
     pools.address,
     factory.address,
+    reserve.address,
     utils.address,
     acc2
   );
@@ -155,41 +155,79 @@ describe("Should Curate", function () {
     assert.equal(await router.isCurated(asset1.address), false);
     assert.equal(BN2Str(await router.curatedPoolLimit()), '1');
     assert.equal(BN2Str(await router.curatedPoolCount()), '0');
-    await router.curatePool(asset1.address, { from: acc1 });
-    assert.equal(await router.isCurated(asset1.address), true);
-    assert.equal(BN2Str(await router.curatedPoolCount()), '1');
-  });
 
-  it("Fail curate second", async function () {
-    await router.curatePool(asset2.address, { from: acc1 });
-    assert.equal(await router.isCurated(asset2.address), false);
-    assert.equal(BN2Str(await router.curatedPoolCount()), '1');
-  });
-
-  it("Increase limit", async function () {
     const targets = [router.address];
     const values = ["0"];
-    const signatures = ["setParams(uint256,uint256,uint256,uint256)"];
-    const calldatas = [encodeParameters(['uint256', 'uint256', 'uint256', 'uint256'], [1, 1, 2, 0])];
+    const signatures = ["curatePool(address)"];
+    const calldatas = [encodeParameters(['address'], [asset1.address])];
 
     const ts = await currentBlockTimestamp() + 2 * 24 * 60 * 60 + 60;
     await timelock.queueTransaction(targets[0], values[0], signatures[0], calldatas[0], ts, { from: acc2 });
     await setNextBlockTimestamp(ts);
     await timelock.executeTransaction(targets[0], values[0], signatures[0], calldatas[0], ts, { from: acc2 });
 
+    assert.equal(await router.isCurated(asset1.address), true);
+    assert.equal(BN2Str(await router.curatedPoolCount()), '1');
+  });
+
+  it("Fail curate second", async function () {
+    const targets = [router.address];
+    const values = ["0"];
+    const signatures = ["curatePool(address)"];
+    const calldatas = [encodeParameters(['address'], [asset2.address])];
+
+    const ts = await currentBlockTimestamp() + 2 * 24 * 60 * 60 + 60;
+    await timelock.queueTransaction(targets[0], values[0], signatures[0], calldatas[0], ts, { from: acc2 });
+    await setNextBlockTimestamp(ts);
+    await timelock.executeTransaction(targets[0], values[0], signatures[0], calldatas[0], ts, { from: acc2 });
+
+    assert.equal(await router.isCurated(asset2.address), false);
+    assert.equal(BN2Str(await router.curatedPoolCount()), '1');
+  });
+
+  it("Increase limit", async function () {
+    let targets = [router.address];
+    let values = ["0"];
+    let signatures = ["setParams(uint256,uint256,uint256,uint256)"];
+    let calldatas = [encodeParameters(['uint256', 'uint256', 'uint256', 'uint256'], [1, 1, 2, 0])];
+
+    let ts = await currentBlockTimestamp() + 2 * 24 * 60 * 60 + 60;
+    await timelock.queueTransaction(targets[0], values[0], signatures[0], calldatas[0], ts, { from: acc2 });
+    await setNextBlockTimestamp(ts);
+    await timelock.executeTransaction(targets[0], values[0], signatures[0], calldatas[0], ts, { from: acc2 });
+
     assert.equal(BN2Str(await router.curatedPoolLimit()), '2');
-    await router.curatePool(asset2.address, { from: acc1 });
+    
+    targets = [router.address];
+    values = ["0"];
+    signatures = ["curatePool(address)"];
+    calldatas = [encodeParameters(['address'], [asset2.address])];
+
+    ts = await currentBlockTimestamp() + 2 * 24 * 60 * 60 + 60;
+    await timelock.queueTransaction(targets[0], values[0], signatures[0], calldatas[0], ts, { from: acc2 });
+    await setNextBlockTimestamp(ts);
+    await timelock.executeTransaction(targets[0], values[0], signatures[0], calldatas[0], ts, { from: acc2 });
+
     assert.equal(await router.isCurated(asset2.address), true);
     assert.equal(BN2Str(await router.curatedPoolCount()), '2');
   });
 
   it("Replace 1-for-1", async function () {
-    await router.replacePool(asset2.address, asset3.address, { from: acc1 });
+    await router.addLiquidity(usdv.address, '1', asset3.address, '1', { from: acc1 })
+  
     assert.equal(await router.isCurated(asset2.address), true);
     assert.equal(await router.isCurated(asset3.address), false);
 
-    await router.addLiquidity(usdv.address, '1', asset3.address, '1', { from: acc1 });
-    await router.replacePool(asset2.address, asset3.address, { from: acc1 });
+    const targets = [router.address];
+    const values = ["0"];
+    const signatures = ["replacePool(address,address)"];
+    const calldatas = [encodeParameters(['address', 'address'], [asset2.address, asset3.address])];
+
+    const ts = await currentBlockTimestamp() + 2 * 24 * 60 * 60 + 60;
+    await timelock.queueTransaction(targets[0], values[0], signatures[0], calldatas[0], ts, { from: acc2 });
+    await setNextBlockTimestamp(ts);
+    await timelock.executeTransaction(targets[0], values[0], signatures[0], calldatas[0], ts, { from: acc2 });
+
     assert.equal(await router.isCurated(asset2.address), false);
     assert.equal(await router.isCurated(asset3.address), true);
   });
@@ -202,7 +240,16 @@ describe("Should Do Rewards and Protection", function () {
   });
 
   it("Curated, Rewards", async function () {
-    await router.curatePool(asset1.address, { from: acc1 });
+    const targets = [router.address];
+    const values = ["0"];
+    const signatures = ["curatePool(address)"];
+    const calldatas = [encodeParameters(['address'], [asset1.address])];
+
+    const ts = await currentBlockTimestamp() + 2 * 24 * 60 * 60 + 60;
+    await timelock.queueTransaction(targets[0], values[0], signatures[0], calldatas[0], ts, { from: acc2 });
+    await setNextBlockTimestamp(ts);
+    await timelock.executeTransaction(targets[0], values[0], signatures[0], calldatas[0], ts, { from: acc2 });
+
     expect(Number(await reserve.reserveUSDV())).to.be.greaterThan(0);
   });
 

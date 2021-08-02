@@ -11,8 +11,6 @@ import "./interfaces/iPOOLS.sol";
 import "./interfaces/iFACTORY.sol";
 import "./interfaces/iSYNTH.sol";
 
-import "hardhat/console.sol";
-
 contract Utils {
     uint256 private constant one = 10**18;
     uint256 private constant _10k = 10000;

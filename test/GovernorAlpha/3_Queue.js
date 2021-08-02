@@ -62,12 +62,12 @@ before(async function () {
     vether.address,
     vader.address,
     usdv.address,
-    reserve.address,
     vault.address,
     router.address,
     lender.address,
     pools.address,
     factory.address,
+    reserve.address,
     utils.address,
     acc5
   );

@@ -52,12 +52,12 @@ before(async function () {
     vether.address,
     vader.address,
     usdv.address,
-    reserve.address,
     vault.address,
     router.address,
     lender.address,
     pools.address,
     factory.address,
+    reserve.address,
     utils.address,
     acc0
   );
@@ -82,7 +82,7 @@ describe("Deploy Lender", function () {
     await usdv.approve(router.address, max, { from: acc1 });
     await anchor.approve(router.address, max, { from: acc1 });
 
-    await vader.upgrade('10', { from: acc1 });
+    await vader.upgrade('20', { from: acc1 });
 
     let targets = [vader.address];
     let values = ["0"];
@@ -96,8 +96,8 @@ describe("Deploy Lender", function () {
 
     targets = [vader.address];
     values = ["0"];
-    signatures = ["setParams(uint256,uint256)"];
-    calldatas = [encodeParameters(['uint256', 'uint256'], [1, 1])];
+    signatures = ["setParams(uint256,uint256,uint256)"];
+    calldatas = [encodeParameters(['uint256', 'uint256', 'uint256'], [1, 1, 365])];
 
     ts = await currentBlockTimestamp() + 2 * 24 * 60 * 60 + 60;
     await timelock.queueTransaction(targets[0], values[0], signatures[0], calldatas[0], ts, { from: acc0 });
@@ -108,7 +108,8 @@ describe("Deploy Lender", function () {
     await vader.transfer(acc1, ('100'), { from: acc0 });
 
     await vader.flipMinting();
-    await vader.convertToUSDV('5000', { from: acc1 });
+    await vader.convertToUSDV('10000', { from: acc1 });
+    await usdv.transfer(reserve.address, '1000', {from:acc1})
 
     await asset.transfer(acc1, '2000');
     await asset.approve(router.address, BN2Str(one), { from: acc1 });
@@ -143,11 +144,11 @@ describe("Add liquidity", function () {
 
 describe("Should Borrow Debt", function () {
   it("Borrow ANCHOR with VADER", async function () {
-    assert.equal(BN2Str(await vader.balanceOf(acc1)), '3000');
+    assert.equal(BN2Str(await vader.balanceOf(acc1)), '8000');
     assert.equal(BN2Str(await anchor.balanceOf(acc1)), '1000');
     await vader.approve(lender.address, max, { from: acc1 });
     await lender.borrow('100', vader.address, anchor.address, { from: acc1 });
-    assert.equal(BN2Str(await vader.balanceOf(acc1)), '2900');
+    assert.equal(BN2Str(await vader.balanceOf(acc1)), '7900');
     assert.equal(BN2Str(await anchor.balanceOf(acc1)), '1058');
     assert.equal(BN2Str(await lender.getSystemCollateral(vader.address, anchor.address)), '97');
     assert.equal(BN2Str(await lender.getSystemDebt(vader.address, anchor.address)), '58');
@@ -155,11 +156,11 @@ describe("Should Borrow Debt", function () {
     assert.equal(BN2Str(await lender.getMemberDebt(acc1, vader.address, anchor.address)), '58');
   });
   it("Borrow ASSET with USDV", async function () {
-    assert.equal(BN2Str(await usdv.balanceOf(acc1)), '3000');
+    assert.equal(BN2Str(await usdv.balanceOf(acc1)), '7000');
     assert.equal(BN2Str(await asset.balanceOf(acc1)), '1000');
     await usdv.approve(lender.address, max, { from: acc1 });
     await lender.borrow('100', usdv.address, asset.address, { from: acc1 });
-    assert.equal(BN2Str(await usdv.balanceOf(acc1)), '2900');
+    assert.equal(BN2Str(await usdv.balanceOf(acc1)), '6900');
     assert.equal(BN2Str(await asset.balanceOf(acc1)), '1058');
     assert.equal(BN2Str(await lender.getSystemCollateral(usdv.address, asset.address)), '97');
     assert.equal(BN2Str(await lender.getSystemDebt(usdv.address, asset.address)), '58');

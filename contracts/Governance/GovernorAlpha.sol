@@ -6,16 +6,17 @@ pragma experimental ABIEncoderV2;
 import "../interfaces/iTIMELOCK.sol";
 import "../interfaces/iVAULT.sol";
 import "../interfaces/iVADER.sol";
+import "../interfaces/iERC20.sol";
 
 contract GovernorAlpha {
     // @notice The name of this contract
     string public constant name = "Vader Governor Alpha";
 
     // @notice The number of votes in support of a proposal required in order for a quorum to be reached and for a vote to succeed
-    function quorumVotes() public view returns (uint) { return iVAULT(VAULT).getUSDVTotalSupply() * 4 / 100; } // 4 % of USDV
+    function quorumVotes() public view returns (uint) { return iERC20(USDV).totalSupply() * 4 / 100; } // 4 % of USDV
 
     // @notice The number of votes required in order for a voter to become a proposer
-    function proposalThreshold() public view returns (uint) { return iVAULT(VAULT).getUSDVTotalSupply() / 100; } // 1 % of USDV
+    function proposalThreshold() public view returns (uint) { return iERC20(USDV).totalSupply() / 100; } // 1 % of USDV
 
     // @notice The maximum number of actions that can be included in a proposal
     function proposalMaxOperations() public pure returns (uint) { return 10; } // 10 actions

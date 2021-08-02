@@ -12,8 +12,6 @@ import "./interfaces/iPOOLS.sol";
 import "./interfaces/iSYNTH.sol";
 import "./interfaces/iFACTORY.sol";
 
-import "hardhat/console.sol";
-
 contract Router {
     using SafeERC20 for ExternalERC20;
 
