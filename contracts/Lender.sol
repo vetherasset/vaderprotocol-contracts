@@ -78,10 +78,10 @@ contract Lender {
         _addDebtToMember(member, _collateral, collateralAsset, _debtIssued, debtAsset); // Update member details
         if (collateralAsset == VADER || iPOOLS(POOLS()).isAnchor(debtAsset)) {
             iRESERVE(RESERVE()).requestFundsStrict(VADER, POOLS(), _baseBorrowed);
-            iPOOLS(POOLS()).swap(VADER, debtAsset, member, false); // Execute swap to member
+            iPOOLS(POOLS()).swap(VADER, debtAsset, _baseBorrowed, member, false); // Execute swap to member
         } else if (collateralAsset == USDV() || iPOOLS(POOLS()).isAsset(debtAsset)) {
             iRESERVE(RESERVE()).requestFundsStrict(USDV(), POOLS(), _baseBorrowed); // Send to pools
-            iPOOLS(POOLS()).swap(USDV(), debtAsset, member, false); // Execute swap to member
+            iPOOLS(POOLS()).swap(USDV(), debtAsset, _baseBorrowed, member, false); // Execute swap to member
         }
         emit AddCollateral(member, collateralAsset, amount, debtAsset, _debtIssued); // Event
         payInterest(collateralAsset, debtAsset);
@@ -107,9 +107,9 @@ contract Lender {
         uint256 _amount = iUTILS(UTILS()).calcPart(basisPoints, getMemberDebt(member, collateralAsset, debtAsset));
         uint256 _debt = moveTokenToPools(debtAsset, _amount); // Get Debt
         if (collateralAsset == VADER || iPOOLS(POOLS()).isAnchor(debtAsset)) {
-            iPOOLS(POOLS()).swap(VADER, debtAsset, RESERVE(), true); // Swap Debt to Base back here
+            iPOOLS(POOLS()).swap(VADER, debtAsset, _amount, RESERVE(), true); // Swap Debt to Base back here
         } else if (collateralAsset == USDV() || iPOOLS(POOLS()).isAsset(debtAsset)) {
-            iPOOLS(POOLS()).swap(USDV(), debtAsset, RESERVE(), true); // Swap Debt to Base back here
+            iPOOLS(POOLS()).swap(USDV(), debtAsset, _amount, RESERVE(), true); // Swap Debt to Base back here
         }
         (uint256 _collateralUnlocked, uint256 _memberInterestShare) =
             iUTILS(UTILS()).getDebtValueInCollateral(member, _debt, collateralAsset, debtAsset); // Unlock collateral that is pro-rata to re-paid debt ($50/$100 = 50%)
@@ -134,7 +134,7 @@ contract Lender {
             _removeCollateral(_interestOwed, collateralAsset, debtAsset);
             if (isBase(collateralAsset)) {
                 iERC20(collateralAsset).transfer(POOLS(), _interestOwed); // safeErc20 not needed; bases trusted
-                iPOOLS(POOLS()).sync(collateralAsset, debtAsset);
+                iPOOLS(POOLS()).sync(collateralAsset, _interestOwed, debtAsset);
             } else if (iPOOLS(POOLS()).isSynth(collateralAsset)) {
                 iERC20(collateralAsset).transfer(POOLS(), _interestOwed); // safeErc20 not needed; synths trusted
                 iPOOLS(POOLS()).syncSynth(iSYNTH(collateralAsset).TOKEN());

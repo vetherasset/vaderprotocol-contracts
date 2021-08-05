@@ -110,7 +110,7 @@ contract Router {
         address _member = msg.sender;
         addDepositData(_member, token, _actualInputBase, _actualInputToken);
         updateTWAPPrice();
-        return iPOOLS(POOLS()).addLiquidity(base, token, _member);
+        return iPOOLS(POOLS()).addLiquidity(base, _actualInputBase, token, _actualInputToken, _member);
     }
 
     function removeLiquidity(
@@ -121,8 +121,8 @@ contract Router {
         address _member = msg.sender;
         uint256 _protection = getILProtection(_member, base, token, basisPoints);
         if (_protection > 0) {
-            iRESERVE(RESERVE()).requestFunds(base, POOLS(), _protection);
-            iPOOLS(POOLS()).addLiquidity(base, token, _member);
+            uint256 _actualInputBase = iRESERVE(RESERVE()).requestFunds(base, POOLS(), _protection);
+            iPOOLS(POOLS()).addLiquidity(base, _actualInputBase, token, 0, _member);
             mapMemberToken_depositBase[_member][token] += _protection;
         }
         (units, amountBase, amountToken) = iPOOLS(POOLS()).removeLiquidity(base, token, basisPoints, _member);
@@ -185,7 +185,7 @@ contract Router {
             // Token||Synth -> BASE
             require(iUTILS(UTILS()).calcSwapSlip(movedAmount, iPOOLS(POOLS()).getTokenAmount(inputToken)) <= slipLimit, ">slipLimit");
             if (!inSynth) {
-                outputAmount = iPOOLS(POOLS()).swap(_base, inputToken, _member, true);
+                outputAmount = iPOOLS(POOLS()).swap(_base, inputToken, movedAmount, _member, true);
             } else {
                 outputAmount = iPOOLS(POOLS()).burnSynth(inputToken, _member);
             }
@@ -193,9 +193,9 @@ contract Router {
             // BASE -> Token||Synth
             require(iUTILS(UTILS()).calcSwapSlip(movedAmount, iPOOLS(POOLS()).getBaseAmount(outputToken)) <= slipLimit, ">slipLimit");
             if (!outSynth) {
-                outputAmount = iPOOLS(POOLS()).swap(_base, outputToken, _member, false);
+                outputAmount = iPOOLS(POOLS()).swap(_base, outputToken, movedAmount, _member, false);
             } else {
-                outputAmount = iPOOLS(POOLS()).mintSynth(outputToken, _member);
+                outputAmount = iPOOLS(POOLS()).mintSynth(outputToken, movedAmount, _member);
             }
         } else {
             // !isBase(inputToken) && !isBase(outputToken)
@@ -203,15 +203,15 @@ contract Router {
             require(iUTILS(UTILS()).calcSwapSlip(movedAmount, iPOOLS(POOLS()).getTokenAmount(inputToken)) <= slipLimit, ">slipLimit");
             uint _intermediaryAmount;
             if (!inSynth) {
-                _intermediaryAmount = iPOOLS(POOLS()).swap(_base, inputToken, POOLS(), true);
+                _intermediaryAmount = iPOOLS(POOLS()).swap(_base, inputToken, movedAmount, POOLS(), true);
             } else {
                 _intermediaryAmount = iPOOLS(POOLS()).burnSynth(inputToken, POOLS());
             }
             require(iUTILS(UTILS()).calcSwapSlip(_intermediaryAmount, iPOOLS(POOLS()).getBaseAmount(outputToken)) <= slipLimit, ">slipLimit");
             if (!outSynth) {
-                outputAmount = iPOOLS(POOLS()).swap(_base, outputToken, _member, false);
+                outputAmount = iPOOLS(POOLS()).swap(_base, outputToken, _intermediaryAmount, _member, false);
             } else {
-                outputAmount = iPOOLS(POOLS()).mintSynth(outputToken, _member);
+                outputAmount = iPOOLS(POOLS()).mintSynth(outputToken, _intermediaryAmount, _member);
             }
         }
         _handlePoolReward(_base, inputToken);
@@ -226,8 +226,8 @@ contract Router {
         if (!isBase(_token)) {
             // USDV or VADER is never a pool
             uint256 _reward = iUTILS(UTILS()).getRewardShare(_token, rewardReductionFactor);
-            iRESERVE(RESERVE()).requestFunds(_base, POOLS(), _reward);
-            iPOOLS(POOLS()).sync(_base, _token);
+            uint256 _actualInputBase = iRESERVE(RESERVE()).requestFunds(_base, POOLS(), _reward);
+            iPOOLS(POOLS()).sync(_base, _actualInputBase, _token);
             emit PoolReward(_base, _token, _reward);
         }
     }
