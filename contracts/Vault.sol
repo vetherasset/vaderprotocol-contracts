@@ -150,8 +150,8 @@ contract Vault {
         if (asset == USDV()) {
             iRESERVE(RESERVE()).requestFunds(USDV(), address(this), reward);
         } else {
-            iRESERVE(RESERVE()).requestFunds(USDV(), POOLS(), reward);
-            reward = iPOOLS(POOLS()).mintSynth(iSYNTH(asset).TOKEN(), address(this));
+            uint256 _actualInputBase = iRESERVE(RESERVE()).requestFunds(USDV(), POOLS(), reward);
+            reward = iPOOLS(POOLS()).mintSynth(iSYNTH(asset).TOKEN(), _actualInputBase, address(this));
         }
         mapAsset_balance[asset] = iERC20(asset).balanceOf(address(this)); // sync deposits, now including the reward
         emit Harvests(asset, reward);

@@ -86,39 +86,41 @@ contract Pools {
 
     function addLiquidity(
         address base,
+        uint256 inputBase,
         address token,
+        uint256 inputToken,
         address member
     ) external onlySystem returns (uint256 liquidityUnits) {
         require(isBase(base), "!Base");
         require(!isBase(token), "USDV || VADER"); // Prohibited
-        uint256 _actualInputBase;
+        // uint256 _actualInputBase;
         if (base == VADER) {
             require(getSynth(token) == address(0), "Synth!");
             if (!_isAnchor[token]) {
                 // If new Anchor
                 _isAnchor[token] = true;
             }
-            _actualInputBase = getAddedAmount(VADER, token);
+            pooledVADER += inputBase;
         } else {
             if (!_isAsset[token]) {
                 // If new Asset
                 _isAsset[token] = true;
             }
-            _actualInputBase = getAddedAmount(USDV(), token);
+            pooledUSDV += inputBase;
         }
-        uint256 _actualInputToken = getAddedAmount(token, token);
+
         liquidityUnits = iUTILS(UTILS()).calcLiquidityUnits(
-            _actualInputBase,
+            inputBase,
             mapToken_baseAmount[token],
-            _actualInputToken,
+            inputToken,
             mapToken_tokenAmount[token],
             mapToken_Units[token]
         );
         mapTokenMember_Units[token][member] += liquidityUnits; // Add units to member
         mapToken_Units[token] += liquidityUnits; // Add in total
-        mapToken_baseAmount[token] += _actualInputBase; // Add BASE
-        mapToken_tokenAmount[token] += _actualInputToken; // Add token
-        emit AddLiquidity(member, base, _actualInputBase, token, _actualInputToken, liquidityUnits);
+        mapToken_baseAmount[token] += inputBase; // Add BASE
+        mapToken_tokenAmount[token] += inputToken; // Add token
+        emit AddLiquidity(member, base, inputBase, token, inputToken, liquidityUnits);
     }
 
     function removeLiquidity(
@@ -144,48 +146,51 @@ contract Pools {
     function swap(
         address base,
         address token,
+        uint256 amount,
         address member,
         bool toBase
     ) external onlySystem returns (uint256 outputAmount) {
         require(isBase(base), "!Base");
         if (toBase) {
-            uint256 _actualInput = getAddedAmount(token, token);
             outputAmount = iUTILS(UTILS()).calcSwapOutput(
-                _actualInput,
+                amount,
                 mapToken_tokenAmount[token],
                 mapToken_baseAmount[token]
             );
             uint256 _swapFee =
-                iUTILS(UTILS()).calcSwapFee(_actualInput, mapToken_tokenAmount[token], mapToken_baseAmount[token]);
-            mapToken_tokenAmount[token] += _actualInput;
+                iUTILS(UTILS()).calcSwapFee(amount, mapToken_tokenAmount[token], mapToken_baseAmount[token]);
+            mapToken_tokenAmount[token] += amount;
             mapToken_baseAmount[token] -= outputAmount;
-            emit Swap(member, token, _actualInput, base, outputAmount, _swapFee);
+            emit Swap(member, token, amount, base, outputAmount, _swapFee);
             transferOut(base, outputAmount, member);
         } else {
-            uint256 _actualInput = getAddedAmount(base, token);
             outputAmount = iUTILS(UTILS()).calcSwapOutput(
-                _actualInput,
+                amount,
                 mapToken_baseAmount[token],
                 mapToken_tokenAmount[token]
             );
             uint256 _swapFee =
-                iUTILS(UTILS()).calcSwapFee(_actualInput, mapToken_baseAmount[token], mapToken_tokenAmount[token]);
-            mapToken_baseAmount[token] += _actualInput;
+                iUTILS(UTILS()).calcSwapFee(amount, mapToken_baseAmount[token], mapToken_tokenAmount[token]);
+            mapToken_baseAmount[token] += amount;
             mapToken_tokenAmount[token] -= outputAmount;
-            emit Swap(member, base, _actualInput, token, outputAmount, _swapFee);
+            emit Swap(member, base, amount, token, outputAmount, _swapFee);
             transferOut(token, outputAmount, member);
         }
     }
 
     // Add to balances directly (must send first)
-    function sync(address token, address pool) external {
-        uint256 _actualInput = getAddedAmount(token, pool);
-        if (isBase(token)) {
-            mapToken_baseAmount[pool] += _actualInput;
-        } else {
-            mapToken_tokenAmount[pool] += _actualInput;
+    function sync(address token, uint256 inputToken, address pool) external {
+        if (token == VADER) {
+            pooledVADER += inputToken;
+        } else if (token == USDV()) {
+            pooledUSDV += inputToken;
         }
-        emit Sync(token, pool, _actualInput);
+        if (isBase(token)) {
+            mapToken_baseAmount[pool] += inputToken;
+        } else {
+            mapToken_tokenAmount[pool] += inputToken;
+        }
+        emit Sync(token, pool, inputToken);
     }
 
     //======================================SYNTH=========================================//
@@ -197,17 +202,17 @@ contract Pools {
     }
 
     // Mint a Synth against its own pool
-    function mintSynth(address token, address member) external onlySystem returns (uint256 outputAmount) {
+    function mintSynth(address token, uint256 inputBase, address member) external onlySystem returns (uint256 outputAmount) {
         address synth = getSynth(token);
         require(synth != address(0), "!Synth");
-        uint256 _actualInputBase = getAddedAmount(USDV(), token); // Get input
+        pooledUSDV += inputBase;
         outputAmount = iUTILS(UTILS()).calcSwapOutput(
-            _actualInputBase,
+            inputBase,
             mapToken_baseAmount[token],
             mapToken_tokenAmount[token]
         ); // Get output
-        mapToken_baseAmount[token] += _actualInputBase; // Add BASE
-        emit MintSynth(member, USDV(), _actualInputBase, token, outputAmount); // Mint Synth Event
+        mapToken_baseAmount[token] += inputBase; // Add BASE
+        emit MintSynth(member, USDV(), inputBase, token, outputAmount); // Mint Synth Event
         iFACTORY(FACTORY()).mintSynth(synth, member, outputAmount); // Ask factory to mint to member
     }
 
@@ -265,25 +270,6 @@ contract Pools {
     // }
 
     //======================================HELPERS=========================================//
-
-    // Safe adds
-    function getAddedAmount(address _token, address _pool) internal returns (uint256 addedAmount) {
-        uint256 _balance = ExternalERC20(_token).balanceOf(address(this));
-        if (_token == VADER && _pool != VADER) {
-            // Want to know added VADER
-            addedAmount = _balance - pooledVADER;
-            pooledVADER = _balance;
-        } else if (_token == USDV()) {
-            // Want to know added USDV
-            addedAmount = _balance - pooledUSDV;
-            pooledUSDV = _balance;
-        } else {
-            // Want to know added Asset/Anchor
-            require((isAsset(_token) || isAnchor(_token)), "!POOL");
-            require(_token == _pool, "!pool");
-            addedAmount = _balance - mapToken_tokenAmount[_pool];
-        }
-    }
 
     function transferOut(
         address _token,

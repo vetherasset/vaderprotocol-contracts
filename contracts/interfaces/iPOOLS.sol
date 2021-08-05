@@ -8,7 +8,9 @@ interface iPOOLS {
 
     function addLiquidity(
         address base,
+        uint256 inputBase,
         address token,
+        uint256 inputToken,
         address member
     ) external returns (uint256 liquidityUnits);
 
@@ -19,11 +21,12 @@ interface iPOOLS {
         address member
     ) external returns (uint256 units, uint256 outputBase, uint256 outputToken);
 
-    function sync(address token, address pool) external;
+    function sync(address token, uint256 inputToken, address pool) external;
 
     function swap(
         address base,
         address token,
+        uint256 inputToken,
         address member,
         bool toBase
     ) external returns (uint256 outputAmount);
@@ -32,6 +35,7 @@ interface iPOOLS {
 
     function mintSynth(
         address token,
+        uint256 inputBase,
         address member
     ) external returns (uint256 outputAmount);
 

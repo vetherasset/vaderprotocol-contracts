@@ -129,7 +129,7 @@ describe("GovernorAlpha#queue", function () {
       await expect(governor.queue(proposalId)).to.be.revertedWith("proposal can only be queued if it is succeeded");
     });
 
-    it("queueing actions in different proposals works", async () => {
+    it("propose different proposals works", async () => {
       await enfranchise(vault, acc2, root);
       await mineBlock();
 
@@ -152,12 +152,15 @@ describe("GovernorAlpha#queue", function () {
       await governor.castVote(proposalId2, true, { from: acc3 });
       await governor.castVote(proposalId2, true, { from: acc1 });
       await governor.castVote(proposalId2, true, { from: root });
-      await mineNBlocks(20000);
+      await mineNBlocks(10000);
+    });
 
+    it("queueing actions in different proposals works", async () => {
+      await mineNBlocks(10000);
+      const proposalId1 = await governor.latestProposalIds(acc2);
+      const proposalId2 = await governor.latestProposalIds(acc3);
       await governor.queue(proposalId1);
       await governor.queue(proposalId2, { from: acc2 });
-
-      await freezeTime(101);
     });
   });
 });
