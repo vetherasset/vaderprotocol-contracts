@@ -21,6 +21,8 @@ contract Reserve {
     uint256 public allocatedVADER;
     uint256 public vaultShare;
 
+    uint256 public lastEra;
+
     // Only TIMELOCK can execute
     modifier onlyTIMELOCK() {
         require(msg.sender == TIMELOCK(), "!TIMELOCK");
@@ -68,10 +70,11 @@ contract Reserve {
         require((block.timestamp - lastGranted) >= minGrantTime, "not too fast");
         lastGranted = block.timestamp;
         uint256 _reserveForGrant = reserveUSDV() / 10;
+        uint256 actualAmount = amount;
         if (amount > _reserveForGrant) {
-            amount = _reserveForGrant;
+            actualAmount = _reserveForGrant;
         }
-        iERC20(USDV()).transfer(recipient, amount); // safeErc20 not needed; USDV trusted
+        iERC20(USDV()).transfer(recipient, actualAmount); // safeErc20 not needed; USDV trusted
     }
 
     //======================================RESERVE SPlIT========================================//
@@ -85,11 +88,12 @@ contract Reserve {
         } else if (base == USDV()) {
             _reserve = reserveUSDV();
         }
+        uint256 actualAmount = amount;
         if (amount > _reserve) {
-            amount = _reserve;
+            actualAmount = _reserve;
         }
-        ExternalERC20(base).safeTransfer(recipient, amount);
-        return amount;
+        ExternalERC20(base).safeTransfer(recipient, actualAmount);
+        return actualAmount;
     }
 
     // System addresses can request an amount up to the balance
@@ -108,9 +112,10 @@ contract Reserve {
     // Anchor (VADER): 33%
     // Asset && VAULT (USDV()): 67%
     function checkReserve() public onlySystem {
-        if (block.timestamp >= nextEraTime && iVADER(VADER).emitting()) {
+        if (block.timestamp >= nextEraTime && iVADER(VADER).era() > lastEra && iVADER(VADER).emitting()) {
             // If new Era
-            nextEraTime = block.timestamp + iVADER(VADER).secondsPerEra();
+            lastEra++;
+            nextEraTime += iVADER(VADER).secondsPerEra();
             uint256 _unallocatedVADER = unallocatedVADER(); // Get unallocated VADER
             if (_unallocatedVADER >= 2) {
                 uint256 _USDVShare = (_unallocatedVADER * splitForUSDV) / 10000; // Get 67%
