@@ -15,6 +15,8 @@ interface iVADER {
 
     function secondsPerEra() external view returns (uint256);
 
+    function era() external view returns(uint256);
+
     function flipEmissions() external;
 
     function flipMinting() external;
