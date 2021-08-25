@@ -109,6 +109,8 @@ contract GovernorAlpha {
     // @notice The EIP-712 typehash for the ballot struct used by the contract
     bytes32 public constant BALLOT_TYPEHASH = keccak256("Ballot(uint256 proposalId,bool support)");
 
+    event Initialized(address vether, address vader, address usdv, address vault, address router, address lender, address pools, address factory, address reserve, address utils);
+    
     // @notice An event emitted when a new proposal is created
     event ProposalCreated(uint id, address proposer, address[] targets, uint[] values, string[] signatures, bytes[] calldatas, uint startBlock, uint endBlock, string description);
 
@@ -164,6 +166,8 @@ contract GovernorAlpha {
         RESERVE = _reserve;
         UTILS = _utils;
         GUARDIAN = _guardian;
+
+        emit Initialized(_vether, _vader, _usdv, _vault, _router, _lender, _pools, _factory, _reserve, _utils);
     }
 
     function initTimelock(address _timelock) external {

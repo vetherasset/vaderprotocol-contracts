@@ -81,12 +81,12 @@ async function main() {
     vether.address,
     vader.address,
     usdv.address,
-    reserve.address,
     vault.address,
     router.address,
     lender.address,
     pools.address,
     factory.address,
+    reserve.address,
     utils.address,
     secret.address
   );
@@ -117,12 +117,12 @@ async function main() {
       vether.address,
       vader.address,
       usdv.address,
-      reserve.address,
       vault.address,
       router.address,
       lender.address,
       pools.address,
       factory.address,
+      reserve.address,
       utils.address,
       secret.address
     ]
