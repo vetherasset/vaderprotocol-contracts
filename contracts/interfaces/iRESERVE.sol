@@ -10,6 +10,8 @@ interface iRESERVE {
 
     function requestFundsStrict(address base, address recipient, uint256 amount) external returns(uint256);
 
+    function updateVADER(address newAddress) external;
+
     function checkReserve() external;
 
     function getVaultReward() external view returns(uint256);

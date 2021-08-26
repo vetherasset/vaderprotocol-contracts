@@ -149,6 +149,11 @@ contract Reserve {
 
     //============================== HELPERS ================================//
 
+    function updateVADER(address newAddress) external {
+        require(msg.sender == GovernorAlpha(), "!VADER");
+        VADER = newAddress;
+    }
+
     function GovernorAlpha() internal view returns (address) {
         return iVADER(VADER).GovernorAlpha();
     }

@@ -17,7 +17,7 @@ contract Pools {
     uint256 public pooledVADER;
     uint256 public pooledUSDV;
 
-    address public immutable VADER;
+    address public VADER;
 
     mapping(address => bool) internal _isAsset;
     mapping(address => bool) internal _isAnchor;
@@ -284,6 +284,11 @@ contract Pools {
         if (_recipient != address(this)) {
             ExternalERC20(_token).safeTransfer(_recipient, _amount);
         }
+    }
+
+    function updateVADER(address newAddress) external {
+        require(msg.sender == GovernorAlpha(), "!VADER");
+        VADER = newAddress;
     }
 
     function isBase(address token) public view returns (bool base) {

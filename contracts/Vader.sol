@@ -308,6 +308,11 @@ contract Vader is iERC20 {
 
     //============================== HELPERS ================================//
 
+    // Update VADER To New one
+    function updateVADER(address newAddress) external onlyAdminOrTIMELOCK {
+        iGovernorAlpha(governorAlpha).updateVADER(newAddress);
+    }
+
     function GovernorAlpha() external view returns (address) {
         return governorAlpha;
     }

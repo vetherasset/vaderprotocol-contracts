@@ -79,13 +79,13 @@ async function main() {
   console.log("Deploying GovernorAlpha...");
   const governor = await GovernorAlpha.deploy(
     vether.address,
-    vader.address,
     usdv.address,
     vault.address,
     router.address,
     lender.address,
     pools.address,
     factory.address,
+    vader.address,
     reserve.address,
     utils.address,
     secret.address
@@ -115,13 +115,13 @@ async function main() {
     address: governor.address,
     constructorArguments: [
       vether.address,
-      vader.address,
       usdv.address,
       vault.address,
       router.address,
       lender.address,
       pools.address,
       factory.address,
+      vader.address,
       reserve.address,
       utils.address,
       secret.address
@@ -132,6 +132,7 @@ async function main() {
   //===================================== Init Timelock ======================================
   await vader.changeGovernorAlpha(governor.address);
   await governor.initTimelock(timelock.address);
+  await reserve.init(vader.address);
 
   //======================================= ADDRESSES ========================================
   console.log('================================== Contracts ==================================');

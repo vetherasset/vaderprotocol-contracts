@@ -6,6 +6,8 @@ interface iUSDV {
 
     function setParams(uint256 newDelay) external;
 
+    function updateVADER(address newAddress) external;
+
     function convertToUSDV(uint256 amount) external returns (uint256);
 
     function convertToUSDVForMember(address member, uint256 amount) external returns (uint256);

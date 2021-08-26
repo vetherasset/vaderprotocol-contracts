@@ -14,6 +14,8 @@ interface iLENDER {
         address debtAsset
     ) external view returns (uint256);
 
+    function updateVADER(address newAddress) external;
+
     function getSystemCollateral(address collateralAsset, address debtAsset) external view returns (uint256);
 
     function getSystemDebt(address collateralAsset, address debtAsset) external view returns (uint256);

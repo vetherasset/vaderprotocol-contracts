@@ -14,7 +14,7 @@ import "./interfaces/iSYNTH.sol";
 contract Lender {
     using SafeERC20 for ExternalERC20;
 
-    address public immutable VADER;
+    address public VADER;
 
     mapping(address => CollateralDetails) private mapMember_Collateral;
     mapping(address => mapping(address => uint256)) private mapCollateralDebt_Collateral;
@@ -231,6 +231,11 @@ contract Lender {
     }
 
     //======================================HELPERS=========================================//
+
+    function updateVADER(address newAddress) external {
+        require(msg.sender == GovernorAlpha(), "!VADER");
+        VADER = newAddress;
+    }
 
     function isBase(address token) public view returns (bool base) {
         return token == VADER || token == USDV();

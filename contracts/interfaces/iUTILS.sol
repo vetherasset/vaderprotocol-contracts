@@ -6,6 +6,8 @@ interface iUTILS {
 
     function assetChecks(address collateralAsset, address debtAsset) external;
 
+    function updateVADER(address newAddress) external;
+
     function isBase(address token) external view returns (bool base);
 
     function calcValueInBase(address token, uint256 amount) external view returns (uint256);

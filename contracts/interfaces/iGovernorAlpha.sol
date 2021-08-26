@@ -2,6 +2,7 @@
 pragma solidity 0.8.3;
 
 interface iGovernorAlpha {
+    function updateVADER(address newAddress) external;
     function VETHER() external view returns(address);
     function VADER() external view returns(address);
     function USDV() external view returns(address);

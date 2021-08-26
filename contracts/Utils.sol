@@ -16,7 +16,7 @@ contract Utils {
     uint256 private constant _10k = 10000;
     uint256 private constant _year = 31536000; // One Year (in seconds)
 
-    address public immutable VADER;
+    address public VADER;
 
     constructor(address _vader) {
         VADER = _vader;
@@ -387,6 +387,11 @@ contract Utils {
     }
 
     //============================== HELPERS ================================//
+
+    function updateVADER(address newAddress) external {
+        require(msg.sender == GovernorAlpha(), "!VADER");
+        VADER = newAddress;
+    }
 
     function GovernorAlpha() internal view returns (address) {
         return iVADER(VADER).GovernorAlpha();

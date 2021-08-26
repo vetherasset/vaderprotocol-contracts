@@ -7,6 +7,12 @@ import "../interfaces/iTIMELOCK.sol";
 import "../interfaces/iVAULT.sol";
 import "../interfaces/iVADER.sol";
 import "../interfaces/iERC20.sol";
+import "../interfaces/iLENDER.sol";
+import "../interfaces/iPOOLS.sol";
+import "../interfaces/iRESERVE.sol";
+import "../interfaces/iROUTER.sol";
+import "../interfaces/iUSDV.sol";
+import "../interfaces/iUTILS.sol";
 
 contract GovernorAlpha {
     // @notice The name of this contract
@@ -28,13 +34,13 @@ contract GovernorAlpha {
     function votingPeriod() public pure returns (uint) { return 17280; } // ~3 days in blocks (assuming 15s blocks)
 
     address public immutable VETHER;
-    address public immutable VADER;
     address public immutable USDV;
     address public immutable VAULT;
     address public immutable ROUTER;
     address public immutable LENDER;
     address public immutable POOLS;
     address public immutable FACTORY;
+    address public VADER;
     address public RESERVE;
     address public UTILS;
     address public TIMELOCK;
@@ -144,30 +150,30 @@ contract GovernorAlpha {
 
     constructor (
         address _vether,
-        address _vader,
         address _usdv,
         address _vault,
         address _router,
         address _lender,
         address _pools,
         address _factory,
+        address _vader,
         address _reserve,
         address _utils,
         address _guardian
     ) {
         VETHER = _vether;
-        VADER = _vader;
         USDV = _usdv;
         VAULT = _vault;
         ROUTER = _router;
         LENDER = _lender;
         POOLS = _pools;
         FACTORY = _factory;
+        VADER = _vader;
         RESERVE = _reserve;
         UTILS = _utils;
         GUARDIAN = _guardian;
 
-        emit Initialized(_vether, _vader, _usdv, _vault, _router, _lender, _pools, _factory, _reserve, _utils);
+        emit Initialized(_vether, _usdv, _vault, _router, _lender, _pools, _factory, _vader, _reserve, _utils);
     }
 
     function initTimelock(address _timelock) external {
@@ -336,6 +342,18 @@ contract GovernorAlpha {
     }
 
     //============================= EXTERNAL ================================//
+
+    function updateVADER(address newAddress) external {
+        require(msg.sender == VADER && newAddress != address(0), "!VADER");
+        VADER = newAddress;
+        iLENDER(LENDER).updateVADER(newAddress);
+        iPOOLS(POOLS).updateVADER(newAddress);
+        iRESERVE(RESERVE).updateVADER(newAddress);
+        iROUTER(ROUTER).updateVADER(newAddress);
+        iUSDV(USDV).updateVADER(newAddress);
+        iUTILS(UTILS).updateVADER(newAddress);
+        iVAULT(VAULT).updateVADER(newAddress);
+    }
 
     function changeUTILS(address newAddress) external onlyTIMELOCK {
         UTILS = newAddress;

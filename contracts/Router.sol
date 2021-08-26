@@ -24,7 +24,7 @@ contract Router {
     uint256 public curatedPoolCount;
     mapping(address => bool) private _isCurated;
 
-    address public immutable VADER;
+    address public VADER;
 
     uint256 public anchorLimit;
     uint256 public insidePriceLimit;
@@ -446,6 +446,11 @@ contract Router {
     }
 
     //======================================HELPERS=========================================//
+
+    function updateVADER(address newAddress) external {
+        require(msg.sender == GovernorAlpha(), "!VADER");
+        VADER = newAddress;
+    }
 
     function isBase(address token) public view returns (bool base) {
         return token == VADER || token == USDV();

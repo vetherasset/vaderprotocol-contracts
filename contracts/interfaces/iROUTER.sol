@@ -64,6 +64,8 @@ interface iROUTER {
         uint256 basisPoints
     ) external view returns (uint256 protection);
 
+    function updateVADER(address newAddress) external;
+
     function curatePool(address token) external;
 
     function replacePool(address oldToken, address newToken) external;

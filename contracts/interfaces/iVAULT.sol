@@ -26,6 +26,8 @@ interface iVAULT {
 
     function calcDepositValueForMember(address asset, address member) external view returns (uint256 value);
 
+    function updateVADER(address newAddress) external;
+
     function getCurrentVotes(address account) external view returns (uint256);
 
     function getPriorVotes(address account, uint blockNumber) external view returns (uint256);

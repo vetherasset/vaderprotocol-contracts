@@ -22,7 +22,7 @@ contract USDV is iERC20 {
     // Parameters
     uint256 public blockDelay;
 
-    address public immutable VADER;
+    address public VADER;
 
     // Only TIMELOCK can execute
     modifier onlyTIMELOCK() {
@@ -197,6 +197,11 @@ contract USDV is iERC20 {
     }
 
     //============================== HELPERS ================================//
+
+    function updateVADER(address newAddress) external {
+        require(msg.sender == GovernorAlpha(), "!VADER");
+        VADER = newAddress;
+    }
 
     function GovernorAlpha() internal view returns(address) {
         return iVADER(VADER).GovernorAlpha();

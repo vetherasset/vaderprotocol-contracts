@@ -18,7 +18,7 @@ contract Vault {
     // Parameters
     uint256 private constant secondsPerYear = 1; //31536000;
 
-    address public immutable VADER;
+    address public VADER;
 
     uint256 public minimumDepositTime;
     uint256 public totalWeight;
@@ -352,6 +352,11 @@ contract Vault {
     }
 
     //============================== HELPERS ================================//
+
+    function updateVADER(address newAddress) external {
+        require(msg.sender == GovernorAlpha(), "!VADER");
+        VADER = newAddress;
+    }
 
     function reserveUSDV() external view returns (uint256) {
         return iRESERVE(RESERVE()).reserveUSDV(); // Balance

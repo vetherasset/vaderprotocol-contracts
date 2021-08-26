@@ -58,6 +58,8 @@ interface iPOOLS {
         address member
     ) external;
 
+    function updateVADER(address newAddress) external;
+
     function isAsset(address token) external view returns (bool);
 
     function isAnchor(address token) external view returns (bool);
